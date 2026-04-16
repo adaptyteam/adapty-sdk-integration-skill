@@ -1,6 +1,6 @@
 ---
 name: adapty-sdk-integration
-description: Use when a user wants to integrate Adapty SDK into a mobile app, set up in-app purchases with Adapty, or add a paywall to their app. Triggers on "integrate Adapty", "add Adapty to my app", "set up subscriptions", "add a paywall", or similar.
+description: Use when a user wants to integrate Adapty SDK into an iOS app, set up in-app purchases with Adapty on iOS, or add a paywall to an iOS Swift app. Triggers on "integrate Adapty", "add Adapty to my iOS app", "set up subscriptions", "add a paywall", or similar in an iOS/Swift project context.
 ---
 
 # Adapty SDK Integration
@@ -111,26 +111,21 @@ If `feedbackEnabled` is false, skip all feedback steps throughout the skill. The
 
 ## Phase 1: Analyze the project
 
-Read the project structure to identify platform and existing code patterns:
+Look for iOS project signals in the project structure:
+- `*.xcodeproj` or `*.xcworkspace`
+- `Package.swift` or `.swift` files
+- `Podfile` (CocoaPods)
 
-| File/signal found | Platform |
-|---|---|
-| `*.xcodeproj`, `Package.swift`, `.swift` files | iOS |
-| `build.gradle`, `AndroidManifest.xml` | Android |
-| `pubspec.yaml` | Flutter |
-| `package.json` with `react-native` dep | React Native |
-| `package.json` with `@capacitor/core` dep | Capacitor |
-| `*.unity`, `Assets/` with `.cs` files | Unity |
-| `shared/build.gradle.kts` (KMP structure) | Kotlin Multiplatform |
+If none of these are found, stop and tell the user: **"This skill currently supports iOS only. I can't find an iOS project here."** Do not proceed.
 
 Also check for:
 - Existing authentication system (affects user identification step)
 - Existing purchase code (may indicate Observer mode is better)
-- Target iOS/Android version (affects SDK compatibility)
+- Target iOS version (this skill targets iOS 15+; if the project targets lower, stop and inform the user)
 
-**State update:** Set `platform` to the detected platform (`ios`, `android`, `flutter`, `react-native`, `unity`, `kmp`, or `capacitor`). Set `phasesCompleted = 1`.
+**State update:** Set `platform = "ios"`. Set `phasesCompleted = 1`.
 
-Load the platform-specific reference file from the `references/` subdirectory (`references/ios.md`, `references/android.md`, etc.).
+Load `references/ios.md` from the skill's `references/` subdirectory.
 
 ## Phase 2: Ask three questions
 
@@ -252,28 +247,16 @@ Use this to determine the path through Steps 4 and 5:
 
 When they provide IDs (or you use placeholders):
 
-- **iOS**: product ID (e.g. `com.example.app.monthly`)
-- **Android subscriptions**: product ID **and** base plan ID (e.g. `monthly-base`) — both required; the CLI rejects the command without `--android-base-plan-id`
-- **Android one-time purchases**: only the product ID is needed
+- **iOS**: product ID matching App Store Connect (e.g. `com.example.app.monthly`)
 
 ```bash
 # --period options: weekly, monthly, two_months, trimonthly, semiannual, annual, lifetime
-# iOS
 npx adapty@latest products create \
   --app <APP_ID> \
   --title "Product Name" \
   --period monthly \
   --access-level-id <ACCESS_LEVEL_ID> \
   --ios-product-id "com.example.app.monthly"
-
-# Android subscription (--android-base-plan-id is required for subscriptions)
-npx adapty@latest products create \
-  --app <APP_ID> \
-  --title "Product Name" \
-  --period monthly \
-  --access-level-id <ACCESS_LEVEL_ID> \
-  --android-product-id "com.example.app.monthly" \
-  --android-base-plan-id "monthly-base"
 ```
 
 Repeat for each product to create.
