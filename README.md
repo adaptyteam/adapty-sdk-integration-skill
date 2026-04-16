@@ -24,26 +24,40 @@ iOS · Android · Flutter · React Native · Unity · Kotlin Multiplatform · Ca
 
 ## How to install
 
-Install via the Claude Code plugin system, or drop the contents of this repo into your project's `.claude/skills/adapty-sdk-integration/` directory.
+### Via Claude Code plugin (recommended)
 
-The skill requires the [Adapty CLI](https://github.com/adaptyteam/adapty-cli) (`npx adapty@latest`) to be runnable — no pre-installation needed.
+```bash
+claude plugin install https://github.com/adaptyteam/adapty-sdk-integration-skill
+```
+
+### Manually
+
+Copy the `skills/` directory into your global Claude config:
+
+```bash
+cp -r skills/adapty-sdk-integration ~/.claude/skills/
+```
+
+The skill requires the [Adapty CLI](https://github.com/adaptyteam/adapty-cli) (`npx adapty@latest`) — no pre-installation needed, `npx` handles it.
 
 ## Repository structure
 
 ```
-SKILL.md                        # The skill itself — instructions for the Claude agent
-references/
-  ios.md                        # Platform-specific doc URLs and implementation order
-  android.md
-  flutter.md
-  react-native.md
-  unity.md
-  kmp.md
-  capacitor.md
-  testing-setup-ios.md          # Sandbox testing setup guides
-  testing-setup-android.md
-feedback-endpoint/              # Vercel serverless function that collects anonymous usage feedback
-  api/sdk-integration-feedback.js
+skills/
+  adapty-sdk-integration/
+    SKILL.md                    # The skill itself — instructions for the Claude agent
+    references/
+      ios.md                    # Platform-specific doc URLs and implementation order
+      android.md
+      flutter.md
+      react-native.md
+      unity.md
+      kmp.md
+      capacitor.md
+      testing-setup-ios.md      # Sandbox testing setup guides
+      testing-setup-android.md
+    feedback-endpoint/          # Vercel serverless function that collects anonymous usage feedback
+      api/sdk-integration-feedback.js
 ```
 
 ## Feedback
