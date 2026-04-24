@@ -239,9 +239,15 @@ Use this to determine the path through Steps 4 and 5:
 
 **If `appPreference` is `existing` and the user wants to use existing products:** note their IDs and access level assignments from the `products list` output. Skip creation.
 
-**If `appPreference` is `existing` and creating new products:** collect store product IDs via `AskUserQuestion` (see below).
+**If `appPreference` is `existing` and creating new products:** follow the guidance below.
 
-**Collecting store product IDs:** Use `AskUserQuestion` to ask whether they already have product IDs configured in App Store Connect / Google Play Console:
+**CLI scope — what this step does NOT do:**
+
+- **Does not set prices.** The CLI has no `--price` flag. Price is configured either in App Store Connect or via the Adapty dashboard's "Create a new product and push to stores" flow (which sets a USD baseline and auto-calculates regional prices). If the user specifies a price, tell them the CLI path can't set it, and ask whether they want to set it in App Store Connect after the store product is created, or switch to the dashboard push-to-stores flow instead.
+- **`--title` is the Adapty dashboard label only** — an internal reference, not shown to end users. Users see either the store product name (from App Store Connect) or per-product copy configured in the Paywall Builder. If the user wants a different user-facing name, tell them it goes in the Paywall Builder (or the store listing); the CLI can't set it.
+- **Does not create products in App Store Connect.** The CLI creates Adapty products that *reference* store product IDs. The actual store products must exist (or be created later) in App Store Connect.
+
+**Collecting store product IDs:** Use `AskUserQuestion` to ask whether they already have product IDs configured in App Store Connect:
 - **Yes, I have them** — ask for the IDs and create products now
 - **No, not yet** — create the Adapty product with a placeholder ID (e.g. `com.example.app.monthly`) and remind them to update it in the Adapty dashboard once they configure the products in the store. Continue to Step 5.
 
@@ -251,9 +257,10 @@ When they provide IDs (or you use placeholders):
 
 ```bash
 # --period options: weekly, monthly, two_months, trimonthly, semiannual, annual, lifetime
+# --title is the Adapty dashboard label (internal); not visible to end users
 npx adapty@latest products create \
   --app <APP_ID> \
-  --title "Product Name" \
+  --title "Monthly" \
   --period monthly \
   --access-level-id <ACCESS_LEVEL_ID> \
   --ios-product-id "com.example.app.monthly"
