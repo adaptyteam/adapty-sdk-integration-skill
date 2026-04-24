@@ -10,6 +10,8 @@ Present this entire checklist to the user with the **exact product IDs and place
 
 Adapty products need matching products in Google Play Console before purchases work.
 
+> **Prerequisite:** Google Play Console will not let you create in-app products or subscriptions until a signed AAB with the `com.android.vending.BILLING` permission has been uploaded to any track. If the **Subscriptions** and **In-app products** pages are empty or disabled, do **Part 4, Step 2** first (upload a signed AAB to a closed track), then come back here. This is a one-time gate — after the first upload you can create products normally.
+
 1. Open [Google Play Console](https://play.google.com/console) → your app → **Monetize → Products**.
 
 2. For **subscriptions**, go to **Subscriptions → Create subscription**:

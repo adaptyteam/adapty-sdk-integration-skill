@@ -244,11 +244,23 @@ Use this to determine the path through Steps 4 and 5:
 
 **If `appPreference` is `existing` and the user wants to use existing products:** note their IDs and access level assignments from the `products list` output. Skip creation.
 
-**If `appPreference` is `existing` and creating new products:** collect store product IDs via `AskUserQuestion` (see below).
+**If `appPreference` is `existing` and creating new products:** follow the guidance below.
 
-**Collecting store product IDs:** Use `AskUserQuestion` to ask whether they already have product IDs configured in App Store Connect / Google Play Console:
-- **Yes, I have them** — ask for the IDs and create products now
-- **No, not yet** — create the Adapty product with a placeholder ID (e.g. `com.example.app.monthly`) and remind them to update it in the Adapty dashboard once they configure the products in the store. Continue to Step 5.
+**CLI scope — what this step does NOT do:**
+
+- **Does not set prices.** The CLI has no `--price` flag. Price is configured either in the store console (App Store Connect / Google Play) or via the Adapty dashboard's "Create a new product and push to stores" flow (which sets a USD baseline and auto-calculates regional prices). If the user specifies a price, tell them the CLI path can't set it, and ask whether they want to set it in the store console later, or switch to the dashboard push-to-stores flow instead.
+- **`--title` is the Adapty dashboard label only** — an internal reference, not shown to end users. Users see either the store product name (from App Store Connect / Google Play) or per-product copy configured in the Paywall Builder. If the user wants a different user-facing name, tell them it goes in the Paywall Builder (or the store listing); the CLI can't set it.
+- **Does not create products in the stores.** The CLI creates Adapty products that *reference* store product IDs. The actual store products must exist (or be created later) in App Store Connect / Google Play Console.
+
+**Google Play prerequisite (Android targets):**
+
+Google Play blocks creating in-app products and subscriptions in the Console until at least one AAB with the `com.android.vending.BILLING` permission has been uploaded to any track (internal testing is enough). So at this stage, for Android-first or Android-only integrations, real Google Play product IDs do not exist yet and cannot be created yet.
+
+Default path for Android: use placeholder IDs in Adapty now (e.g. `com.example.app.monthly` + base plan `monthly-base`), continue through Phase 4, build, upload a signed AAB to Google Play internal testing, then create the real products in Google Play Console (see `references/testing-setup-android.md`, Part 1) and update the Adapty products with the real IDs in the dashboard. Tell the user this ordering upfront so they know the placeholders are expected.
+
+**Collecting store product IDs:** Use `AskUserQuestion` to ask whether product IDs are already configured:
+- **Yes, I have them** — ask for the IDs and create Adapty products now
+- **No, not yet** — for iOS, App Store Connect products can be created anytime; for Android, the Google Play prerequisite above applies. Default to placeholder IDs and plan to update them later.
 
 When they provide IDs (or you use placeholders):
 
@@ -258,10 +270,11 @@ When they provide IDs (or you use placeholders):
 
 ```bash
 # --period options: weekly, monthly, two_months, trimonthly, semiannual, annual, lifetime
+# --title is the Adapty dashboard label (internal); not visible to end users
 # iOS
 npx adapty@latest products create \
   --app <APP_ID> \
-  --title "Product Name" \
+  --title "Monthly" \
   --period monthly \
   --access-level-id <ACCESS_LEVEL_ID> \
   --ios-product-id "com.example.app.monthly"
@@ -269,7 +282,7 @@ npx adapty@latest products create \
 # Android subscription (--android-base-plan-id is required for subscriptions)
 npx adapty@latest products create \
   --app <APP_ID> \
-  --title "Product Name" \
+  --title "Monthly" \
   --period monthly \
   --access-level-id <ACCESS_LEVEL_ID> \
   --android-product-id "com.example.app.monthly" \
