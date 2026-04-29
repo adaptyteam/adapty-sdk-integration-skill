@@ -14,7 +14,7 @@
         "name": "Adapty",
         "email": "support@adapty.io"
       },
-      "source": "./",
+      "source": "./plugins/adapty-sdk-integration",
       "category": "development",
       "homepage": "https://adapty.io/docs"
     }

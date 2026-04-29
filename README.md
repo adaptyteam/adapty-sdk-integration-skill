@@ -25,7 +25,7 @@ claude plugin install https://github.com/adaptyteam/adapty-sdk-integration-skill
 
 #### Other agentic CLIs
 
-The skill is a portable directory — `skills/adapty-sdk-integration/` in this repo. All three CLIs below read the same Claude-style `SKILL.md` format.
+The skill is a portable directory — `plugins/adapty-sdk-integration/skills/adapty-sdk-integration/` in this repo. All three CLIs below read the same Claude-style `SKILL.md` format.
 
 **GitHub Copilot CLI** — install command, or drop the folder in place:
 
@@ -33,7 +33,7 @@ The skill is a portable directory — `skills/adapty-sdk-integration/` in this r
 gh skill install adaptyteam/adapty-sdk-integration-skill
 # or manually:
 git clone https://github.com/adaptyteam/adapty-sdk-integration-skill.git
-cp -r adapty-sdk-integration-skill/skills/adapty-sdk-integration ~/.copilot/skills/
+cp -r adapty-sdk-integration-skill/plugins/adapty-sdk-integration/skills/adapty-sdk-integration ~/.copilot/skills/
 ```
 
 Docs: [About agent skills (GitHub)](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills).
@@ -42,7 +42,7 @@ Docs: [About agent skills (GitHub)](https://docs.github.com/en/copilot/concepts/
 
 ```bash
 git clone https://github.com/adaptyteam/adapty-sdk-integration-skill.git
-cp -r adapty-sdk-integration-skill/skills/adapty-sdk-integration ~/.agents/skills/
+cp -r adapty-sdk-integration-skill/plugins/adapty-sdk-integration/skills/adapty-sdk-integration ~/.agents/skills/
 ```
 
 Docs: [Codex Skills](https://developers.openai.com/codex/skills).
@@ -53,7 +53,7 @@ Docs: [Codex Skills](https://developers.openai.com/codex/skills).
 gemini skills install https://github.com/adaptyteam/adapty-sdk-integration-skill
 # or manually:
 git clone https://github.com/adaptyteam/adapty-sdk-integration-skill.git
-cp -r adapty-sdk-integration-skill/skills/adapty-sdk-integration ~/.gemini/skills/
+cp -r adapty-sdk-integration-skill/plugins/adapty-sdk-integration/skills/adapty-sdk-integration ~/.gemini/skills/
 ```
 
 Docs: [Gemini CLI Skills](https://geminicli.com/docs/cli/skills/).
