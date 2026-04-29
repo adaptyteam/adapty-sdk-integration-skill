@@ -10,18 +10,14 @@ A skill for agentic coding tools (Claude Code, GitHub Copilot CLI, OpenAI Codex,
 
 #### Claude Code
 
-**Option A — Adapty marketplace (recommended).** Run inside Claude Code:
-
-```
-/plugin marketplace add adaptyteam/adapty-sdk-integration-skill
-/plugin install adapty-sdk-integration@adapty
-```
-
-**Option B — Direct plugin install.** From your shell:
+From your shell:
 
 ```bash
-claude plugin install https://github.com/adaptyteam/adapty-sdk-integration-skill
+claude plugin marketplace add adaptyteam/adapty-sdk-integration-skill
+claude plugin install adapty-sdk-integration@adapty
 ```
+
+Then run `/reload-plugins` inside Claude Code to activate it.
 
 #### Other agentic CLIs
 
