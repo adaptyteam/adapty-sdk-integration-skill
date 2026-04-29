@@ -1,5 +1,7 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "adapty",
+  "description": "Adapty's official Claude Code plugins.",
   "owner": {
     "name": "Adapty",
     "email": "support@adapty.io"
@@ -7,8 +9,14 @@
   "plugins": [
     {
       "name": "adapty-sdk-integration",
-      "source": ".",
-      "description": "End-to-end Adapty SDK integration for mobile apps — dashboard setup, SDK install, paywall, and store configuration. Supports iOS, Android, Flutter, React Native, Unity, KMP, and Capacitor."
+      "description": "End-to-end Adapty SDK integration for mobile apps — dashboard setup, SDK install, paywall, and store configuration. Supports iOS, Android, Flutter, React Native, Unity, KMP, and Capacitor.",
+      "author": {
+        "name": "Adapty",
+        "email": "support@adapty.io"
+      },
+      "source": "./",
+      "category": "development",
+      "homepage": "https://adapty.io/docs"
     }
   ]
 }
