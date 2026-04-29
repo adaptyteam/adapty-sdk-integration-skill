@@ -1,6 +1,6 @@
 ---
 name: adapty-sdk-integration
-description: Use when a user wants to integrate Adapty SDK into an iOS app, set up in-app purchases with Adapty on iOS, or add a paywall to an iOS Swift app. Triggers on "integrate Adapty", "add Adapty to my iOS app", "set up subscriptions", "add a paywall", or similar in an iOS/Swift project context.
+description: Use when a user wants to integrate Adapty SDK into a mobile app, set up in-app purchases with Adapty, or add a paywall to their app. Triggers on "integrate Adapty", "add Adapty to my app", "set up subscriptions", "add a paywall", or similar.
 ---
 
 # Adapty SDK Integration
@@ -111,21 +111,26 @@ If `feedbackEnabled` is false, skip all feedback steps throughout the skill. The
 
 ## Phase 1: Analyze the project
 
-Look for iOS project signals in the project structure:
-- `*.xcodeproj` or `*.xcworkspace`
-- `Package.swift` or `.swift` files
-- `Podfile` (CocoaPods)
+Read the project structure to identify platform and existing code patterns:
 
-If none of these are found, stop and tell the user: **"This skill currently supports iOS only. I can't find an iOS project here."** Do not proceed.
+| File/signal found | Platform |
+|---|---|
+| `*.xcodeproj`, `Package.swift`, `.swift` files | iOS |
+| `build.gradle`, `AndroidManifest.xml` | Android |
+| `pubspec.yaml` | Flutter |
+| `package.json` with `react-native` dep | React Native |
+| `package.json` with `@capacitor/core` dep | Capacitor |
+| `*.unity`, `Assets/` with `.cs` files | Unity |
+| `shared/build.gradle.kts` (KMP structure) | Kotlin Multiplatform |
 
 Also check for:
 - Existing authentication system (affects user identification step)
 - Existing purchase code (may indicate Observer mode is better)
-- Target iOS version (this skill targets iOS 15+; if the project targets lower, stop and inform the user)
+- Target iOS/Android version (affects SDK compatibility)
 
-**State update:** Set `platform = "ios"`. Set `phasesCompleted = 1`.
+**State update:** Set `platform` to the detected platform (`ios`, `android`, `flutter`, `react-native`, `unity`, `kmp`, or `capacitor`). Set `phasesCompleted = 1`.
 
-Load `references/ios.md` from the skill's `references/` subdirectory.
+Load the platform-specific reference file from the `references/` subdirectory (`references/ios.md`, `references/android.md`, etc.).
 
 ## Phase 2: Ask three questions
 
@@ -243,27 +248,45 @@ Use this to determine the path through Steps 4 and 5:
 
 **CLI scope — what this step does NOT do:**
 
-- **Does not set prices.** The CLI has no `--price` flag. Price is configured either in App Store Connect or via the Adapty dashboard's "Create a new product and push to stores" flow (which sets a USD baseline and auto-calculates regional prices). If the user specifies a price, tell them the CLI path can't set it, and ask whether they want to set it in App Store Connect after the store product is created, or switch to the dashboard push-to-stores flow instead.
-- **`--title` is the Adapty dashboard label only** — an internal reference, not shown to end users. Users see either the store product name (from App Store Connect) or per-product copy configured in the Paywall Builder. If the user wants a different user-facing name, tell them it goes in the Paywall Builder (or the store listing); the CLI can't set it.
-- **Does not create products in App Store Connect.** The CLI creates Adapty products that *reference* store product IDs. The actual store products must exist (or be created later) in App Store Connect.
+- **Does not set prices.** The CLI has no `--price` flag. Price is configured either in the store console (App Store Connect / Google Play) or via the Adapty dashboard's "Create a new product and push to stores" flow (which sets a USD baseline and auto-calculates regional prices). If the user specifies a price, tell them the CLI path can't set it, and ask whether they want to set it in the store console later, or switch to the dashboard push-to-stores flow instead.
+- **`--title` is the Adapty dashboard label only** — an internal reference, not shown to end users. Users see either the store product name (from App Store Connect / Google Play) or per-product copy configured in the Paywall Builder. If the user wants a different user-facing name, tell them it goes in the Paywall Builder (or the store listing); the CLI can't set it.
+- **Does not create products in the stores.** The CLI creates Adapty products that *reference* store product IDs. The actual store products must exist (or be created later) in App Store Connect / Google Play Console.
 
-**Collecting store product IDs:** Use `AskUserQuestion` to ask whether they already have product IDs configured in App Store Connect:
-- **Yes, I have them** — ask for the IDs and create products now
-- **No, not yet** — create the Adapty product with a placeholder ID (e.g. `com.example.app.monthly`) and remind them to update it in the Adapty dashboard once they configure the products in the store. Continue to Step 5.
+**Google Play prerequisite (Android targets):**
+
+Google Play blocks creating in-app products and subscriptions in the Console until at least one AAB with the `com.android.vending.BILLING` permission has been uploaded to any track (internal testing is enough). So at this stage, for Android-first or Android-only integrations, real Google Play product IDs do not exist yet and cannot be created yet.
+
+Default path for Android: use placeholder IDs in Adapty now (e.g. `com.example.app.monthly` + base plan `monthly-base`), continue through Phase 4, build, upload a signed AAB to Google Play internal testing, then create the real products in Google Play Console (see `references/testing-setup-android.md`, Part 1) and update the Adapty products with the real IDs in the dashboard. Tell the user this ordering upfront so they know the placeholders are expected.
+
+**Collecting store product IDs:** Use `AskUserQuestion` to ask whether product IDs are already configured:
+- **Yes, I have them** — ask for the IDs and create Adapty products now
+- **No, not yet** — for iOS, App Store Connect products can be created anytime; for Android, the Google Play prerequisite above applies. Default to placeholder IDs and plan to update them later.
 
 When they provide IDs (or you use placeholders):
 
-- **iOS**: product ID matching App Store Connect (e.g. `com.example.app.monthly`)
+- **iOS**: product ID (e.g. `com.example.app.monthly`)
+- **Android subscriptions**: product ID **and** base plan ID (e.g. `monthly-base`) — both required; the CLI rejects the command without `--android-base-plan-id`
+- **Android one-time purchases**: only the product ID is needed
 
 ```bash
 # --period options: weekly, monthly, two_months, trimonthly, semiannual, annual, lifetime
 # --title is the Adapty dashboard label (internal); not visible to end users
+# iOS
 npx adapty@latest products create \
   --app <APP_ID> \
   --title "Monthly" \
   --period monthly \
   --access-level-id <ACCESS_LEVEL_ID> \
   --ios-product-id "com.example.app.monthly"
+
+# Android subscription (--android-base-plan-id is required for subscriptions)
+npx adapty@latest products create \
+  --app <APP_ID> \
+  --title "Monthly" \
+  --period monthly \
+  --access-level-id <ACCESS_LEVEL_ID> \
+  --android-product-id "com.example.app.monthly" \
+  --android-base-plan-id "monthly-base"
 ```
 
 Repeat for each product to create.
