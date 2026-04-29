@@ -1,0 +1,14 @@
+{
+  "name": "adapty",
+  "owner": {
+    "name": "Adapty",
+    "email": "support@adapty.io"
+  },
+  "plugins": [
+    {
+      "name": "adapty-sdk-integration",
+      "source": ".",
+      "description": "End-to-end Adapty SDK integration for mobile apps — dashboard setup, SDK install, paywall, and store configuration. Supports iOS, Android, Flutter, React Native, Unity, KMP, and Capacitor."
+    }
+  ]
+}
