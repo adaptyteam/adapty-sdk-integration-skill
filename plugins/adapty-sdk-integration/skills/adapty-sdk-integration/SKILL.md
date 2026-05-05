@@ -317,11 +317,14 @@ Then use `AskUserQuestion` to present your findings and confirm. Example:
 Create one paywall and one placement per confirmed location.
 
 ```bash
+# Create paywall — capture the returned id as <PAYWALL_ID>
 npx adapty@latest paywalls create --app <APP_ID> --title "Main Paywall"
 
-# Repeat for each placement location
-npx adapty@latest placements create --app <APP_ID> --title "Main" --developer-id "main"
+# Repeat for each placement location, using the paywall id from above
+npx adapty@latest placements create --app <APP_ID> --title "Main" --developer-id "main" --audiences '[{"segment_ids":[],"paywall_id":"<PAYWALL_ID>","priority":0}]'
 ```
+
+`--audiences` is the canonical flag. The legacy `--paywall-id` shorthand still works but emits a deprecation warning.
 
 After all commands succeed, you will have collected from CLI output:
 - **Public SDK key** — from `apps list` or `apps create` output
