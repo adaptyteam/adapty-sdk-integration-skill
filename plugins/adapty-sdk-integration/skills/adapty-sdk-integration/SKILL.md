@@ -229,6 +229,8 @@ npx adapty@latest paywalls list --app <APP_ID>
 npx adapty@latest placements list --app <APP_ID>
 ```
 
+**Note for `paywallApproach == "flow_builder"`:** the CLI's `paywalls list` does not return Flow Builder flows — flows are dashboard-only. An empty `paywalls list` does **not** mean nothing is set up. In Step 5, the dashboard path will confirm directly with the user whether a flow + placement already exists. `placements list` still works and is the source of truth for placement developer IDs.
+
 Use this to determine the path through Steps 4 and 5:
 
 | User said | Items found in list | Action |
@@ -292,15 +294,11 @@ npx adapty@latest products create \
 
 Repeat for each product to create.
 
-### Step 5: Create paywall and placement
+### Step 5: Create paywall/flow and placement
 
-**Prerequisite: do not start this step until at least one product has been successfully created (or confirmed to exist) in Step 4.** A paywall without products is non-functional.
+**Prerequisite: do not start this step until at least one product has been successfully created (or confirmed to exist) in Step 4.** A paywall/flow without products is non-functional.
 
-**If `appPreference` is `existing` and the user wants to use existing paywalls/placements:** note their IDs and developer IDs from the list output in Step 3.5. Skip creation.
-
-**If creating new paywalls/placements** (either `appPreference` is `new`, or `existing` but creating new ones):
-
-First, analyze the project to identify natural paywall locations. Look for:
+First, analyze the project to identify natural locations to show the paywall/flow. Look for:
 - Onboarding flows (welcome screens, feature intro screens)
 - Feature gates (premium feature entry points)
 - Settings screens (upgrade/subscription management)
@@ -313,9 +311,42 @@ Then use `AskUserQuestion` to present your findings and confirm. Example:
 > 2. **Settings** — `SettingsScreen.kt` (subscription management)
 > 3. **Feature gate** — `PremiumFeatureView.swift` (when user taps a locked feature)
 >
-> Which of these do you want to use? You can pick multiple. I'll create one placement per location."
+> Which of these do you want to use? You can pick multiple. I'll set up one placement per location."
 
-Create one paywall and one placement per confirmed location.
+Then branch by `paywallApproach`:
+
+#### `paywallApproach == "flow_builder"` (iOS Flow Builder) — dashboard path
+
+The CLI cannot create flows or attach them to placements — Flow Builder is dashboard-only. Skip the CLI commands below. For each confirmed location, the user creates a flow and attaches it to a placement in the dashboard.
+
+Ask the user via `AskUserQuestion`:
+
+> "For each location, have you already created a flow in the Adapty Dashboard and attached it to a placement?"
+> - **Yes, already set up** — I'll ask for your placement ID(s)
+> - **No, walk me through it** — I'll guide you in the dashboard
+
+**If already set up:** collect the **placement developer ID** for each location (the user finds it at [Adapty Dashboard → Placements](https://app.adapty.io/placements) — the **Developer ID** column). Set as placement ID(s) and continue to Phase 4.
+
+**If walk me through:** guide the user through these steps in the dashboard. After each step, use `AskUserQuestion` to confirm completion before moving on.
+
+1. **Create the flow** at [Adapty Dashboard → Flows](https://app.adapty.io/flows):
+   - Click **Create flow** → pick a template, generate with AI, or start from scratch
+   - Add the products created in Step 4 to the flow
+   - **Save & publish**
+2. **Create the placement** at [Adapty Dashboard → Placements](https://app.adapty.io/placements):
+   - Click **Create placement** (or open an existing one if it fits the location)
+   - Set a **Developer ID** (e.g. `main`, `onboarding`, `settings`) — this is the exact string the SDK uses in `Adapty.getFlow(placementId:)`
+   - Under the **All Users** audience, attach the flow you just created
+   - Save
+3. Repeat for each confirmed location.
+
+After the user finishes, collect the **placement developer ID(s)** via `AskUserQuestion`. These are the values you'll use in Phase 4.
+
+#### `paywallApproach == "paywall_builder"`, `"custom"`, or `"observer"` — CLI path
+
+**If `appPreference` is `existing` and the user wants to use existing paywalls/placements:** note their IDs and developer IDs from the list output in Step 3.5. Skip creation.
+
+**If creating new paywalls/placements** (either `appPreference` is `new`, or `existing` but creating new ones), create one paywall and one placement per confirmed location:
 
 ```bash
 # Create paywall — capture the returned id as <PAYWALL_ID>
@@ -340,7 +371,7 @@ If the user says they'd rather do it manually, walk them through these five step
 | 1. Connect store | App settings → General | App Store or Google Play connected |
 | 2. Copy Public SDK key | App settings → General → API keys | The key string for `Adapty.activate()` |
 | 3. Create product(s) | Products page | At least one product created |
-| 4. Create paywall + placement | Paywalls page, then Placements page | Placement ID for `getPaywall()` |
+| 4. Create paywall/flow + placement | Paywalls or Flows page, then Placements page | Placement ID for `getFlow()` (iOS Flow Builder) or `getPaywall()` (other approaches) |
 | 5. Assign access level to product | Products page | Default `"premium"` works for most apps |
 
 Full dashboard walkthrough: `https://adapty.io/docs/quickstart.md`
