@@ -138,7 +138,7 @@ Use `AskUserQuestion` for all three together in one call:
 
 1. **Paywall approach** — which do they want?
    - **Paywall Builder** (recommended): Adapty renders paywalls in a no-code visual editor; no paywall UI to build
-     - **iOS only:** Present this option as **Flow Builder** instead. Flow Builder is the v4 successor to Paywall Builder and also supports onboarding flows. The `paywallApproach` state value for this choice on iOS is `flow_builder`.
+     - **iOS only:** Present this option as **Flow Builder** instead. Flow Builder is the v4 successor to Paywall Builder and also supports onboarding flows. The `paywallApproach` state value for this choice on iOS is `flow_builder`. Note: Flow Builder requires the iOS SDK **v4+**, which is currently a **pre-release (beta)** — at install time the exact version must be pinned (`4.0.0-beta.1`); see Stage 1 in `references/ios.md`.
    - **Custom paywall**: User builds their own paywall UI; Adapty fetches products and handles purchases
    - **Observer mode** *(not recommended for new projects)*: Keep existing StoreKit/Billing purchase infrastructure unchanged; Adapty only tracks events. Limitations: no paywall management, no A/B testing, manual transaction reporting required. Only suitable if replacing a purchase system is not feasible.
 

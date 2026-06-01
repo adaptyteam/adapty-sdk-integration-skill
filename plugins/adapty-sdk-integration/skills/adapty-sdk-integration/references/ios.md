@@ -143,13 +143,18 @@ Tell the user to do this in Xcode:
    ```
    https://github.com/adaptyteam/AdaptySDK-iOS.git
    ```
-3. Select the latest stable version → click **Add Package**
-4. In the "Choose Package Products" dialog, select:
+3. Choose the version:
+   - **Flow Builder (`paywallApproach == "flow_builder"`):** Flow Builder requires Adapty iOS SDK **v4+**, which is currently a **pre-release (beta)**. Swift Package Manager does **not** resolve beta versions through the "Up to Next Major Version" (`from:`) rule, so the exact version must be pinned. Set the **Dependency Rule** to **Exact Version** and enter `4.0.0-beta.1`.
+   - **Custom paywall or Observer mode:** select the latest stable version.
+4. Click **Add Package**
+5. In the "Choose Package Products" dialog, select:
    - **Adapty** — always required
    - **AdaptyUI** — only if using Flow Builder
    - Do NOT select any other packages
-5. Click **Add Package**
-6. Verify: "Adapty" (and "AdaptyUI" if selected) should appear under **Package Dependencies** in the project navigator
+6. Click **Add Package**
+7. Verify: "Adapty" (and "AdaptyUI" if selected) should appear under **Package Dependencies** in the project navigator
+
+**If the project uses a `Package.swift` manifest instead of the Xcode UI:** pin the matching version in the `dependencies` array — `.package(url: "https://github.com/adaptyteam/AdaptySDK-iOS.git", exact: "4.0.0-beta.1")` for Flow Builder (the beta won't resolve via `from:`), or `from: "<latest stable>"` for Custom paywall / Observer mode.
 
 Use `AskUserQuestion` to confirm the package was added successfully before proceeding.
 
