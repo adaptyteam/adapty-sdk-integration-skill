@@ -143,13 +143,18 @@ Tell the user to do this in Xcode:
    ```
    https://github.com/adaptyteam/AdaptySDK-iOS.git
    ```
-3. Select the latest stable version → click **Add Package**
-4. In the "Choose Package Products" dialog, select:
+3. Choose the version:
+   - **Flow Builder (`paywallApproach == "flow_builder"`):** Flow Builder requires Adapty iOS SDK **v4+**, which is currently a **pre-release (beta)**. Swift Package Manager does **not** resolve beta versions through the "Up to Next Major Version" (`from:`) rule, so the exact version must be pinned. Set the **Dependency Rule** to **Exact Version** and enter `4.0.0-beta.1`.
+   - **Custom paywall or Observer mode:** select the latest stable version.
+4. Click **Add Package**
+5. In the "Choose Package Products" dialog, select:
    - **Adapty** — always required
-   - **AdaptyUI** — only if using Paywall Builder
+   - **AdaptyUI** — only if using Flow Builder
    - Do NOT select any other packages
-5. Click **Add Package**
-6. Verify: "Adapty" (and "AdaptyUI" if selected) should appear under **Package Dependencies** in the project navigator
+6. Click **Add Package**
+7. Verify: "Adapty" (and "AdaptyUI" if selected) should appear under **Package Dependencies** in the project navigator
+
+**If the project uses a `Package.swift` manifest instead of the Xcode UI:** pin the matching version in the `dependencies` array — `.package(url: "https://github.com/adaptyteam/AdaptySDK-iOS.git", exact: "4.0.0-beta.1")` for Flow Builder (the beta won't resolve via `from:`), or `from: "<latest stable>"` for Custom paywall / Observer mode.
 
 Use `AskUserQuestion` to confirm the package was added successfully before proceeding.
 
@@ -160,7 +165,7 @@ Ask the user whether they use SwiftUI or UIKit. Then write the activation code i
 **SwiftUI** — add to the `@main` App struct:
 ```swift
 import Adapty
-import AdaptyUI  // only if using Paywall Builder
+import AdaptyUI  // only if using Flow Builder
 
 @main
 struct YourApp: App {
@@ -189,7 +194,7 @@ struct YourApp: App {
 **UIKit** — add to `AppDelegate.application(_:didFinishLaunchingWithOptions:)`:
 ```swift
 import Adapty
-import AdaptyUI  // only if using Paywall Builder
+import AdaptyUI  // only if using Flow Builder
 
 func application(_ application: UIApplication, didFinishLaunchingWithOptions ...) -> Bool {
     let config = AdaptyConfiguration
@@ -215,7 +220,7 @@ The SDK key comes from `AppConstants` — already set in the recommended archite
 
 Choose the section matching the user's paywall approach.
 
-### Paywall Builder
+### Flow Builder
 
 Read before writing code:
 ```
@@ -226,18 +231,25 @@ https://adapty.io/docs/ios-handling-events.md
 https://adapty.io/docs/handle-paywall-actions.md
 ```
 
-**Required call signature** — always use the labeled parameter:
+**v4 API names:** Flow Builder uses the new `getFlow` / `AdaptyFlow` / `AdaptyFlowController` / `.flow()` / `AdaptyFlowView` family. The same APIs also render existing Paywall Builder paywalls — no dashboard changes are required for users migrating from Paywall Builder.
+
+**Required call signature** — always use the labeled parameter, and pass `locale` to `getFlowConfiguration` (not to `getFlow`):
 ```swift
 // Correct
-let paywall = try await Adapty.getPaywall(placementId: AppConstants.placementId)
+let flow = try await Adapty.getFlow(placementId: AppConstants.placementId)
+let flowConfiguration = try await AdaptyUI.getFlowConfiguration(forFlow: flow, locale: "en")
 
 // Wrong — Swift will not infer the label; this compiles but is incorrect usage
-let paywall = try await Adapty.getPaywall(AppConstants.placementId)
+let flow = try await Adapty.getFlow(AppConstants.placementId)
 ```
 
-**Checkpoint:** Paywall appears on screen with configured products. Tapping a product triggers the sandbox purchase dialog.
+**Renamed callback:** `didFailRendering` / `didFailRenderingWith` is now `didReceiveError`. The replacement fires for the same rendering errors plus new runtime errors from the flow script (JavaScript exceptions — `AdaptyUIError` code `4105` / `.jsException`). Existing handler bodies do not need code changes — just rename the parameter and protocol method.
 
-**Gotcha:** Blank paywall or `getPaywall` returns error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned.
+**Removed APIs:** `Adapty.getPaywallProductsWithoutDeterminingOffer(paywall:)` and `AdaptyPaywallProductWithoutDeterminingOffer` are removed in v4. Any callback that previously received `AdaptyPaywallProductWithoutDeterminingOffer` (e.g. `didSelectProduct`) now receives `AdaptyPaywallProduct`.
+
+**Checkpoint:** Flow appears on screen with configured products. Tapping a product triggers the sandbox purchase dialog.
+
+**Gotcha:** Blank flow or `getFlow` returns error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned.
 
 ### Custom paywall (manual)
 
@@ -252,9 +264,12 @@ https://adapty.io/docs/restore-purchase.md
 
 **Required call signature** — always use the labeled parameter:
 ```swift
-let paywall = try await Adapty.getPaywall(placementId: AppConstants.placementId)
-// NOT: Adapty.getPaywall(AppConstants.placementId)
+let flow = try await Adapty.getFlow(placementId: AppConstants.placementId)
+let products = try await Adapty.getPaywallProducts(flow: flow)
+// NOT: Adapty.getFlow(AppConstants.placementId)
 ```
+
+**v4 note:** Even for custom paywalls, the v4 SDK uses `getFlow` / `AdaptyFlow` for the fetch — but products are still `AdaptyPaywallProduct` and `getPaywallProducts(flow:)` is the right call to fetch them. `getPaywallProductsWithoutDeterminingOffer` is removed; all products now include offer information.
 
 **Checkpoint:** Custom paywall UI shows products fetched from Adapty. Tapping a product triggers the sandbox purchase dialog. A restore button calls `restorePurchases()`.
 
@@ -262,10 +277,10 @@ let paywall = try await Adapty.getPaywall(placementId: AppConstants.placementId)
 
 ### Observer mode *(not recommended)*
 
-> **When to use:** Only if replacing the existing StoreKit purchase infrastructure is not feasible (e.g., deeply embedded legacy code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new projects or projects where purchases aren't yet implemented, use Paywall Builder or Custom paywall instead.
+> **When to use:** Only if replacing the existing StoreKit purchase infrastructure is not feasible (e.g., deeply embedded legacy code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new projects or projects where purchases aren't yet implemented, use Flow Builder or Custom paywall instead.
 >
 > **Limitations:**
-> - No paywall management or Paywall Builder support
+> - No paywall management or Flow Builder support
 > - No A/B testing on paywalls or offers
 > - Transactions must be manually reported to Adapty after each purchase
 > - Subscription events depend on App Store Server Notifications being configured
@@ -313,13 +328,13 @@ https://adapty.io/docs/ios-quickstart-identify.md
 ```
 
 **What to do:**
-- Call `Adapty.identify("your-user-id")` after `activate()` and before `getPaywall()`
+- Call `Adapty.identify("your-user-id")` after `activate()` and before `getFlow()`
 - For apps where users can purchase before logging in, call `identify()` at login — Adapty handles profile merging automatically
 - Call `Adapty.logout()` when users log out
 
 **Checkpoint:** After calling `identify("your-user-id")`, the Adapty dashboard **Profiles** section shows the custom user ID on the profile.
 
-**Gotcha:** Profile shows anonymous ID even after `identify()` → `identify()` was called after `getPaywall()`, so the purchase was attributed to the anonymous profile. Order: `activate()` → `identify()` → `getPaywall()`.
+**Gotcha:** Profile shows anonymous ID even after `identify()` → `identify()` was called after `getFlow()`, so the purchase was attributed to the anonymous profile. Order: `activate()` → `identify()` → `getFlow()`.
 
 ---
 
@@ -421,7 +436,7 @@ Do not proceed to the manual checklist until the build is clean. Do not hand off
 Read and follow `references/testing-setup-ios.md` (in this skill directory). It contains the full step-by-step checklist for:
 1. Creating products in App Store Connect
 2. Connecting App Store to Adapty (Bundle ID, In-App Purchase Key, Server Notifications)
-3. Designing the paywall in Paywall Builder — template, AI generator, or from scratch *(Paywall Builder only)*
+3. Designing the flow in Flow Builder — template, AI generator, or from scratch *(Flow Builder only)*
 4. Sandbox testing — creating a test account, switching device to sandbox, making a test purchase, verifying results
 
 Present the checklist to the user with the exact product IDs from Phase 3 already filled in.

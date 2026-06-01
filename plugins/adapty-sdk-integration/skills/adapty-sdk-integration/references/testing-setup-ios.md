@@ -71,14 +71,14 @@ Server notifications are required for subscription events (renewals, cancellatio
 
 ---
 
-## Part 3: Design the paywall in Adapty *(Paywall Builder only — skip for Custom paywall)*
+## Part 3: Design the flow in Adapty *(Flow Builder only — skip for Custom paywall)*
 
-The paywall must have a design and the "Show on device" toggle must be on before it renders. Without this, `hasViewConfiguration` returns `false` and the paywall view will not render even if `getPaywall` succeeds.
+The flow must have a design and the "Show on device" toggle must be on before it renders. Without this, `hasViewConfiguration` returns `false` and the flow view will not render even if `getFlow` succeeds.
 
 ### Option A: Use a template (fastest)
 
 1. In [Adapty Dashboard → Paywalls](https://app.adapty.io/paywalls), open your paywall.
-2. Click **Paywall Builder**.
+2. Click **Flow Builder**.
 3. Click **Change template** in Layout settings.
 4. Browse the template gallery and select one. Templates are professionally designed — pick one that fits your app's style.
 5. Click **Choose** to apply it. Note: switching templates discards unsaved changes, so confirm before proceeding.
@@ -93,7 +93,7 @@ The paywall must have a design and the "Show on device" toggle must be on before
 
 The AI generator analyzes your app's App Store listing to generate relevant visuals and copy automatically.
 
-1. In Paywall Builder, click **Change template → Generate template**, or click **Generate paywall** from the Builder & Generator tab.
+1. In Flow Builder, click **Change template → Generate template**, or click **Generate flow** from the Builder & Generator tab.
 2. Write a prompt describing the visual style. Tips:
    - **Good**: "Create a modern, minimalistic paywall with a light background, rounded buttons, and subtle gradients."
    - **Bad**: "Make my paywall look modern" (too vague)
@@ -154,7 +154,7 @@ Build and run the app from Xcode on the connected device. The app launches with 
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Paywall doesn't appear / blank screen | `hasViewConfiguration` is false | Part 3: enable "Show on device" in Paywall Builder and save |
+| Flow doesn't appear / blank screen | `hasViewConfiguration` is false | Part 3: enable "Show on device" in Flow Builder and save |
 | Product list is empty | Product ID mismatch (case-sensitive) | Verify `--ios-product-id` in Adapty exactly matches the Product ID in App Store Connect |
 | Purchase succeeds but no event in Adapty | Server notifications not configured | Re-check Step 2c: both Production and Sandbox URLs must be set |
 | Can't buy — "already purchased" | Reused sandbox account with purchase history | Create a new sandbox account (Step 1) or clear purchase history: **Settings → Developer → Sandbox Apple Account → Manage → Clear Purchase History** |
