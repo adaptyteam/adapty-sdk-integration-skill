@@ -193,7 +193,7 @@ final adaptyProfileStreamProvider = StreamProvider<AdaptyProfile>(
 
 First fetch the full installation doc for reference:
 ```bash
-curl -s https://adapty.io/docs/sdk-installation-flutter.md
+curl -s "https://adapty.io/docs/sdk-installation-flutter.md?ref=skill"
 ```
 
 Then guide the user through each step explicitly.

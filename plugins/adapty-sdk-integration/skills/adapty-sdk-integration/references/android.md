@@ -145,7 +145,7 @@ If the project uses Hilt or another DI framework, inject `AdaptyService` as a si
 
 First fetch the full installation doc for reference:
 ```bash
-curl -s https://adapty.io/docs/sdk-installation-android.md
+curl -s "https://adapty.io/docs/sdk-installation-android.md?ref=skill"
 ```
 
 Then guide the user through each step explicitly.
