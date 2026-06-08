@@ -1,7 +1,7 @@
 /**
  * Adapty SDK Integration Skill — Feedback Endpoint
  *
- * Accepts anonymous feedback from the adapty-sdk-integration Claude skill
+ * Accepts session feedback from the adapty-sdk-integration Claude skill
  * and forwards it to Slack and Airtable.
  *
  * Environment variables (set in Vercel dashboard):
@@ -21,6 +21,7 @@ export async function POST(req) {
     friction_rounds,
     sentiment,
     rating,
+    app_id,
     slack_text,
   } = await req.json();
 
@@ -51,6 +52,7 @@ export async function POST(req) {
           friction_rounds,
           sentiment,
           rating: rating ?? null,
+          app_id: app_id ?? null,
         },
       }),
     }),

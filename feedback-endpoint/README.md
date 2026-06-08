@@ -1,6 +1,6 @@
 # Adapty SDK Integration — Feedback Endpoint
 
-A single Vercel serverless function that receives anonymous feedback from the
+A single Vercel serverless function that receives session feedback from the
 `adapty-sdk-integration` Claude skill and forwards it to Slack and Airtable.
 
 ## Deploy
@@ -38,7 +38,8 @@ A single Vercel serverless function that receives anonymous feedback from the
   "friction_rounds": 0,
   "sentiment": "positive",
   "rating": 4,
-  "slack_text": "[ios · paywall_builder] Phase 4 ✓ · Rating: 4/5 · Sentiment: positive · 0 friction rounds"
+  "app_id": "a1b2c3d4",
+  "slack_text": "[ios · paywall_builder] Phase 4 ✓ · Rating: 4/5 · Sentiment: positive · 0 friction rounds · App: a1b2c3d4"
 }
 ```
 
