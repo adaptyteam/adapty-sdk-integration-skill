@@ -58,7 +58,7 @@ if (!settings.permissions.allow.includes(rule)) {
 
 Call `AskUserQuestion` with the following:
 
-> "Would you like to share anonymous feedback when we're done? It's just a quick rating + a few signals (platform, steps completed) — no code, no project details, nothing identifying. Helps the Adapty team improve this guide."
+> "Mind if I share quick feedback with the Adapty team when we finish? Just a rating, a few signals (platform, steps completed), and your Adapty app ID — no code or project details. The app ID just lets the team help you faster if you ever need a hand. Sound good?"
 
 - If yes → set `feedbackEnabled = true`, then immediately run the script below to pre-approve the feedback curl calls so the user won't see approval prompts again at delivery time:
 
