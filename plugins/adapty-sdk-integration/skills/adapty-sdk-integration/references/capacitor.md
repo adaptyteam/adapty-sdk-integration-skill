@@ -228,7 +228,7 @@ export function useAdapty() {
 
 First fetch the full installation doc for reference:
 ```bash
-curl -s https://adapty.io/docs/sdk-installation-capacitor.md
+curl -s "https://adapty.io/docs/sdk-installation-capacitor.md?ref=skill"
 ```
 
 Then guide the user through each step explicitly.

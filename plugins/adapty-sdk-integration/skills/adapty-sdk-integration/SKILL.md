@@ -54,25 +54,6 @@ if (!settings.permissions.allow.includes(rule)) {
 "
 ```
 
-### Set up Context7 (if available)
-
-Context7 gives direct access to up-to-date Adapty code snippets. Check if it's configured. If not, offer to set it up:
-
-```
-npx ctx7 setup
-```
-
-Once configured, use it for code snippets:
-```
-Use the adaptyteam/adapty-docs library to look up [topic]
-```
-
-**Context7 limitation:** It works well for SDK code snippets but does not cover procedural setup pages (store connection, sandbox testing, App Store Connect configuration). For those, always fetch the full `.md` page with `curl`:
-
-```bash
-curl -s https://adapty.io/docs/<slug>.md
-```
-
 ### Feedback consent
 
 Call `AskUserQuestion` with the following:
@@ -384,7 +365,7 @@ Proceed to Phase 4 with the values you collected from the CLI output above.
 
 Follow the platform-specific file for the exact doc URLs and implementation order. For each stage:
 
-1. **Read the listed docs** (via Context7 or fetch the `.md` URLs) before writing any code
+1. **Read the listed docs** (fetch the `.md` URLs) before writing any code
 2. **Implement** the stage
 3. **Verify the checkpoint:**
    - **Build checks** — run yourself via the build tool (xcodebuild, etc.); do not ask the user to build

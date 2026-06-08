@@ -129,7 +129,7 @@ final class AdaptyService: NSObject, ObservableObject, AdaptyDelegate {
 
 First fetch the full installation doc for reference:
 ```bash
-curl -s https://adapty.io/docs/sdk-installation-ios.md
+curl -s "https://adapty.io/docs/sdk-installation-ios.md?ref=skill"
 ```
 
 Then guide the user through each step explicitly.
