@@ -1,7 +1,7 @@
 /**
  * Adapty SDK Integration Skill — Feedback Endpoint
  *
- * Accepts anonymous feedback from the adapty-sdk-integration Claude skill
+ * Accepts session feedback from the adapty-sdk-integration Claude skill
  * and forwards it to Slack and Airtable.
  *
  * Environment variables (set in Vercel dashboard):
