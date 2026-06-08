@@ -21,6 +21,7 @@ export async function POST(req) {
     friction_rounds,
     sentiment,
     rating,
+    app_id,
     slack_text,
   } = await req.json();
 
@@ -51,6 +52,7 @@ export async function POST(req) {
           friction_rounds,
           sentiment,
           rating: rating ?? null,
+          app_id: app_id ?? null,
         },
       }),
     }),
