@@ -77,14 +77,14 @@ RTDN is required for subscription events (renewals, cancellations, refunds) to r
 
 ---
 
-## Part 3: Design the paywall in Adapty *(Paywall Builder only — skip for Custom paywall)*
+## Part 3: Design the flow in Adapty *(Flow Builder only — skip for Custom paywall)*
 
-The paywall must have a design and the "Show on device" toggle must be on before it renders. Without this, `hasViewConfiguration` returns `false` and the paywall will not render even if `getPaywall` succeeds.
+The flow must have a design and the "Show on device" toggle must be on before it renders. Without this, `hasViewConfiguration` returns `false` and the flow will not render even if `getFlow` succeeds.
 
 ### Option A: Use a template (fastest)
 
 1. In [Adapty Dashboard → Paywalls](https://app.adapty.io/paywalls), open your paywall.
-2. Click **Paywall Builder**.
+2. Click **Flow Builder**.
 3. Click **Change template** in Layout settings.
 4. Browse the template gallery and select one.
 5. Click **Choose** to apply it.
@@ -97,7 +97,7 @@ The paywall must have a design and the "Show on device" toggle must be on before
 
 ### Option B: Generate with AI
 
-1. In Paywall Builder, click **Change template → Generate template**, or click **Generate paywall** from the Builder & Generator tab.
+1. In Flow Builder, click **Change template → Generate template**, or click **Generate flow** from the Builder & Generator tab.
 2. Write a prompt describing the visual style. Tips:
    - **Good**: "Create a modern, minimalistic paywall with a dark background and rounded buttons."
    - Describe visuals and text style, not layout structure or your app's features.
@@ -165,7 +165,7 @@ Google Play sandbox purchases only work for apps uploaded to Play — local debu
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Paywall doesn't appear / blank screen | `hasViewConfiguration` is false | Part 3: enable "Show on device" in Paywall Builder and save |
+| Flow doesn't appear / blank screen | `hasViewConfiguration` is false | Part 3: enable "Show on device" in Flow Builder and save |
 | Google Play purchase sheet doesn't appear | App not installed from Play or tester not opted in | Complete Steps 2–3: upload to closed track, add tester, open opt-in URL |
 | Products show but prices are missing | Products not activated in Google Play Console | Activate the subscription base plan and/or one-time product |
 | Purchase succeeds but no event in Adapty | RTDN not configured or Service Account missing Pub/Sub permission | Re-check Step 2b; try "Send test notification" to diagnose |

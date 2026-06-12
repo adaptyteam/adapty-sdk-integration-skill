@@ -119,7 +119,7 @@ Use `AskUserQuestion` for all three together in one call:
 
 1. **Paywall approach** — which do they want?
    - **Paywall Builder** (recommended): Adapty renders paywalls in a no-code visual editor; no paywall UI to build
-     - **iOS only:** Present this option as **Flow Builder** instead. Flow Builder is the v4 successor to Paywall Builder and also supports onboarding flows. The `paywallApproach` state value for this choice on iOS is `flow_builder`. Note: Flow Builder requires the iOS SDK **v4+**, which is currently a **pre-release (beta)** — at install time the exact version must be pinned (`4.0.0-beta.1`); see Stage 1 in `references/ios.md`.
+     - **iOS and Android:** Present this option as **Flow Builder** instead. Flow Builder is the v4 successor to Paywall Builder and also supports onboarding flows. The `paywallApproach` state value for this choice on iOS and Android is `flow_builder`. Note: Flow Builder requires the iOS or Android SDK **v4+**, which is currently a **pre-release (beta)** — at install time the exact version must be pinned (`4.0.0-beta.1`); see Stage 1 in `references/ios.md` or `references/android.md`.
    - **Custom paywall**: User builds their own paywall UI; Adapty fetches products and handles purchases
    - **Observer mode** *(not recommended for new projects)*: Keep existing StoreKit/Billing purchase infrastructure unchanged; Adapty only tracks events. Limitations: no paywall management, no A/B testing, manual transaction reporting required. Only suitable if replacing a purchase system is not feasible.
 
@@ -135,7 +135,7 @@ Use `AskUserQuestion` for all three together in one call:
    - **I already have an app** — you'll fetch the list in Phase 3 and ask them to pick one
    - **Create a new app** — you'll create one in Phase 3
 
-**State update:** Set `paywallApproach` to `paywall_builder` (or `flow_builder` on iOS), `custom`, or `observer`. Set `integrations` to the array of selected integration keys (e.g. `["amplitude", "appsflyer"]`), or `[]` if none. Set `appPreference` to `existing` or `new`. Set `phasesCompleted = 2`.
+**State update:** Set `paywallApproach` to `paywall_builder` (or `flow_builder` on iOS or Android), `custom`, or `observer`. Set `integrations` to the array of selected integration keys (e.g. `["amplitude", "appsflyer"]`), or `[]` if none. Set `appPreference` to `existing` or `new`. Set `phasesCompleted = 2`.
 
 Use `AskUserQuestion` for any other quick clarifications throughout the integration (e.g., "Did the build succeed?", "What's your App Store product ID?"). Never ask for values that can be retrieved via CLI.
 
@@ -296,7 +296,7 @@ Then use `AskUserQuestion` to present your findings and confirm. Example:
 
 Then branch by `paywallApproach`:
 
-#### `paywallApproach == "flow_builder"` (iOS Flow Builder) — dashboard path
+#### `paywallApproach == "flow_builder"` (Flow Builder, iOS or Android) — dashboard path
 
 The CLI cannot create flows or attach them to placements — Flow Builder is dashboard-only. Skip the CLI commands below. For each confirmed location, the user creates a flow and attaches it to a placement in the dashboard.
 
@@ -316,7 +316,7 @@ Ask the user via `AskUserQuestion`:
    - **Save & publish**
 2. **Create the placement** at [Adapty Dashboard → Placements](https://app.adapty.io/placements):
    - Click **Create placement** (or open an existing one if it fits the location)
-   - Set a **Developer ID** (e.g. `main`, `onboarding`, `settings`) — this is the exact string the SDK uses in `Adapty.getFlow(placementId:)`
+   - Set a **Developer ID** (e.g. `main`, `onboarding`, `settings`) — this is the exact string the SDK uses in `Adapty.getFlow`
    - Under the **All Users** audience, attach the flow you just created
    - Save
 3. Repeat for each confirmed location.
@@ -352,7 +352,7 @@ If the user says they'd rather do it manually, walk them through these five step
 | 1. Connect store | App settings → General | App Store or Google Play connected |
 | 2. Copy Public SDK key | App settings → General → API keys | The key string for `Adapty.activate()` |
 | 3. Create product(s) | Products page | At least one product created |
-| 4. Create paywall/flow + placement | Paywalls or Flows page, then Placements page | Placement ID for `getFlow()` (iOS Flow Builder) or `getPaywall()` (other approaches) |
+| 4. Create paywall/flow + placement | Paywalls or Flows page, then Placements page | Placement ID for `getFlow()` (Flow Builder) or `getPaywall()` (other approaches) |
 | 5. Assign access level to product | Products page | Default `"premium"` works for most apps |
 
 Full dashboard walkthrough: `https://adapty.io/docs/quickstart.md`
