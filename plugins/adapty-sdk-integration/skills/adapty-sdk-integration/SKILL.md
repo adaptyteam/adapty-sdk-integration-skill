@@ -394,6 +394,20 @@ When a checkpoint fails:
 - **Server notifications not configured** — events won't appear in the dashboard; required before going to production
 - **Wrong SDK key** — using secret key instead of public key in `activate()`
 
+## Closing review
+
+Once the integration is functionally working — the paywall or flow appears and a sandbox purchase completes — always finish with a short closing review before you wrap up. Do this every time you conclude a working integration: it is not optional, and it still applies even if you already glanced at the release notes during the build, or the user seems ready to stop.
+
+Pull the release checklist as your reference:
+
+```bash
+curl -s "https://adapty.io/docs/release-checklist.md?ref=skill"
+```
+
+Treat it as a pointer list, not a script — don't narrate it or walk through it line by line, and don't re-verify things already done. Skim it only to pick out a few still-relevant items and their links (e.g. server notifications, privacy policy, going to production), and offer those to the user as a brief "before you ship" list of suggested next steps. Keep it to a few bullets.
+
+Then continue to the feedback step below (if enabled).
+
 ## Phase 5: Feedback Delivery
 
 **Only run this phase if `feedbackEnabled` is true.** Skip entirely otherwise.
