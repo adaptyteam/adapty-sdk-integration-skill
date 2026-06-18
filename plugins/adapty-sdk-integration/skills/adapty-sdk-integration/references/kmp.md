@@ -140,7 +140,7 @@ Expose this as a singleton (via `object`, a DI framework, or your KMP ViewModel 
 
 First fetch the full installation doc for reference:
 ```bash
-curl -s "https://adapty.io/docs/sdk-installation-kotlin-multiplatform.md?ref=skill"
+curl -s "https://adapty.io/docs/sdk-installation-kotlin-multiplatform.md?ref=skill-<sessionToken>"
 ```
 
 Then guide the user through each step explicitly.

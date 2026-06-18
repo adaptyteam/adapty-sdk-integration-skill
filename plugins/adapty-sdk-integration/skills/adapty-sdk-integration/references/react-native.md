@@ -205,7 +205,7 @@ First fetch the full installation docs for reference:
 
 ```bash
 # Fetch both — you'll need both for Expo vs bare RN detection
-curl -s "https://adapty.io/docs/sdk-installation-react-native-pure.md?ref=skill"
+curl -s "https://adapty.io/docs/sdk-installation-react-native-pure.md?ref=skill-<sessionToken>"
 curl -s https://adapty.io/docs/sdk-installation-react-native-expo.md
 ```
 

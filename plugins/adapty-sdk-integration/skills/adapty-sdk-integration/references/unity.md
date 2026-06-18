@@ -198,7 +198,7 @@ Attach `AdaptyService` to a persistent `GameObject` in your first scene (e.g., a
 
 First fetch the full installation doc for reference:
 ```bash
-curl -s "https://adapty.io/docs/sdk-installation-unity.md?ref=skill"
+curl -s "https://adapty.io/docs/sdk-installation-unity.md?ref=skill-<sessionToken>"
 ```
 
 Then guide the user through each step explicitly.
