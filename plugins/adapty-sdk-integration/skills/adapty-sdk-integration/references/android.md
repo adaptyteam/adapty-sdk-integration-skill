@@ -159,13 +159,17 @@ Get the latest SDK version badge from:
 https://github.com/adaptyteam/AdaptySDK-Android/releases
 ```
 
+**Choose the version:**
+- **Flow Builder (`paywallApproach == "flow_builder"`):** Flow Builder requires Adapty Android SDK **v4+**, which is currently a **pre-release (beta)**. Gradle does **not** resolve pre-release versions through dynamic version ranges (`+` / `latest.release`), so pin the exact version — set the `adapty-bom` to `4.0.0-beta.1`. The BOM resolves the matching `android-sdk` and `android-ui` versions for you. See [Migrate Adapty Android SDK to v4](https://adapty.io/docs/migration-to-android-sdk-v4.md).
+- **Custom paywall or Observer mode:** use the latest stable version.
+
 **Groovy DSL (`build.gradle`):**
 ```groovy
 dependencies {
-    implementation platform('io.adapty:adapty-bom:3.x.x')  // replace with latest version
+    implementation platform('io.adapty:adapty-bom:3.x.x')  // latest stable; for Flow Builder use 4.0.0-beta.1
     implementation 'io.adapty:android-sdk'
 
-    // Only add if using Paywall Builder:
+    // Only add if using Flow Builder or Paywall Builder:
     implementation 'io.adapty:android-ui'
 }
 ```
@@ -173,10 +177,10 @@ dependencies {
 **Kotlin DSL (`build.gradle.kts`):**
 ```kotlin
 dependencies {
-    implementation(platform("io.adapty:adapty-bom:3.x.x"))  // replace with latest version
+    implementation(platform("io.adapty:adapty-bom:3.x.x"))  // latest stable; for Flow Builder use 4.0.0-beta.1
     implementation("io.adapty:android-sdk")
 
-    // Only add if using Paywall Builder:
+    // Only add if using Flow Builder or Paywall Builder:
     implementation("io.adapty:android-ui")
 }
 ```
@@ -260,7 +264,7 @@ The SDK key comes from `AppConstants` — already set in the recommended archite
 
 Choose the section matching the user's paywall approach.
 
-### Paywall Builder
+### Flow Builder
 
 Read before writing code:
 ```
@@ -271,37 +275,40 @@ https://adapty.io/docs/android-handling-events.md
 https://adapty.io/docs/android-handle-paywall-actions.md
 ```
 
-**Required call signature** — always use a string placement ID:
+**v4 API names:** Flow Builder uses the new `getFlow` / `AdaptyFlow` / `getFlowConfiguration` / `AdaptyFlowView` / `AdaptyFlowScreen` family. The same APIs also render existing Paywall Builder paywalls — no dashboard changes are required for users migrating from Paywall Builder.
+
+**Required call signature** — pass `locale` to `getFlowConfiguration` (not to `getFlow`):
 ```kotlin
-// Correct
-Adapty.getPaywall(AppConstants.PLACEMENT_ID) { result ->
+Adapty.getFlow(AppConstants.PLACEMENT_ID) { result ->
     if (result is AdaptyResult.Success) {
-        val paywall = result.value
+        val flow = result.value
 
-        if (!paywall.hasViewConfiguration) return@getPaywall
+        if (!flow.hasViewConfiguration) return@getFlow
 
-        AdaptyUI.getViewConfiguration(paywall) { configResult ->
+        AdaptyUI.getFlowConfiguration(flow, locale = "en") { configResult ->
             if (configResult is AdaptyResult.Success) {
-                val viewConfiguration = configResult.value
-                // display the paywall
-                val paywallView = AdaptyUI.getPaywallView(
+                val flowConfiguration = configResult.value
+                // display the flow
+                val flowView = AdaptyUI.getFlowView(
                     activity,
-                    viewConfiguration,
+                    flowConfiguration,
                     null, // null = auto-fetch products
                     eventListener,
                 )
-                setContentView(paywallView)
+                setContentView(flowView)
             }
         }
     }
 }
 ```
 
-**Checkpoint:** Paywall appears on screen with configured products. Tapping a product triggers the Google Play sandbox purchase dialog.
+**Renamed callbacks:** the event listener is now `AdaptyFlowEventListener` (was `AdaptyUiEventListener`) — extend `AdaptyFlowDefaultEventListener` for no-op defaults. Its lifecycle callbacks `onPaywallShown` / `onPaywallClosed` are now `onFlowShown` / `onFlowClosed`, and `onRenderingError` is now `onError`. The other callbacks are unchanged, and products are still `AdaptyPaywallProduct`.
 
-**Gotcha:** Blank paywall or `getPaywall` returns error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned.
+**Checkpoint:** Flow appears on screen with configured products. Tapping a product triggers the Google Play sandbox purchase dialog.
 
-**Gotcha:** `hasViewConfiguration` is `false` → the **Show on device** toggle in the Paywall Builder is off. Tell the user to enable it in the dashboard.
+**Gotcha:** Blank flow or `getFlow` returns error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned.
+
+**Gotcha:** `hasViewConfiguration` is `false` → the **Show on device** toggle in the Flow Builder is off. Tell the user to enable it in the dashboard.
 
 ### Custom paywall (manual)
 
@@ -316,10 +323,10 @@ https://adapty.io/docs/android-restore-purchase.md
 
 **Required call signature:**
 ```kotlin
-Adapty.getPaywall(AppConstants.PLACEMENT_ID) { result ->
+Adapty.getFlow(AppConstants.PLACEMENT_ID) { result ->
     if (result is AdaptyResult.Success) {
-        val paywall = result.value
-        Adapty.getPaywallProducts(paywall) { productResult ->
+        val flow = result.value
+        Adapty.getPaywallProducts(flow) { productResult ->
             if (productResult is AdaptyResult.Success) {
                 val products = productResult.value
                 // build your custom paywall UI with products
@@ -329,16 +336,18 @@ Adapty.getPaywall(AppConstants.PLACEMENT_ID) { result ->
 }
 ```
 
+**v4 note:** Even for custom paywalls, the v4 SDK uses `getFlow` / `AdaptyFlow` for the fetch — but products are still `AdaptyPaywallProduct`, and `getPaywallProducts(flow)` is the right call to fetch them.
+
 **Checkpoint:** Custom paywall UI shows products fetched from Adapty. Tapping a product triggers the Google Play sandbox purchase dialog. A restore button calls `Adapty.restorePurchases()`.
 
 **Gotcha:** Empty products array → paywall in the dashboard has no products assigned, or placement has no audience.
 
 ### Observer mode *(not recommended)*
 
-> **When to use:** Only if replacing the existing Google Play Billing infrastructure is not feasible (e.g., deeply embedded legacy code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new projects or projects where purchases aren't yet implemented, use Paywall Builder or Custom paywall instead.
+> **When to use:** Only if replacing the existing Google Play Billing infrastructure is not feasible (e.g., deeply embedded legacy code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new projects or projects where purchases aren't yet implemented, use Flow Builder or Custom paywall instead.
 >
 > **Limitations:**
-> - No paywall management or Paywall Builder support
+> - No paywall management, Flow Builder, or Paywall Builder support
 > - No A/B testing on paywalls or offers
 > - Transactions must be manually reported to Adapty after each purchase
 > - Subscription events depend on Google Play Real-Time Developer Notifications (RTDN) being configured
@@ -461,7 +470,7 @@ https://adapty.io/docs/android-quickstart-identify.md
 ```
 
 **What to do:**
-- Call `Adapty.identify("your-user-id")` after `activate()` and before `getPaywall()`
+- Call `Adapty.identify("your-user-id")` after `activate()` and before `getFlow()`
 - For apps where users can purchase before logging in, call `identify()` at login — Adapty handles profile merging automatically
 - Call `Adapty.logout()` when users log out
 
@@ -492,7 +501,7 @@ AdaptyConfig.Builder(AppConstants.ADAPTY_PUBLIC_KEY)
 
 **Checkpoint:** After calling `identify("your-user-id")`, the Adapty dashboard **Profiles** section shows the custom user ID on the profile.
 
-**Gotcha:** Profile shows anonymous ID even after `identify()` → `identify()` was called after `getPaywall()`, so the purchase was attributed to the anonymous profile. Order: `activate()` → `identify()` → `getPaywall()`.
+**Gotcha:** Profile shows anonymous ID even after `identify()` → `identify()` was called after `getFlow()`, so the purchase was attributed to the anonymous profile. Order: `activate()` → `identify()` → `getFlow()`.
 
 ---
 
@@ -536,7 +545,7 @@ Do not proceed to the manual checklist until the build is clean. Do not hand off
 Read and follow `references/testing-setup-android.md` (in this skill directory). It contains the full step-by-step checklist for:
 1. Creating products in Google Play Console (subscriptions or one-time products)
 2. Connecting Google Play to Adapty (Service Account key, Real-Time Developer Notifications)
-3. Designing the paywall in Paywall Builder — template, AI generator, or from scratch *(Paywall Builder only)*
+3. Designing the flow in Flow Builder — template, AI generator, or from scratch *(Flow Builder only)*
 4. Sandbox testing — adding a license tester, making a test purchase on a real device or emulator, verifying results in the Adapty dashboard Event Feed
 
 Present the checklist to the user with the exact product IDs from Phase 3 already filled in.
