@@ -302,7 +302,7 @@ Adapty.getFlow(AppConstants.PLACEMENT_ID) { result ->
 }
 ```
 
-**Renamed callbacks:** the `AdaptyUiEventListener` lifecycle callbacks `onPaywallShown` / `onPaywallClosed` are now `onFlowShown` / `onFlowClosed`. The other callbacks are unchanged, and products are still `AdaptyPaywallProduct`.
+**Renamed callbacks:** the event listener is now `AdaptyFlowEventListener` (was `AdaptyUiEventListener`) — extend `AdaptyFlowDefaultEventListener` for no-op defaults. Its lifecycle callbacks `onPaywallShown` / `onPaywallClosed` are now `onFlowShown` / `onFlowClosed`, and `onRenderingError` is now `onError`. The other callbacks are unchanged, and products are still `AdaptyPaywallProduct`.
 
 **Checkpoint:** Flow appears on screen with configured products. Tapping a product triggers the Google Play sandbox purchase dialog.
 
