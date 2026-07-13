@@ -4,9 +4,9 @@ Platform: React Native · Language: TypeScript / JavaScript · Package manager: 
 
 ## Prerequisites
 
-- iOS 13.0+ (iOS 15.0+ required for Paywall Builder paywalls)
+- iOS 15.0+ (SDK v4 raises the minimum deployment target from 13.0)
 - Android with Google Play Billing Library (Adapty ships v7.0.0 by default; compatible up to 8.x)
-- React Native 0.68+ (or Expo with Dev Client — Expo Go only supports mock mode)
+- React Native 0.75+ for SDK v4 (or Expo with Dev Client — Expo Go only supports mock mode); older React Native versions must stay on `react-native-adapty` 3.x (no Flow Builder)
 - Node.js with npm or yarn
 
 ---
@@ -237,6 +237,26 @@ npx expo install react-native-adapty
 npx expo prebuild
 ```
 
+**iOS native SDKs come through Swift Package Manager (v4+):** starting with v4, the native `Adapty`, `AdaptyUI`, and `AdaptyPlugin` SDKs are no longer pulled as CocoaPods sub-dependencies — the podspec pulls them through SPM. This requires **React Native 0.75 or later** and dynamic frameworks:
+
+- **Bare React Native** — add dynamic frameworks to the `ios/Podfile` target, then reinstall pods. If the Podfile has explicit `pod 'Adapty'`, `pod 'AdaptyUI'`, or `pod 'AdaptyPlugin'` lines, remove them first.
+  ```ruby
+  # ios/Podfile
+  use_frameworks! :linkage => :dynamic
+  ```
+  ```bash
+  cd ios && pod install --repo-update
+  ```
+- **Expo** — add the [`expo-build-properties`](https://docs.expo.dev/versions/latest/sdk/build-properties/) plugin to `app.json` (or `app.config.js`) with `"ios": { "useFrameworks": "dynamic" }`, then:
+  ```bash
+  npx expo install expo-build-properties
+  npx expo prebuild --clean
+  ```
+
+**Gotcha:** `pod install` fails with an `spm_dependency` error → React Native is older than 0.75. Upgrade React Native first, or stay on `react-native-adapty` 3.x (no Flow Builder).
+
+**Gotcha:** Build errors after switching to dynamic frameworks → another library doesn't support modular headers, or the project uses Flipper (incompatible). See [Migrate Adapty React Native SDK to v4](https://adapty.io/docs/migration-to-react-native-sdk-v4.md).
+
 For Android with React Native < 0.73, also update `/android/build.gradle`:
 ```groovy
 // /android/build.gradle
@@ -323,7 +343,7 @@ adapty.activate(ADAPTY_PUBLIC_KEY, {
 
 Choose the section matching the user's paywall approach.
 
-### Paywall Builder
+### Flow Builder
 
 Read before writing code:
 ```bash
@@ -334,34 +354,31 @@ curl -s https://adapty.io/docs/react-native-handling-events-1.md
 curl -s https://adapty.io/docs/react-native-handle-paywall-actions.md
 ```
 
+**v4 API names:** Flow Builder uses the new `getFlow` / `AdaptyFlow` / `createFlowView` / `AdaptyFlowView` / `FlowEventHandlers` family. The same APIs also render existing Paywall Builder paywalls — no dashboard changes are required for users migrating from Paywall Builder. `getFlow` takes no `locale` parameter (the locale resolves automatically on render), and `hasViewConfiguration` no longer exists on the model — do not check it. The lifecycle handlers `onPaywallShown` / `onPaywallClosed` are now `onAppeared` / `onDisappeared`, and `onRenderingFailed` is now `onError`; the other event handlers keep their v3 names, and products are still `AdaptyPaywallProduct`.
+
 **Fetch and display pattern:**
 
 ```typescript
-import { adapty, createPaywallView, AdaptyPaywallView, EventHandlers } from 'react-native-adapty';
+import { adapty, createFlowView, AdaptyFlowView } from 'react-native-adapty';
+import type { FlowEventHandlers } from 'react-native-adapty';
 import { Linking, useCallback } from 'react-native';
 import { PLACEMENT_ID } from '../constants';
 
-// 1. Fetch the paywall
-const paywall = await adapty.getPaywall(PLACEMENT_ID);
+// 1. Fetch the flow
+const flow = await adapty.getFlow(PLACEMENT_ID);
 
-// 2. Verify it has a view configuration (Paywall Builder toggle must be ON in dashboard)
-if (!paywall.hasViewConfiguration) {
-  // Fall back to custom paywall UI
-  return;
-}
-
-// 3a. Display as a React component (embed in your tree)
-function MyPaywallScreen({ paywall }) {
-  const onCloseButtonPress = useCallback<EventHandlers['onCloseButtonPress']>(() => {
+// 2a. Display as a React component (embed in your tree)
+function MyFlowScreen({ flow }) {
+  const onCloseButtonPress = useCallback<FlowEventHandlers['onCloseButtonPress']>(() => {
     // navigate back
   }, []);
-  const onUrlPress = useCallback<EventHandlers['onUrlPress']>((url) => {
+  const onUrlPress = useCallback<FlowEventHandlers['onUrlPress']>((url) => {
     Linking.openURL(url);
   }, []);
 
   return (
-    <AdaptyPaywallView
-      paywall={paywall}
+    <AdaptyFlowView
+      flow={flow}
       style={{ flex: 1 }}
       onCloseButtonPress={onCloseButtonPress}
       onUrlPress={onUrlPress}
@@ -369,16 +386,16 @@ function MyPaywallScreen({ paywall }) {
   );
 }
 
-// 3b. Display modally (alternative)
-const view = await createPaywallView(paywall);
-await view.present(); // Each view is single-use; call createPaywallView again to re-show
+// 2b. Display modally (alternative)
+const view = await createFlowView(flow);
+await view.present(); // Each view is single-use; call createFlowView again to re-show
 ```
 
-**Checkpoint:** Paywall appears on screen with configured products. Tapping a product triggers the sandbox purchase dialog (App Store sandbox on iOS, Google Play test on Android).
+**Checkpoint:** Flow appears on screen with configured products. Tapping a product triggers the sandbox purchase dialog (App Store sandbox on iOS, Google Play test on Android).
 
-**Gotcha:** Blank paywall or `getPaywall` returns error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned.
+**Gotcha:** Blank flow or `getFlow` returns error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned.
 
-**Gotcha:** Paywall builder shows empty → **Show on device** toggle in the Paywall Builder is off. Turn it on.
+**Gotcha:** Flow shows empty → **Show on device** toggle in the Flow Builder is off. Turn it on.
 
 ### Custom paywall (manual)
 
@@ -397,9 +414,9 @@ curl -s https://adapty.io/docs/react-native-restore-purchase.md
 import { adapty } from 'react-native-adapty';
 import { PLACEMENT_ID } from '../constants';
 
-// Fetch paywall and products
-const paywall = await adapty.getPaywall(PLACEMENT_ID);
-const products = await adapty.getPaywallProducts(paywall);
+// Fetch the flow and its products
+const flow = await adapty.getFlow(PLACEMENT_ID);
+const products = await adapty.getPaywallProducts(flow);
 
 // Make a purchase
 try {
@@ -418,16 +435,18 @@ try {
 }
 ```
 
+**v4 note:** Even for custom paywalls, the v4 SDK uses `getFlow` / `AdaptyFlow` for the fetch — but products are still `AdaptyPaywallProduct`, and `getPaywallProducts(flow)` is the right call to fetch them.
+
 **Checkpoint:** Custom paywall UI shows products fetched from Adapty. Tapping a product triggers the sandbox purchase dialog. A restore button calls `restorePurchases()`.
 
 **Gotcha:** Empty products array → paywall in the dashboard has no products assigned, or placement has no audience.
 
 ### Observer mode *(not recommended)*
 
-> **When to use:** Only if replacing the existing purchase infrastructure is not feasible (e.g., deeply embedded legacy code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new projects, use Paywall Builder or Custom paywall instead.
+> **When to use:** Only if replacing the existing purchase infrastructure is not feasible (e.g., deeply embedded legacy code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new projects, use Flow Builder or Custom paywall instead.
 >
 > **Limitations:**
-> - No paywall management or Paywall Builder support
+> - No paywall management, Flow Builder, or Paywall Builder support
 > - No A/B testing on paywalls or offers
 > - Transactions must be manually reported to Adapty after each purchase
 > - Subscription events depend on App Store Server Notifications (iOS) and RTDN (Android) being configured
@@ -587,7 +606,7 @@ async function handleLogout() {
 
 **Checkpoint:** After calling `identify("your-user-id")`, the Adapty dashboard **Profiles** section shows the custom user ID on the profile.
 
-**Gotcha:** Profile shows anonymous ID even after `identify()` → `identify()` was called after `getPaywall()`, so the purchase was attributed to the anonymous profile. Correct order: `activate()` → `identify()` → `getPaywall()`.
+**Gotcha:** Profile shows anonymous ID even after `identify()` → `identify()` was called after `getFlow()`, so the purchase was attributed to the anonymous profile. Correct order: `activate()` → `identify()` → `getFlow()`.
 
 **Gotcha:** After `identify()`, always re-request paywalls and products — the identified profile may have different offerings, A/B test variants, or access levels than the anonymous profile had.
 
@@ -649,7 +668,7 @@ Testing in-app purchases requires platform setup that cannot be done in code. Fo
 Read and follow the iOS sandbox testing setup. Required steps:
 1. App Store Connect: create App ID and In-App Purchase products (use product IDs from Phase 3)
 2. Connect App Store to Adapty: Bundle ID, In-App Purchase Key, App Store Server Notifications
-3. Design the paywall in Paywall Builder (if using Paywall Builder mode)
+3. Design the flow in Flow Builder (if using Flow Builder mode)
 4. Create a sandbox test account in App Store Connect → Users and Access → Sandbox Testers
 5. On device: Settings → App Store → Sandbox Account → sign in with test account
 6. Make a test purchase, verify it appears in Adapty dashboard **Event Feed**
