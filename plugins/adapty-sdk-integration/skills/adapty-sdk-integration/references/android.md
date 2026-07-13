@@ -160,13 +160,13 @@ https://github.com/adaptyteam/AdaptySDK-Android/releases
 ```
 
 **Choose the version:**
-- **Flow Builder (`paywallApproach == "flow_builder"`):** Flow Builder requires Adapty Android SDK **v4+**, which is currently a **pre-release (beta)**. Gradle does **not** resolve pre-release versions through dynamic version ranges (`+` / `latest.release`), so pin the exact version — set the `adapty-bom` to `4.0.0-beta.1`. The BOM resolves the matching `android-sdk` and `android-ui` versions for you. See [Migrate Adapty Android SDK to v4](https://adapty.io/docs/migration-to-android-sdk-v4.md).
+- **Flow Builder (`paywallApproach == "flow_builder"`):** Flow Builder requires Adapty Android SDK **v4+** — set the `adapty-bom` to `4.0.0` or later. The BOM resolves the matching `android-sdk` and `android-ui` versions for you. See [Migrate Adapty Android SDK to v4](https://adapty.io/docs/migration-to-android-sdk-v4.md).
 - **Custom paywall or Observer mode:** use the latest stable version.
 
 **Groovy DSL (`build.gradle`):**
 ```groovy
 dependencies {
-    implementation platform('io.adapty:adapty-bom:3.x.x')  // latest stable; for Flow Builder use 4.0.0-beta.1
+    implementation platform('io.adapty:adapty-bom:3.x.x')  // latest stable; for Flow Builder use 4.0.0 or later
     implementation 'io.adapty:android-sdk'
 
     // Only add if using Flow Builder or Paywall Builder:
@@ -177,7 +177,7 @@ dependencies {
 **Kotlin DSL (`build.gradle.kts`):**
 ```kotlin
 dependencies {
-    implementation(platform("io.adapty:adapty-bom:3.x.x"))  // latest stable; for Flow Builder use 4.0.0-beta.1
+    implementation(platform("io.adapty:adapty-bom:3.x.x"))  // latest stable; for Flow Builder use 4.0.0 or later
     implementation("io.adapty:android-sdk")
 
     // Only add if using Flow Builder or Paywall Builder:

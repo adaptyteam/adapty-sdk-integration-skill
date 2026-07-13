@@ -126,7 +126,7 @@ Use `AskUserQuestion` for all three together in one call:
 
 1. **Paywall approach** — which do they want?
    - **Paywall Builder** (recommended): Adapty renders paywalls in a no-code visual editor; no paywall UI to build
-     - **iOS and Android:** Present this option as **Flow Builder** instead. Flow Builder is the v4 successor to Paywall Builder and also supports onboarding flows. The `paywallApproach` state value for this choice on iOS and Android is `flow_builder`. Note: Flow Builder requires the iOS or Android SDK **v4+**, which is currently a **pre-release (beta)** — at install time the exact version must be pinned (`4.0.0-beta.1`); see Stage 1 in `references/ios.md` or `references/android.md`.
+     - **iOS, Android, and React Native:** Present this option as **Flow Builder** instead. Flow Builder is the v4 successor to Paywall Builder and also supports onboarding flows. The `paywallApproach` state value for this choice on these platforms is `flow_builder`. Note: Flow Builder requires the platform SDK **v4+**; see Stage 1 in `references/ios.md`, `references/android.md`, or `references/react-native.md`.
    - **Custom paywall**: User builds their own paywall UI; Adapty fetches products and handles purchases
    - **Observer mode** *(not recommended for new projects)*: Keep existing StoreKit/Billing purchase infrastructure unchanged; Adapty only tracks events. Limitations: no paywall management, no A/B testing, manual transaction reporting required. Only suitable if replacing a purchase system is not feasible.
 
@@ -142,7 +142,7 @@ Use `AskUserQuestion` for all three together in one call:
    - **I already have an app** — you'll fetch the list in Phase 3 and ask them to pick one
    - **Create a new app** — you'll create one in Phase 3
 
-**State update:** Set `paywallApproach` to `paywall_builder` (or `flow_builder` on iOS or Android), `custom`, or `observer`. Set `integrations` to the array of selected integration keys (e.g. `["amplitude", "appsflyer"]`), or `[]` if none. Set `appPreference` to `existing` or `new`. Set `phasesCompleted = 2`.
+**State update:** Set `paywallApproach` to `paywall_builder` (or `flow_builder` on iOS, Android, or React Native), `custom`, or `observer`. Set `integrations` to the array of selected integration keys (e.g. `["amplitude", "appsflyer"]`), or `[]` if none. Set `appPreference` to `existing` or `new`. Set `phasesCompleted = 2`.
 
 Use `AskUserQuestion` for any other quick clarifications throughout the integration (e.g., "Did the build succeed?", "What's your App Store product ID?"). Never ask for values that can be retrieved via CLI.
 
@@ -303,7 +303,7 @@ Then use `AskUserQuestion` to present your findings and confirm. Example:
 
 Then branch by `paywallApproach`:
 
-#### `paywallApproach == "flow_builder"` (Flow Builder, iOS or Android) — dashboard path
+#### `paywallApproach == "flow_builder"` (Flow Builder) — dashboard path
 
 The CLI cannot create flows or attach them to placements — Flow Builder is dashboard-only. Skip the CLI commands below. For each confirmed location, the user creates a flow and attaches it to a placement in the dashboard.
 
