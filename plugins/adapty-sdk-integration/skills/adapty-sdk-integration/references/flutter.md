@@ -4,8 +4,8 @@ Platform: Flutter · Language: Dart · Targets: iOS and Android from one codebas
 
 ## Prerequisites
 
-- Flutter SDK (stable channel)
-- iOS 13.0+ (iOS 15.0+ for Paywall Builder)
+- Flutter 3.32.0+ / Dart 3.8.0+ (stable channel) — required by SDK v4
+- iOS 15.0+ (SDK v4 raises the minimum deployment target from 13.0); building for iOS requires Xcode 26+
 - Android: Google Play Billing Library up to 8.x (Adapty defaults to 7.0.0)
 - Dart null safety enabled
 - `pubspec.yaml` in project root
@@ -204,7 +204,7 @@ Add Adapty to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  adapty_flutter: ^3.10.0   # replace with latest version from pub.dev
+  adapty_flutter: ^4.0.0   # replace with latest version from pub.dev
 ```
 
 Then run:
@@ -214,6 +214,14 @@ flutter pub get
 ```
 
 Check pub.dev for the latest release: `https://pub.dev/packages/adapty_flutter`
+
+**iOS native SDK comes through Swift Package Manager (v4+):** starting with v4, the native iOS SDK is no longer distributed through CocoaPods — the plugin pulls it through SPM only. Flutter 3.44+ enables SPM support by default; on Flutter 3.32–3.43, enable it once:
+
+```bash
+flutter config --enable-swift-package-manager
+```
+
+**Gotcha:** iOS build fails to resolve the Adapty native SDK → Swift Package Manager support is off (Flutter 3.32–3.43); run the config command above and rebuild. Flutter older than 3.32 must stay on `adapty_flutter` 3.x (no Flow Builder).
 
 ### Step 2: Import and activate the SDK
 
@@ -252,7 +260,7 @@ Future<void> main() async {
 }
 ```
 
-**If using Paywall Builder, also activate AdaptyUI:**
+**If using Flow Builder, also activate AdaptyUI:**
 
 ```dart
 await Adapty().activate(
@@ -288,7 +296,7 @@ The SDK key comes from `AppConstants` — already set in the recommended archite
 
 Choose the section matching the user's paywall approach.
 
-### Paywall Builder
+### Flow Builder
 
 Read before writing code:
 ```bash
@@ -299,24 +307,25 @@ curl -s https://adapty.io/docs/flutter-handling-events.md
 curl -s https://adapty.io/docs/flutter-handle-paywall-actions.md
 ```
 
-**Required pattern — get paywall, create view, present:**
+**v4 API names:** Flow Builder uses the new `getFlow` / `AdaptyFlow` / `createFlowView` / `AdaptyUIFlowView` / `AdaptyUIFlowsEventsObserver` family. The same APIs also render existing Paywall Builder paywalls — no dashboard changes are required for users migrating from Paywall Builder. You no longer pass a `locale` when fetching (localization resolves automatically on render), the observer registers via `setFlowsEventsObserver`, and all `paywallViewDid*` callbacks are now `flowViewDid*`. Products are still `AdaptyPaywallProduct`.
+
+**Required pattern — get flow, create view, present:**
 
 ```dart
 import 'package:adapty_flutter/adapty_flutter.dart';
 import 'app_constants.dart';
 
-Future<void> showPaywall(BuildContext context) async {
+Future<void> showFlow(BuildContext context) async {
   try {
-    // 1. Fetch paywall by placement ID
-    final paywall = await Adapty().getPaywall(
+    // 1. Fetch the flow by placement ID
+    final flow = await Adapty().getFlow(
       placementId: AppConstants.placementId,
-      locale: 'en',
     );
 
-    // 2. Create the paywall view (only works if paywall was built in Paywall Builder)
-    final view = await AdaptyUI().createPaywallView(paywall: paywall);
+    // 2. Create the flow view (only works if the flow has an on-device design)
+    final view = await AdaptyUI().createFlowView(flow: flow);
 
-    // 3. Present the paywall
+    // 3. Present the flow
     await view.present();
   } on AdaptyError catch (e) {
     debugPrint('Adapty error ${e.code}: ${e.message}');
@@ -326,42 +335,42 @@ Future<void> showPaywall(BuildContext context) async {
 }
 ```
 
-**Handling close and URL button actions:**
+**Handling events — three callbacks are required (the observer won't compile without them):**
 
 ```dart
-class MyPaywallScreen extends StatefulWidget { ... }
-
-class _MyPaywallScreenState extends State<MyPaywallScreen>
-    implements AdaptyUIPaywallsEventsObserver {
-
+class MyFlowsObserver extends AdaptyUIFlowsEventsObserver {
   @override
-  void initState() {
-    super.initState();
-    AdaptyUI().setPaywallsEventsObserver(this);
-  }
-
-  @override
-  void paywallViewDidPerformAction(
-      AdaptyUIPaywallView view, AdaptyUIAction action) {
-    switch (action) {
-      case const CloseAction():
-      case const AndroidSystemBackAction():
-        view.dismiss();
-        break;
-      case OpenUrlAction(url: final url):
-        // Launch URL with url_launcher
-        launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-        break;
+  void flowViewDidFinishPurchase(AdaptyUIFlowView view,
+      AdaptyPaywallProduct product, AdaptyPurchaseResult purchaseResult) {
+    // No auto-dismiss in v4 — dismiss yourself, or do nothing to let the flow continue
+    if (purchaseResult is! AdaptyPurchaseResultUserCancelled) {
+      view.dismiss();
     }
   }
+
+  @override
+  void flowViewDidFinishRestore(AdaptyUIFlowView view, AdaptyProfile profile) {
+    // check access level, then dismiss if appropriate
+    view.dismiss();
+  }
+
+  @override
+  void flowViewDidReceiveError(AdaptyUIFlowView view, AdaptyError error) {
+    debugPrint('Flow view error ${error.code}: ${error.message}');
+  }
 }
+
+// Register before presenting any flow view:
+AdaptyUI().setFlowsEventsObserver(MyFlowsObserver());
 ```
 
-**Checkpoint:** Paywall appears on screen with configured products. Tapping a product triggers the sandbox purchase dialog.
+All other observer callbacks are optional. The default `flowViewDidPerformAction` already dismisses on `CloseAction` and opens URLs natively; the Android system back button no longer closes a flow by default — override `flowViewDidPerformAction` and handle `AndroidSystemBackAction` if the user wants that behavior back.
 
-**Gotcha:** Blank paywall or `getPaywall` returns error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned.
+**Checkpoint:** Flow appears on screen with configured products. Tapping a product triggers the sandbox purchase dialog.
 
-**Gotcha:** `hasViewConfiguration` is false → the paywall was not created in Paywall Builder, or the **Show on device** toggle is off in the builder.
+**Gotcha:** Blank flow or `getFlow` returns error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned.
+
+**Gotcha:** `hasViewConfiguration` is false → the flow has no on-device design, or the **Show on device** toggle is off in the Flow Builder.
 
 ### Custom paywall (manual)
 
@@ -374,7 +383,7 @@ curl -s https://adapty.io/docs/flutter-making-purchases.md
 curl -s https://adapty.io/docs/flutter-restore-purchase.md
 ```
 
-**Fetch paywall and products:**
+**Fetch the flow and its products:**
 
 ```dart
 import 'package:adapty_flutter/adapty_flutter.dart';
@@ -382,16 +391,18 @@ import 'app_constants.dart';
 
 Future<void> loadPaywallData() async {
   try {
-    final paywall = await Adapty().getPaywall(
+    final flow = await Adapty().getFlow(
       placementId: AppConstants.placementId,
     );
-    final products = await Adapty().getPaywallProducts(paywall: paywall);
+    final products = await Adapty().getPaywallProducts(flow: flow);
     // Pass products to your custom paywall UI widget
   } on AdaptyError catch (e) {
     debugPrint('Adapty error ${e.code}: ${e.message}');
   }
 }
 ```
+
+**v4 note:** Even for custom paywalls, the v4 SDK uses `getFlow` / `AdaptyFlow` for the fetch — but products are still `AdaptyPaywallProduct`, and `getPaywallProducts(flow: flow)` is the right call to fetch them.
 
 **Make a purchase:**
 
@@ -433,10 +444,10 @@ Future<void> restorePurchases() async {
 
 ### Observer mode *(not recommended)*
 
-> **When to use:** Only if replacing the existing purchase infrastructure is not feasible (e.g., deeply embedded legacy code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new projects or projects where purchases aren't yet implemented, use Paywall Builder or Custom paywall instead.
+> **When to use:** Only if replacing the existing purchase infrastructure is not feasible (e.g., deeply embedded legacy code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new projects or projects where purchases aren't yet implemented, use Flow Builder or Custom paywall instead.
 >
 > **Limitations:**
-> - No paywall management or Paywall Builder support
+> - No paywall management, Flow Builder, or Paywall Builder support
 > - No A/B testing on paywalls or offers
 > - Transactions must be manually reported to Adapty after each purchase
 > - Subscription events depend on App Store / Google Play Server Notifications being configured
@@ -575,7 +586,7 @@ curl -s https://adapty.io/docs/flutter-quickstart-identify.md
 
 **What to do:**
 - If the user ID is known at launch, pass it to `activate()` via `..withCustomerUserId(userId)` — already covered in Stage 1
-- If users log in after launch, call `Adapty().identify()` after `activate()` and before `getPaywall()`
+- If users log in after launch, call `Adapty().identify()` after `activate()` and before `getFlow()`
 - Call `Adapty().logout()` when users log out
 
 **Identify after login:**
@@ -606,7 +617,7 @@ Future<void> onUserLogout() async {
 
 **Checkpoint:** After calling `Adapty().identify("your-user-id")`, the Adapty dashboard **Profiles** section shows the custom user ID on the profile.
 
-**Gotcha:** Profile shows anonymous ID even after `identify()` → `identify()` was called after `getPaywall()`, so the purchase was attributed to the anonymous profile. Order: `activate()` → `identify()` → `getPaywall()`.
+**Gotcha:** Profile shows anonymous ID even after `identify()` → `identify()` was called after `getFlow()`, so the purchase was attributed to the anonymous profile. Order: `activate()` → `identify()` → `getFlow()`.
 
 ---
 
@@ -655,7 +666,7 @@ Do not proceed to the manual checklist until both builds are clean. Do not hand 
 Read and follow `references/testing-setup-ios.md` (in this skill directory). It contains the full step-by-step checklist for:
 1. Creating products in App Store Connect
 2. Connecting App Store to Adapty (Bundle ID, In-App Purchase Key, Server Notifications)
-3. Designing the paywall in Paywall Builder — template, AI generator, or from scratch *(Paywall Builder only)*
+3. Designing the flow in Flow Builder — template, AI generator, or from scratch *(Flow Builder only)*
 4. Sandbox testing — creating a test account, switching device to sandbox, making a test purchase, verifying results
 
 Present the iOS checklist to the user with the exact product IDs from Phase 3 already filled in.
