@@ -5,9 +5,10 @@ Platform: Unity · Language: C# · Targets: iOS and Android from one project
 ## Prerequisites
 
 - Unity 2020.3 LTS or later
-- iOS 13.0+ (iOS 15.0+ for Paywall Builder)
+- iOS deployment target 15.0+ (enforced by an SDK build validator when building for iOS)
 - Android with Google Play Billing Library support
-- External Dependency Manager for Unity (EDM4U / unity-jar-resolver)
+- External Dependency Manager for Unity (EDM4U / unity-jar-resolver) **1.2.187 or later** — earlier versions can't resolve the iOS Swift Package dependency
+- SDK v4 is currently a pre-release — pin the exact version tag (see Stage 1)
 
 ---
 
@@ -125,14 +126,16 @@ public static class UserManager
 
 Central service that:
 - Lives on a `DontDestroyOnLoad` `GameObject` (persists across scene loads)
-- Implements `AdaptyEventListener` for real-time subscription updates (no polling needed)
+- Implements `IAdaptyEventListener` for real-time subscription updates (no polling needed)
 - Exposes a clean `IsPremiumUser` property for gating content throughout the game
+
+In SDK v4, listener interfaces follow the C# I-prefix convention (`IAdaptyEventListener`, not `AdaptyEventListener`) — no legacy aliases exist.
 
 ```csharp
 using UnityEngine;
 using AdaptySDK;
 
-public class AdaptyService : MonoBehaviour, AdaptyEventListener
+public class AdaptyService : MonoBehaviour, IAdaptyEventListener
 {
     public static AdaptyService Instance { get; private set; }
 
@@ -203,24 +206,34 @@ curl -s "https://adapty.io/docs/sdk-installation-unity.md?ref=skill-<sessionToke
 
 Then guide the user through each step explicitly.
 
-### Step 1: Import the Adapty `.unitypackage`
+### Step 1: Install the Adapty SDK
 
-Tell the user to do this in Unity Editor:
+SDK v4 is a pre-release — install the exact beta version, not "latest".
+
+**Option A: Unity Package Manager (Git URL)**
+
+1. In Unity Editor: **Window → Package Manager** → **+** → **Add package from git URL...**
+2. Enter the Git URL with the beta tag pinned (instead of the `#upm` branch):
+   ```
+   https://github.com/adaptyteam/AdaptySDK-Unity.git?path=Packages/com.adapty.unity-sdk#4.0.0-beta.1
+   ```
+3. Verify: **Adapty Unity SDK** appears in the Package Manager list.
+
+**Option B: `.unitypackage`**
 
 1. Go to the [Adapty Unity SDK releases page](https://github.com/adaptyteam/AdaptySDK-Unity/tree/main/Releases) on GitHub.
-2. Download the latest `adapty-unity-plugin-*.unitypackage`.
+2. Download `adapty-unity-plugin-4.0.0-beta.1.unitypackage` (the exact v4 beta — check the folder for the latest 4.x tag and use it verbatim).
 3. In Unity Editor: **Assets → Import Package → Custom Package...** → select the downloaded file → click **Import All**.
-4. Verify: `AdaptySDK` folder should appear under **Assets** in the Project window.
 
 ### Step 2: Import the External Dependency Manager (EDM4U)
 
-EDM4U resolves iOS CocoaPods and Android Gradle dependencies automatically.
+EDM4U resolves the iOS Swift Package and Android Gradle dependencies automatically. SDK v4 requires EDM **1.2.187 or later** — the native iOS Adapty SDK is declared as a remote Swift package (no CocoaPods), and earlier EDM versions can't resolve it.
 
 1. Download and import the [External Dependency Manager plugin](https://github.com/googlesamples/unity-jar-resolver) (`.unitypackage`).
-2. After import, resolve dependencies:
-   - **Android:** Assets → External Dependency Manager → Android Resolver → Force Resolve
-   - **iOS:** Assets → External Dependency Manager → iOS Resolver → Install Cocoapods
-3. Verify: No resolver errors appear in the Console.
+2. After import, resolve Android dependencies: **Assets → External Dependency Manager → Android Resolver → Force Resolve**.
+3. iOS needs no resolver step: EDM adds the Adapty Swift package to the Xcode project automatically when Unity builds for iOS. (The `iOS Resolver → Install Cocoapods` step applies to SDK 3.x only.)
+4. Verify: No resolver errors appear in the Console.
+5. Set the iOS deployment target to **15.0 or later** in **Edit → Project Settings → Player → iOS → Other Settings → Target minimum iOS Version**. A build validator in the SDK stops the iOS build otherwise.
 
 ### Step 3: Add Kotlin plugin for Android (required — do not skip)
 
@@ -251,7 +264,7 @@ Without this step, the Android build will crash when displaying a paywall.
 
 The SDK key comes from `AppConstants` — already set up in the recommended architecture step above.
 
-**If using Paywall Builder**, also enable AdaptyUI by adding `.SetActivateUI(true)` to the builder in `AdaptyService.Awake()`:
+**If using Flow Builder**, also enable AdaptyUI by adding `.SetActivateUI(true)` to the builder in `AdaptyService.Awake()`:
 ```csharp
 var builder = new AdaptyConfiguration.Builder(AppConstants.AdaptyPublicKey)
     .SetActivateUI(true)
@@ -270,7 +283,7 @@ var builder = new AdaptyConfiguration.Builder(AppConstants.AdaptyPublicKey)
 
 Choose the section matching the user's paywall approach.
 
-### Paywall Builder
+### Flow Builder
 
 Read before writing code:
 ```bash
@@ -281,41 +294,42 @@ curl -s https://adapty.io/docs/unity-handling-events.md
 curl -s https://adapty.io/docs/unity-handle-paywall-actions.md
 ```
 
+**v4 API names:** Flow Builder uses the new `GetFlow` / `AdaptyFlow` / `CreateFlowView` / `AdaptyUIFlowView` / `IAdaptyFlowsEventsListener` family. The same APIs also render existing Paywall Builder paywalls — no dashboard changes are required for users migrating from Paywall Builder. You no longer pass a `locale` when fetching (localization resolves automatically on render), the listener registers via `Adapty.SetFlowsEventsListener`, all `PaywallViewDid*` callbacks are now `FlowViewDid*`, and `HasViewConfiguration` is gone — `CreateFlowView` returns an error instead when the flow has no on-device design. Products are still `AdaptyPaywallProduct`.
+
+**Behavior notes (differ from v3):**
+- `IAdaptyFlowsEventsListener` is a plain C# interface — implement **all** of its methods (empty bodies are fine for events you don't need).
+- The SDK applies no default behavior to flow events: a successful purchase or an error does **not** dismiss the view — call `view.Dismiss(...)` yourself. Handle `Close`, `SystemBack` (Android back button/gesture), and `OpenUrl` actions in `FlowViewDidPerformAction`.
+- A flow view is single-use: after `Dismiss`, the view is destroyed — call `CreateFlowView` again to present the flow once more.
+
 **Key implementation pattern:**
 
 ```csharp
+using System.Collections.Generic;
 using AdaptySDK;
 using UnityEngine;
 
-public class PaywallPresenter : MonoBehaviour, AdaptyPaywallsEventsListener
+public class FlowPresenter : MonoBehaviour, IAdaptyFlowsEventsListener
 {
     void Start()
     {
-        Adapty.SetPaywallsEventsListener(this);
+        Adapty.SetFlowsEventsListener(this);
     }
 
-    public void ShowPaywall()
+    public void ShowFlow()
     {
-        Adapty.GetPaywall(AppConstants.PlacementId, (paywall, error) =>
+        Adapty.GetFlow(AppConstants.PlacementId, (flow, error) =>
         {
             if (error != null)
             {
-                Debug.LogError($"[Adapty] GetPaywall error: {error.Message}");
+                Debug.LogError($"[Adapty] GetFlow error: {error.Message}");
                 return;
             }
 
-            if (!paywall.HasViewConfiguration)
-            {
-                Debug.LogWarning("[Adapty] Paywall has no view configuration — check that 'Show on device' is enabled in Paywall Builder.");
-                return;
-            }
-
-            var parameters = new AdaptyUICreatePaywallViewParameters();
-            AdaptyUI.CreatePaywallView(paywall, parameters, (view, viewError) =>
+            AdaptyUI.CreateFlowView(flow, (view, viewError) =>
             {
                 if (viewError != null)
                 {
-                    Debug.LogError($"[Adapty] CreatePaywallView error: {viewError.Message}");
+                    Debug.LogError($"[Adapty] CreateFlowView error: {viewError.Message} — the flow has no on-device design, or 'Show on device' is off in Flow Builder.");
                     return;
                 }
                 view.Present(null);
@@ -323,29 +337,53 @@ public class PaywallPresenter : MonoBehaviour, AdaptyPaywallsEventsListener
         });
     }
 
-    // Handle close and URL buttons — purchases are handled automatically by AdaptyUI
-    public void PaywallViewDidPerformAction(AdaptyUIPaywallView view, AdaptyUIUserAction action)
+    // Handle close, system back, and URL buttons — purchases are handled automatically by AdaptyUI
+    public void FlowViewDidPerformAction(AdaptyUIFlowView view, AdaptyUIUserAction action)
     {
         switch (action.Type)
         {
             case AdaptyUIUserActionType.Close:
+            case AdaptyUIUserActionType.SystemBack:
                 view.Dismiss(null);
                 break;
             case AdaptyUIUserActionType.OpenUrl:
-                Application.OpenURL(action.Value);
+                AdaptyUI.OpenUrl(action.Value, action.OpenIn ?? AdaptyWebPresentation.ExternalBrowser, null);
                 break;
         }
     }
+
+    // v4 does not auto-dismiss after purchase — dismiss yourself once the user gets access
+    public void FlowViewDidFinishPurchase(AdaptyUIFlowView view, AdaptyPaywallProduct product, AdaptyPurchaseResult purchasedResult)
+    {
+        if (purchasedResult.Type != AdaptyPurchaseResultType.UserCancelled)
+        {
+            view.Dismiss(null);
+        }
+    }
+
+    // Remaining IAdaptyFlowsEventsListener methods — implement as needed
+    public void FlowViewDidAppear(AdaptyUIFlowView view) { }
+    public void FlowViewDidDisappear(AdaptyUIFlowView view) { }
+    public void FlowViewDidSelectProduct(AdaptyUIFlowView view, string productId) { }
+    public void FlowViewDidStartPurchase(AdaptyUIFlowView view, AdaptyPaywallProduct product) { }
+    public void FlowViewDidFailPurchase(AdaptyUIFlowView view, AdaptyPaywallProduct product, AdaptyError error) { }
+    public void FlowViewDidStartRestore(AdaptyUIFlowView view) { }
+    public void FlowViewDidFinishRestore(AdaptyUIFlowView view, AdaptyProfile profile) { }
+    public void FlowViewDidFailRestore(AdaptyUIFlowView view, AdaptyError error) { }
+    public void FlowViewDidReceiveError(AdaptyUIFlowView view, AdaptyError error) { }
+    public void FlowViewDidFailLoadingProducts(AdaptyUIFlowView view, AdaptyError error) { }
+    public void FlowViewDidFinishWebPaymentNavigation(AdaptyUIFlowView view, AdaptyPaywallProduct product, AdaptyError error) { }
+    public void FlowViewDidReceiveAnalyticEvent(AdaptyUIFlowView view, string name, IDictionary<string, object> @params) { }
 }
 ```
 
-**Checkpoint:** Paywall appears on screen with configured products. Tapping a product triggers the sandbox purchase dialog.
+**Checkpoint:** Flow appears on screen with configured products. Tapping a product triggers the sandbox purchase dialog.
 
-**Gotcha:** Blank paywall or `GetPaywall` returns error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned.
+**Gotcha:** Blank flow or `GetFlow` returns error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned.
 
-**Gotcha:** `HasViewConfiguration` is `false` → open the paywall in Paywall Builder in the Adapty Dashboard and make sure the **Show on device** toggle is enabled.
+**Gotcha:** `CreateFlowView` fails → the flow has no on-device design, or the **Show on device** toggle is off in the Flow Builder.
 
-**Gotcha:** App crashes on Android when displaying paywall → Kotlin plugin was not added (Stage 1, Step 3).
+**Gotcha:** App crashes on Android when displaying a flow → Kotlin plugin was not added (Stage 1, Step 3).
 
 ### Custom paywall (manual)
 
@@ -368,11 +406,11 @@ public class CustomPaywallManager : MonoBehaviour
 {
     public void LoadAndShowPaywall()
     {
-        Adapty.GetPaywall(AppConstants.PlacementId, (paywall, error) =>
+        Adapty.GetFlow(AppConstants.PlacementId, (flow, error) =>
         {
             if (error != null) { /* handle */ return; }
 
-            Adapty.GetPaywallProducts(paywall, (products, productsError) =>
+            Adapty.GetPaywallProducts(flow, (products, productsError) =>
             {
                 if (productsError != null) { /* handle */ return; }
                 // Build your UI using the products array
@@ -412,16 +450,18 @@ public class CustomPaywallManager : MonoBehaviour
 }
 ```
 
+**v4 note:** Even for custom paywalls, the v4 SDK uses `GetFlow` / `AdaptyFlow` for the fetch — there is no `locale` parameter anymore. Products are still `AdaptyPaywallProduct`, and `GetPaywallProducts(flow, ...)` is the right call to fetch them.
+
 **Checkpoint:** Custom paywall UI shows products fetched from Adapty. Tapping a product triggers the sandbox purchase dialog. A restore button calls `RestorePurchases()`.
 
 **Gotcha:** Empty products array → paywall in the dashboard has no products assigned, or placement has no audience.
 
 ### Observer mode *(not recommended)*
 
-> **When to use:** Only if replacing an existing purchase infrastructure is not feasible (e.g., deeply embedded legacy in-app-purchase code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new Unity projects or projects where purchases aren't yet implemented, use Paywall Builder or Custom paywall instead.
+> **When to use:** Only if replacing an existing purchase infrastructure is not feasible (e.g., deeply embedded legacy in-app-purchase code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new Unity projects or projects where purchases aren't yet implemented, use Flow Builder or Custom paywall instead.
 >
 > **Limitations:**
-> - No paywall management or Paywall Builder support
+> - No paywall management, Flow Builder, or Paywall Builder support
 > - No A/B testing on paywalls or offers
 > - Transactions must be manually reported to Adapty after each purchase
 > - Subscription events depend on App Store Server Notifications / Google Play RTDN being configured
@@ -431,7 +471,10 @@ Read before writing code:
 curl -s https://adapty.io/docs/observer-vs-full-mode.md
 curl -s https://adapty.io/docs/implement-observer-mode-unity.md
 curl -s https://adapty.io/docs/report-transactions-observer-mode-unity.md
+curl -s https://adapty.io/docs/unity-present-flows-in-observer-mode.md
 ```
+
+**v4 note:** If the user wants to show Flow Builder flows while staying in Observer mode, v4 supports it: register an `IAdaptyUIObserverModeResolver` via `Adapty.SetObserverModeResolver(...)` and run your own purchase/restore code when `FlowViewDidInitiatePurchase` / `FlowViewDidInitiateRestore` fires (invoke the `onStart.../onFinish...` callbacks so the flow shows and hides its loader) — without a registered resolver, nothing happens when the user taps buy. See the last doc above.
 
 **Checkpoint:** After a sandbox purchase through the existing purchase flow, the transaction appears in the Adapty dashboard **Event Feed**.
 
@@ -484,7 +527,7 @@ curl -s https://adapty.io/docs/unity-quickstart-identify.md
 ```
 
 **What to do:**
-- Call `Adapty.Identify("your-user-id", callback)` after `Activate()` and before `GetPaywall()`
+- Call `Adapty.Identify("your-user-id", callback)` after `Activate()` and before `GetFlow()`
 - For apps where users can purchase before logging in, call `Identify()` at login — Adapty handles profile merging automatically
 - Call `Adapty.Logout(callback)` when users log out (this creates a new anonymous profile)
 
@@ -509,7 +552,7 @@ Adapty.Logout((error) =>
 
 **Checkpoint:** After calling `Adapty.Identify("your-user-id", ...)`, the Adapty dashboard **Profiles** section shows the custom user ID on the profile.
 
-**Gotcha:** Profile shows anonymous ID even after `Identify()` → `Identify()` was called after `GetPaywall()`, so the purchase was attributed to the anonymous profile. Correct order: `Activate()` → `Identify()` → `GetPaywall()`.
+**Gotcha:** Profile shows anonymous ID even after `Identify()` → `Identify()` was called after `GetFlow()`, so the purchase was attributed to the anonymous profile. Correct order: `Activate()` → `Identify()` → `GetFlow()`.
 
 ---
 
@@ -581,19 +624,18 @@ When building for iOS, Unity generates an Xcode project. The user must open it i
 
 **Ask the user to:**
 1. In Unity Editor: **File → Build Settings** → select **iOS** → click **Build** (or **Build And Run** for device).
-2. Unity outputs a folder (e.g., `iOSBuild/`) containing `Unity-iPhone.xcworkspace`.
-3. Open `Unity-iPhone.xcworkspace` (NOT `Unity-iPhone.xcodeproj` — CocoaPods requires the workspace).
-4. In Xcode: select a simulator or connected device → click **Build** (⌘B).
+2. Unity outputs a folder (e.g., `iOSBuild/`) containing the generated Xcode project. On SDK 4.0, iOS dependencies come via Swift Package Manager (no CocoaPods) — open `Unity-iPhone.xcodeproj` unless a `Unity-iPhone.xcworkspace` was generated (open the workspace in that case).
+3. In Xcode: select a simulator or connected device → click **Build** (⌘B). The first build resolves the Adapty Swift package — this needs network access.
 
-If you can run `xcodebuild` from bash (e.g., the project has already been built once and the workspace exists), use it:
+If you can run `xcodebuild` from bash (e.g., the project has already been generated once), use it:
 
 ```bash
-# Find the generated Xcode workspace
-find . -maxdepth 5 -name "*.xcworkspace" ! -path "*/Pods/*" 2>/dev/null
+# Find the generated Xcode project (SDK 4.0 uses Swift Package Manager — usually no workspace)
+find . -maxdepth 5 \( -name "*.xcworkspace" -o -name "Unity-iPhone.xcodeproj" \) ! -path "*/Pods/*" 2>/dev/null
 
-# Build for iOS Simulator
+# Build for iOS Simulator (use -workspace instead if a workspace exists)
 xcodebuild \
-  -workspace "Unity-iPhone.xcworkspace" \
+  -project "Unity-iPhone.xcodeproj" \
   -scheme "Unity-iPhone" \
   -destination "generic/platform=iOS Simulator" \
   -quiet \
@@ -603,7 +645,8 @@ xcodebuild \
 **Handle output:**
 - **Build succeeded** → proceed to manual checklist
 - **BUILD FAILED** with errors in your files → fix directly and rebuild
-- CocoaPods errors / missing frameworks → the user opened `.xcodeproj` instead of `.xcworkspace`; redirect them to the workspace
+- Missing `Adapty` / `AdaptyUI` frameworks or unresolved Swift package → EDM is older than 1.2.187, or the Swift package couldn't resolve (needs network access); update EDM and rebuild from Unity
+- iOS build stopped by the Adapty build validator → raise the iOS deployment target to 15.0+ in Player Settings
 - Signing errors → safe to ignore for simulator builds; not blocking for testing
 
 ### Full Android build verification
@@ -628,10 +671,10 @@ Unity targets both iOS and Android. Testing setup differs per platform.
 Follow `references/testing-setup-ios.md` (in this skill directory) for:
 1. Creating products in App Store Connect
 2. Connecting App Store to Adapty (Bundle ID, In-App Purchase Key, Server Notifications)
-3. Designing the paywall in Paywall Builder *(Paywall Builder only)*
+3. Designing the flow in Flow Builder — template, AI generator, or from scratch *(Flow Builder only)*
 4. Sandbox testing — creating a sandbox account, switching device to sandbox, making a test purchase
 
-Note: When building for iOS from Unity, always open `Unity-iPhone.xcworkspace` in Xcode, never `Unity-iPhone.xcodeproj`.
+Note: On SDK 4.0, iOS dependencies come via Swift Package Manager — open `Unity-iPhone.xcodeproj` in Xcode unless a `Unity-iPhone.xcworkspace` was generated.
 
 ### Android testing
 
@@ -684,7 +727,7 @@ After the basics are working, use `AskUserQuestion` to present this menu. Keep i
 > 1. **Fallback paywalls** — show a cached paywall if the user is offline or Adapty is unreachable
 > 2. **Custom user attributes** — tag users with properties (plan, country, cohort) to enable segmentation and A/B testing
 > 3. **Promotional offers** — set up subscription discounts and win-back offers for lapsed subscribers
-> 4. **Onboardings** — add interactive onboarding flows powered by Adapty's builder
+> 4. **Onboardings** — *(deprecated in SDK v4)* legacy WebView-based onboardings still work but no longer receive fixes; Flow Builder covers onboarding flows natively
 > 5. **Kids mode** — COPPA-compliant mode that disables IDFA/GAID and ad data collection
 > 6. **A/B testing** — run experiments on paywalls and offers from the dashboard without app updates
 > 7. **Custom access levels** — set up multiple subscription tiers (e.g. `basic` vs `pro`) if different products unlock different features
