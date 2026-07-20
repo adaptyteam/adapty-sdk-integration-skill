@@ -5,9 +5,10 @@ Platform: Kotlin Multiplatform · Language: Kotlin · Targets: Android + iOS
 ## Prerequisites
 
 - Kotlin Multiplatform project with Android and/or iOS targets
-- Xcode 16.2+ (for iOS target)
+- Xcode 16.2+ (for iOS target); iOS deployment target 15.0+
 - Google Play Billing Library up to 8.x (Adapty defaults to 7.0.0)
 - `mavenCentral()` in your Gradle repositories
+- SDK v4 is currently a pre-release — pin the exact version (see Stage 1)
 
 ---
 
@@ -157,9 +158,9 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("io.adapty:adapty-kmp:<latest-version>")
-                // Add adapty-kmp-ui only if using Paywall Builder with Compose Multiplatform:
-                // implementation("io.adapty:adapty-kmp-ui:<latest-version>")
+                implementation("io.adapty:adapty-kmp:4.0.0-beta.1")
+                // Add adapty-kmp-ui only if using Flow Builder with Compose Multiplatform:
+                // implementation("io.adapty:adapty-kmp-ui:4.0.0-beta.1")
             }
         }
     }
@@ -169,7 +170,7 @@ kotlin {
 **Option B: version catalog (libs.versions.toml)**
 ```toml
 [versions]
-adapty-kmp = "<latest-version>"
+adapty-kmp = "4.0.0-beta.1"
 
 [libraries]
 adapty-kmp = { module = "io.adapty:adapty-kmp", version.ref = "adapty-kmp" }
@@ -183,14 +184,14 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(libs.adapty.kmp)
-                // implementation(libs.adapty.kmp.ui)  // only for Paywall Builder + Compose Multiplatform
+                // implementation(libs.adapty.kmp.ui)  // only for Flow Builder + Compose Multiplatform
             }
         }
     }
 }
 ```
 
-Check the latest version at [Maven Central](https://search.maven.org/search?q=io.adapty:adapty-kmp).
+**SDK v4 is a pre-release — pin the exact version.** Gradle does not resolve pre-release versions through dynamic ranges (`+`, `latest.release`), so a dynamic range silently falls back to 3.x. Check [Maven Central](https://search.maven.org/search?q=io.adapty:adapty-kmp) for the latest 4.x version and use it verbatim.
 
 If you get a Maven-related error, make sure `mavenCentral()` is in your Gradle repositories:
 ```groovy
@@ -219,7 +220,7 @@ fun initializeAdapty(customerUserId: String? = null) {
         .Builder(AppConstants.ADAPTY_PUBLIC_KEY)
         .withLogLevel(AdaptyLogLevel.INFO) // use VERBOSE during development
         .withCustomerUserId(customerUserId) // pass null if no auth system
-        // Add .withActivateUI(true) if using Paywall Builder
+        // Add .withActivateUI(true) if using Flow Builder
         .build()
 
     Adapty.activate(configuration = config)
@@ -304,7 +305,7 @@ The SDK key comes from `AppConstants` — already set in the recommended archite
 
 Choose the section matching the user's paywall approach.
 
-### Paywall Builder
+### Flow Builder
 
 Read before writing code:
 ```
@@ -315,84 +316,108 @@ https://adapty.io/docs/kmp-handling-events.md
 https://adapty.io/docs/kmp-handle-paywall-actions.md
 ```
 
+**v4 API names:** Flow Builder uses the new `getFlow` / `AdaptyFlow` / `createFlowView` / `AdaptyUIFlowView` / `AdaptyUIFlowsEventsObserver` family. The same APIs also render existing Paywall Builder paywalls — no dashboard changes are required for users migrating from Paywall Builder. You no longer pass a `locale` when fetching (localization resolves automatically on render), the observer registers via `setFlowsEventsObserver`, and all `paywallViewDid*` callbacks are now `flowViewDid*`. Products are still `AdaptyPaywallProduct`.
+
 **Required call signature** — always use the named parameter:
 ```kotlin
 // Correct
-Adapty.getPaywall(placementId = AppConstants.PLACEMENT_ID)
+Adapty.getFlow(placementId = AppConstants.PLACEMENT_ID)
 
 // Wrong — compiles but incorrect usage
-Adapty.getPaywall(AppConstants.PLACEMENT_ID)
+Adapty.getFlow(AppConstants.PLACEMENT_ID)
 ```
 
 **With Compose Multiplatform (recommended):**
 ```kotlin
 // commonMain ViewModel or coroutine scope
-Adapty.getPaywall(placementId = AppConstants.PLACEMENT_ID)
-    .onSuccess { paywall ->
-        if (!paywall.hasViewConfiguration) return@onSuccess
-
-        AdaptyUI.createPaywallView(paywall = paywall)
-            .onSuccess { view ->
-                view.present()
-            }
-            .onError { error ->
-                // handle view creation error
-            }
-    }
-    .onError { error ->
-        // handle paywall fetch error
-    }
+viewModelScope.launch {
+    Adapty.getFlow(placementId = AppConstants.PLACEMENT_ID)
+        .onSuccess { flow ->
+            AdaptyUI.createFlowView(flow = flow)
+                .onSuccess { view ->
+                    view.present()
+                }
+                .onError { error ->
+                    // the flow has no on-device design, or view creation failed
+                }
+        }
+        .onError { error ->
+            // handle flow fetch error
+        }
+}
 ```
 
-**Handle paywall button actions (especially close):**
+A flow view is single-use: after `dismiss()`, the view is destroyed — call `createFlowView` again to present the flow once more.
+
+**Handle events:** all observer callbacks have default implementations in Kotlin — override only what you need. The v4 defaults differ from v3: the close button dismisses the view, but the Android system back button **keeps it open**, a successful purchase **does not auto-dismiss**, an error **dismisses** the view, and URLs open natively.
+
 ```kotlin
-AdaptyUI.setPaywallsEventsObserver(object : AdaptyUIPaywallsEventsObserver {
-    override fun paywallViewDidPerformAction(view: AdaptyUIPaywallView, action: AdaptyUIAction) {
+AdaptyUI.setFlowsEventsObserver(object : AdaptyUIFlowsEventsObserver {
+    override fun flowViewDidFinishPurchase(
+        view: AdaptyUIFlowView,
+        product: AdaptyPaywallProduct,
+        purchaseResult: AdaptyPurchaseResult
+    ) {
+        // v4 no longer auto-dismisses after purchase — dismiss yourself,
+        // or do nothing to let the flow continue
+        if (purchaseResult !is AdaptyPurchaseResult.UserCanceled) {
+            mainUiScope.launch { view.dismiss() }
+        }
+    }
+
+    override fun flowViewDidPerformAction(view: AdaptyUIFlowView, action: AdaptyUIAction) {
         when (action) {
-            is AdaptyUIAction.CloseAction,
-            is AdaptyUIAction.AndroidSystemBackAction -> view.dismiss()
-            else -> { /* handle custom actions */ }
+            // restore the v3 behavior where system back closes the flow
+            is AdaptyUIAction.AndroidSystemBackAction -> mainUiScope.launch { view.dismiss() }
+            // keep the defaults: CloseAction dismisses, OpenUrlAction opens natively
+            else -> super.flowViewDidPerformAction(view, action)
         }
     }
 })
 ```
 
-**Without Compose Multiplatform** — use `createNativePaywallView` from the core module (no `adapty-kmp-ui` dependency needed):
+**Without Compose Multiplatform** — use `createNativeFlowView` from the core module (no `adapty-kmp-ui` dependency needed):
 
 Android:
 ```kotlin
-val nativeView = AdaptyUI.createNativePaywallView(
+val nativeView = AdaptyUI.createNativeFlowView(
     context = context,
     viewModelStoreOwner = activity,
-    paywall = paywall,
-    observer = myPaywallObserver,
+    flow = flow,
+    observer = myFlowObserver,
 )
 // Embed nativeView.view in your layout
 ```
 
+Embedded views don't apply safe-area paddings by default (your layout handles insets); pass `androidEnableSafeArea = true` to opt in (Android-only).
+
 iOS (requires a base class workaround due to KMP Swift interop):
 ```kotlin
 // iosMain — declare open base class so Swift can subclass it
-open class BasePaywallObserver : AdaptyUIPaywallsEventsObserver
+open class BaseFlowObserver : AdaptyUIFlowsEventsObserver
 ```
 
 ```swift
 // Swift
-class MyPaywallObserver: BasePaywallObserver {
-    override func paywallViewDidPerformAction(view: AdaptyUIPaywallView, action: any AdaptyUIAction) {
+class MyFlowObserver: BaseFlowObserver {
+    override func flowViewDidPerformAction(view: AdaptyUIFlowView, action: any AdaptyUIAction) {
         if action is AdaptyUIActionCloseAction {
             // remove nativeView from your view hierarchy
         }
     }
 }
 
-let nativeView = AdaptyUI.shared.createNativePaywallView(paywall: paywall, observer: MyPaywallObserver())
+let nativeView = AdaptyUI.shared.createNativeFlowView(flow: flow, observer: MyFlowObserver())
 // nativeView.viewController is a UIViewController — add to SwiftUI or UIKit hierarchy
 ```
 
-**Checkpoint:** Paywall appears on screen with configured products. Tapping a product triggers the sandbox purchase dialog (Play Store sandbox on Android, App Store sandbox on iOS).
+Call `nativeView.dispose()` when removing an embedded view from your layout — it unregisters the event listener and releases resources.
 
-**Gotcha:** Blank paywall or `getPaywall` returns error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned. Also check that **Show on device** toggle is enabled in Paywall Builder.
+**Checkpoint:** Flow appears on screen with configured products. Tapping a product triggers the sandbox purchase dialog (Play Store sandbox on Android, App Store sandbox on iOS).
+
+**Gotcha:** Blank flow or `getFlow` returns error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned.
+
+**Gotcha:** `createFlowView` fails → the flow has no on-device design, or the **Show on device** toggle is off in the Flow Builder.
 
 ### Custom paywall (manual)
 
@@ -405,15 +430,14 @@ https://adapty.io/docs/kmp-making-purchases.md
 https://adapty.io/docs/kmp-restore-purchase.md
 ```
 
-**Fetch paywall and products:**
+**Fetch the flow and its products:**
 ```kotlin
-Adapty.getPaywall(
+Adapty.getFlow(
     placementId = AppConstants.PLACEMENT_ID,
-    locale = "en",
     fetchPolicy = AdaptyPaywallFetchPolicy.Default,
     loadTimeout = 5.seconds
-).onSuccess { paywall ->
-    Adapty.getPaywallProducts(paywall)
+).onSuccess { flow ->
+    Adapty.getPaywallProducts(flow)
         .onSuccess { products ->
             // render your custom paywall UI with products
         }
@@ -425,13 +449,23 @@ Adapty.getPaywall(
 }
 ```
 
+**v4 note:** Even for custom paywalls, the v4 SDK uses `getFlow` / `AdaptyFlow` for the fetch — there is no `locale` parameter anymore. Products are still `AdaptyPaywallProduct`, and `getPaywallProducts(flow)` is the right call to fetch them.
+
 **Do not hardcode product IDs.** The number and type of products can change in the dashboard without an app update. Display all products returned by `getPaywallProducts`.
 
 **Make a purchase:**
 ```kotlin
 Adapty.makePurchase(product = selectedProduct)
-    .onSuccess { profile ->
-        // check profile.accessLevels[AppConstants.ACCESS_LEVEL_ID]?.isActive
+    .onSuccess { purchaseResult ->
+        when (purchaseResult) {
+            is AdaptyPurchaseResult.Success -> {
+                val isPremium = purchaseResult.profile
+                    .accessLevels[AppConstants.ACCESS_LEVEL_ID]?.isActive == true
+                // unlock content if isPremium
+            }
+            is AdaptyPurchaseResult.UserCanceled -> { /* user backed out — no error UI needed */ }
+            is AdaptyPurchaseResult.Pending -> { /* e.g. awaiting approval; deliver on profile update */ }
+        }
     }
     .onError { error ->
         // handle purchase error
@@ -455,10 +489,10 @@ Adapty.restorePurchases()
 
 ### Observer mode *(not recommended)*
 
-> **When to use:** Only if replacing the existing purchase infrastructure is not feasible (e.g., deeply embedded legacy code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new projects, use Paywall Builder or Custom paywall instead.
+> **When to use:** Only if replacing the existing purchase infrastructure is not feasible (e.g., deeply embedded legacy code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new projects, use Flow Builder or Custom paywall instead.
 >
 > **Limitations:**
-> - No paywall management or Paywall Builder support
+> - No paywall management, Flow Builder, or Paywall Builder support
 > - No A/B testing on paywalls or offers
 > - Transactions must be manually reported to Adapty after each purchase
 > - Subscription events depend on App Store Server Notifications (iOS) and Play Store RTDN (Android) being configured
@@ -468,7 +502,10 @@ Read before writing code:
 https://adapty.io/docs/observer-vs-full-mode.md
 https://adapty.io/docs/implement-observer-mode-kmp.md
 https://adapty.io/docs/report-transactions-observer-mode-kmp.md
+https://adapty.io/docs/kmp-present-flows-in-observer-mode.md
 ```
+
+**v4 note:** If the user wants to show Flow Builder flows while staying in Observer mode, v4 supports it: register an `AdaptyUIObserverModeResolver` via `AdaptyUI.setObserverModeResolver(...)` and run your own purchase/restore code when the resolver fires — without it, nothing happens when the user taps buy. See the last doc above.
 
 **Checkpoint:** After a sandbox purchase through the existing purchase flow, the transaction appears in the Adapty dashboard **Event Feed**.
 
@@ -611,7 +648,7 @@ https://adapty.io/docs/kmp-identifying-users.md
 
 **Checkpoint:** After calling `identify("your-user-id")`, the Adapty dashboard **Profiles** section shows the custom user ID on the profile.
 
-**Gotcha:** Profile shows anonymous ID even after `identify()` → `identify()` was called after `getPaywall()`, so the purchase was attributed to the anonymous profile. Order: `activate()` → `identify()` → `getPaywall()`.
+**Gotcha:** Profile shows anonymous ID even after `identify()` → `identify()` was called after `getFlow()`, so the purchase was attributed to the anonymous profile. Order: `activate()` → `identify()` → `getFlow()`.
 
 ---
 
@@ -656,7 +693,7 @@ xcodebuild \
 
 **BUILD FAILED (iOS):**
 - Errors in files you wrote → fix them directly and rebuild
-- KMP Swift interop issues with `AdaptyUIPaywallsEventsObserver` → use the open base class pattern from Stage 2
+- KMP Swift interop issues with `AdaptyUIFlowsEventsObserver` → use the open base class pattern from Stage 2
 - `import shared` fails → KMP framework wasn't generated; run `./gradlew :shared:assembleXCFramework` (or your project's equivalent task) first
 - Signing errors → safe to ignore for simulator builds
 
@@ -671,7 +708,7 @@ Both platforms require store-side setup before sandbox testing works.
 **For iOS:** Read and follow `references/testing-setup-ios.md` (in this skill directory). It covers:
 1. Creating products in App Store Connect
 2. Connecting App Store to Adapty (Bundle ID, In-App Purchase Key, App Store Server Notifications)
-3. Designing the paywall in Paywall Builder — template, AI generator, or from scratch *(Paywall Builder only)*
+3. Designing the flow in Flow Builder — template, AI generator, or from scratch *(Flow Builder only)*
 4. Sandbox testing — creating a sandbox tester account, switching device to sandbox, making a test purchase, verifying results
 
 Present the iOS checklist with the exact iOS product IDs from Phase 3 already filled in (`--ios-product-id` values).
@@ -727,7 +764,7 @@ After the basics are working, use `AskUserQuestion` to present this menu. Keep i
 > 1. **Fallback paywalls** — show a cached paywall if the user is offline or Adapty is unreachable
 > 2. **Custom user attributes** — tag users with properties (plan, country, cohort) to enable segmentation and A/B testing
 > 3. **Promotional offers** — set up subscription discounts and win-back offers for lapsed subscribers
-> 4. **Onboardings** — add interactive onboarding flows powered by Adapty's builder (KMP supported)
+> 4. **Onboardings** — *(deprecated in SDK v4)* legacy WebView-based onboardings still work but no longer receive fixes; Flow Builder covers onboarding flows natively
 > 5. **Kids mode** — COPPA/GDPR-compliant mode that disables GAID and ad data collection
 > 6. **A/B testing** — run experiments on paywalls and offers from the dashboard without app updates
 > 7. **Custom access levels** — set up multiple subscription tiers (e.g. `basic` vs `pro`) if different products unlock different features
