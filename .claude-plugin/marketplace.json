@@ -14,11 +14,7 @@
         "name": "Adapty",
         "email": "support@adapty.io"
       },
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/adaptyteam/adapty-sdk-integration-skill.git",
-        "path": "plugins/adapty-sdk-integration"
-      },
+      "source": "./",
       "category": "development",
       "homepage": "https://adapty.io/docs"
     }
