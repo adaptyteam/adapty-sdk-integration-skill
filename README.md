@@ -1,5 +1,7 @@
 # adapty-sdk-integration
 
+[![skills.sh](https://skills.sh/b/adaptyteam/adapty-sdk-integration-skill)](https://skills.sh/adaptyteam/adapty-sdk-integration-skill)
+
 A skill for agentic coding tools (Claude Code, GitHub Copilot CLI, OpenAI Codex, Gemini CLI) that guides you through integrating the [Adapty](https://adapty.io) SDK into a mobile app end-to-end — dashboard setup, SDK install, paywall, and store configuration — step by step, with the agent doing the work and pointing you to the right docs when input is needed.
 
 **Supported platforms:** iOS · Android · Flutter · React Native · Unity · Kotlin Multiplatform · Capacitor
@@ -19,7 +21,21 @@ claude plugin install adapty-sdk-integration@adapty
 
 Then run `/reload-plugins` inside Claude Code to activate it.
 
-#### Other agentic CLIs
+#### Any agentic CLI (skills CLI)
+
+The [skills CLI](https://skills.sh) installs the skill into any supported agent — Cursor, Copilot, Codex, Gemini CLI, Zed, Amp, and more:
+
+```bash
+npx skills add adaptyteam/adapty-sdk-integration-skill
+```
+
+Skills installed this way don't update automatically; to get the latest version later, run:
+
+```bash
+npx skills update
+```
+
+#### Tool-specific installs
 
 The skill is a portable directory — `skills/adapty-sdk-integration/` in this repo. All three CLIs below read the same Claude-style `SKILL.md` format.
 
