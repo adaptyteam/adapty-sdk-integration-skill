@@ -220,7 +220,7 @@ Google Play blocks creating in-app products and subscriptions in the Console unt
    - Google Play product ID — suggest the App Store ID as the default (cross-store products usually share the identifier)
    - **Period** — one of the CLI's `--period` values: `weekly`, `monthly`, `two_months`, `trimonthly`, `semiannual`, `annual`, `lifetime` (lifetime = one-time purchase, not a subscription)
    - Google Play **base plan ID** — only when the period is NOT `lifetime`; lifetime products never have one
-   After each product ask whether to add another. Any number of products is fine — keep looping. A product available in both stores is ONE Adapty product carrying both store IDs, not two.
+   After each product ask whether to add another. Any number of products is fine — keep looping. A product available in both stores is ONE Adapty product carrying both store IDs, not two. Do NOT assume every product exists in all the selected stores — a specific product may live in only one of them (e.g. an old iOS-only lifetime SKU); if the user's answer leaves that ambiguous, ask, and create the product with only the store IDs it really has.
 
 When they provide IDs:
 
