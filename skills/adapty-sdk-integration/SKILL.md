@@ -207,13 +207,22 @@ Use this to determine the path through Steps 4 and 5:
 
 Google Play blocks creating in-app products and subscriptions in the Console until at least one AAB with the `com.android.vending.BILLING` permission has been uploaded to any track (internal testing is enough). So at this stage, for Android-first or Android-only integrations, real Google Play product IDs do not exist yet and cannot be created yet.
 
-Default path for Android: use placeholder IDs in Adapty now (e.g. `com.example.app.monthly` + base plan `monthly-base`), continue through Phase 4, build, upload a signed AAB to Google Play internal testing, then create the real products in Google Play Console (see `references/testing-setup-android.md`, Part 1) and update the Adapty products with the real IDs in the dashboard. Tell the user this ordering upfront so they know the placeholders are expected.
+**Store product IDs are IMMUTABLE in Adapty** — once a product is created, its store IDs can never be changed; the only fix is deleting and recreating the product (losing its paywall attachments). So NEVER create a product with a placeholder or guessed store ID. When real IDs don't exist yet, create no products — write the exact ready-to-run `products create` commands (with `<REAL_PRODUCT_ID>` slots) into ADAPTY_SETUP.md instead, and for Android explain the ordering: build → upload a signed AAB to internal testing → create the real products in Google Play Console (see `references/testing-setup-android.md`, Part 1) → run the deferred commands.
 
-**Collecting store product IDs:** Use `AskUserQuestion` to ask whether product IDs are already configured:
-- **Yes, I have them** — ask for the IDs and create Adapty products now
-- **No, not yet** — for iOS, App Store Connect products can be created anytime; for Android, the Google Play prerequisite above applies. Default to placeholder IDs and plan to update them later.
+**Collecting store product IDs — a staged conversation, skippable at every step:**
 
-When they provide IDs (or you use placeholders):
+1. **Which stores?** Use `AskUserQuestion` with mutually exclusive options built from the app's target stores — never show an irrelevant store (iOS-only app → no Google Play option), and never mix a multi-select with a "No" option:
+   - Cross-platform: "Yes, in both stores" / "Yes, in the App Store only" / "Yes, in Google Play only" / "Not yet — skip for now"
+   - Single-store app: "Yes, in the App Store" / "Not yet — skip for now" (or the Google Play pair)
+   "Not yet" → create no products; defer with commands in ADAPTY_SETUP.md as above.
+2. **The IDs, one product at a time.** Even after "yes", the user may prefer not to dig for IDs right now — offer a skip at this stage too, and treat an empty first answer as "skip for now". Per product ask only what the chosen stores need:
+   - App Store product ID
+   - Google Play product ID — suggest the App Store ID as the default (cross-store products usually share the identifier)
+   - **Period** — one of the CLI's `--period` values: `weekly`, `monthly`, `two_months`, `trimonthly`, `semiannual`, `annual`, `lifetime` (lifetime = one-time purchase, not a subscription)
+   - Google Play **base plan ID** — only when the period is NOT `lifetime`; lifetime products never have one
+   After each product ask whether to add another. Any number of products is fine — keep looping. A product available in both stores is ONE Adapty product carrying both store IDs, not two.
+
+When they provide IDs:
 
 - **iOS**: product ID (e.g. `com.example.app.monthly`)
 - **Android subscriptions**: product ID **and** base plan ID (e.g. `monthly-base`) — both required; the CLI rejects the command without `--android-base-plan-id`
@@ -244,7 +253,7 @@ Repeat for each product to create.
 
 ### Step 5: Create paywall/flow and placement
 
-**Prerequisite: do not start this step until at least one product has been successfully created (or confirmed to exist) in Step 4.** A paywall/flow without products is non-functional.
+**Prerequisite: do not start this step until at least one product has been successfully created (or confirmed to exist) in Step 4.** A paywall/flow without products is a non-functional empty shell — if Step 4 deferred product creation, defer this step the same way: create nothing now and put the full command sequence (paywall, then placement) into ADAPTY_SETUP.md right after the deferred `products create` commands, keeping the placement ID consistent with the one used in code.
 
 First, analyze the project to identify natural locations to show the paywall/flow. Look for:
 - Onboarding flows (welcome screens, feature intro screens)
