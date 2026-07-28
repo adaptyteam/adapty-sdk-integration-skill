@@ -795,4 +795,5 @@ For broader context when the LLM needs more coverage:
 - KMP docs index: `https://adapty.io/docs/kmp-llms.txt`
 - KMP full docs (large): `https://adapty.io/docs/kmp-llms-full.txt`
 - All Adapty docs index: `https://adapty.io/docs/llms.txt`
+- Sample app (SDK-team maintained, close to real usage — open it when a docs page doesn't show how the pieces fit together in a real app; take API usage from it, not the sample's app architecture): https://github.com/adaptyteam/AdaptySDK-KMP/tree/main/example
 - All Adapty docs (very large): `https://adapty.io/docs/llms-full.txt`

@@ -697,3 +697,4 @@ For broader context when more coverage is needed:
 - Capacitor docs index: `https://adapty.io/docs/capacitor-llms.txt`
 - Capacitor full docs (large): `https://adapty.io/docs/capacitor-llms-full.txt`
 - All Adapty docs index: `https://adapty.io/docs/llms.txt`
+- Sample app (SDK-team maintained, close to real usage — open it when a docs page doesn't show how the pieces fit together in a real app; take API usage from it, not the sample's app architecture): https://github.com/adaptyteam/AdaptySDK-Capacitor/tree/master/examples
