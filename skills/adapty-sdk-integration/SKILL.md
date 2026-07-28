@@ -100,6 +100,10 @@ Use `AskUserQuestion` for all three together in one call:
 
    Save the answer — it determines whether Stage 3.5 (integrations) runs during implementation.
 
+   Two different things are easy to confuse here, and they point at different docs:
+   - **Adapty → the user's backend** (they want to be told when a subscription renews, cancels, refunds): webhooks — https://adapty.io/docs/set-up-webhook-integration.md, https://adapty.io/docs/webhook-event-types-and-fields.md
+   - **The stores → Adapty** (so Adapty learns about renewals at all; a release-checklist item, not an integration the user picks): server notifications — https://adapty.io/docs/enable-app-store-server-notifications.md, https://adapty.io/docs/enable-real-time-developer-notifications-rtdn.md
+
 3. **Adapty app** — do they already have an app created in the Adapty dashboard, or should a new one be created?
    - **I already have an app** — you'll fetch the list in Phase 3 and ask them to pick one
    - **Create a new app** — you'll create one in Phase 3
