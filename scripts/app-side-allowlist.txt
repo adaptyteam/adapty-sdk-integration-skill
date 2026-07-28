@@ -1,0 +1,18 @@
+# App-side wrapper names that the skill's references SUGGEST the user create.
+# They look Adapty-branded but are NOT SDK symbols, so the docs will never
+# mention them and the symbol lint must not flag them.
+#
+# One name per line. When a reference introduces a new suggested wrapper
+# (service, notifier, context, constant), add its name here - the failing
+# lint message points at this file.
+
+AdaptyService          # suggested service/singleton wrapper (all platforms)
+AdaptyNotifier         # flutter: suggested Riverpod notifier
+AdaptyInitializer      # kmp: suggested shared-config file/class
+AdaptyInitializerKt    # kmp: Kotlin-generated name of the above
+AdaptyContext          # capacitor/react: suggested React context
+AdaptyContextValue     # capacitor/react
+AdaptyProvider         # capacitor/react
+AdaptyState            # react-native: suggested state holder
+AdaptyPublicKey        # unity: suggested constant holding the SDK key
+adapty.service         # capacitor: suggested file name adapty.service.ts

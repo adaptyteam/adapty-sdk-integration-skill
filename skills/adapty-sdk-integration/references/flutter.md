@@ -750,3 +750,4 @@ For broader context when more coverage is needed:
 - Flutter docs index: `https://adapty.io/docs/flutter-llms.txt`
 - Flutter full docs (large): `https://adapty.io/docs/flutter-llms-full.txt`
 - All Adapty docs index: `https://adapty.io/docs/llms.txt`
+- Sample app (SDK-team maintained, close to real usage — open it when a docs page doesn't show how the pieces fit together in a real app; take API usage from it, not the sample's app architecture): https://github.com/adaptyteam/AdaptySDK-Flutter/tree/master/example

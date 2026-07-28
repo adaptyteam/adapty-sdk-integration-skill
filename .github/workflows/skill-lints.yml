@@ -1,0 +1,80 @@
+# Skill validation lints - two triggers for two failure modes:
+#
+#   1. pull_request / push: catches breakage WE introduce by editing the
+#      skill (typo'd SDK symbol, dead docs link, new wrapper name outside
+#      the allowlist). Red blocks the merge.
+#   2. daily cron: catches drift that happens WITHOUT any skill commit -
+#      the docs renamed a page, an SDK release rewrote a section. On
+#      failure a GitHub issue is filed (deduped: one open issue, follow-up
+#      failures add comments).
+#
+# Severity policy: dead docs links and missing SDK symbols are always red;
+# "works but not in llms.txt" and flaky external links are warnings in the
+# job log only - llms.txt completeness is the docs repo's responsibility.
+#
+# Both lints also run locally: node scripts/lint-symbols.mjs [platform],
+# node scripts/lint-links.mjs
+
+name: skill-lints
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 6 * * *' # daily, off the top of the hour (UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  lints:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Explicit bash = GitHub runs steps with `-o pipefail`, so
+        # `node lint | tee` cannot mask the lint's exit code.
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Symbol lint (SDK symbols in references exist in the docs)
+        id: symbols
+        run: node scripts/lint-symbols.mjs 2>&1 | tee /tmp/lint-symbols.out
+
+      - name: Link lint (every docs URL works the way an agent fetches it)
+        id: links
+        if: always()
+        run: node scripts/lint-links.mjs 2>&1 | tee /tmp/lint-links.out
+
+      # Cron failures have no PR to turn red - file an issue so drift is
+      # never silent. One open issue at a time; repeats become comments.
+      - name: File a drift issue on scheduled failure
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          {
+            echo "The daily skill lints failed on \`main\` - the docs or SDK moved underneath the skill (no skill commit involved)."
+            echo
+            echo '```'
+            tail -n 60 /tmp/lint-symbols.out /tmp/lint-links.out 2>/dev/null
+            echo '```'
+            echo
+            echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > /tmp/issue-body.md
+          gh label create skill-drift --description "Docs/SDK moved underneath the skill" --color D93F0B --force
+          existing=$(gh issue list --label skill-drift --state open --json number --jq '.[0].number' || true)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file /tmp/issue-body.md
+          else
+            gh issue create --title "Skill drift: daily lints failed" \
+              --label skill-drift --body-file /tmp/issue-body.md
+          fi

@@ -1,0 +1,11 @@
+# SDK symbols the skill legitimately uses that are DELIBERATELY absent from
+# the docs. Each entry names the source-of-truth file - the symbol lint
+# verifies these against the CODE instead of the docs, so a rename/removal
+# in the SDK still turns the lint red.
+#
+# Format:  <reference>: <symbol>  <source-url>
+#
+# If this file grows beyond a handful of lines, that is a signal: either the
+# docs should document these, or the skill is teaching agents shadow APIs.
+
+capacitor: adapty.updateAttribution  https://raw.githubusercontent.com/adaptyteam/AdaptySDK-Capacitor/main/src/adapty.ts

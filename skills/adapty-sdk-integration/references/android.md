@@ -613,3 +613,4 @@ For broader context when the LLM needs more coverage:
 - Android docs index: `https://adapty.io/docs/android-llms.txt`
 - Android full docs (large): `https://adapty.io/docs/android-llms-full.txt`
 - All Adapty docs index: `https://adapty.io/docs/llms.txt`
+- Sample app (SDK-team maintained, close to real usage — open it when a docs page doesn't show how the pieces fit together in a real app; take API usage from it, not the sample's app architecture): https://github.com/adaptyteam/AdaptySDK-Android/tree/master/app
