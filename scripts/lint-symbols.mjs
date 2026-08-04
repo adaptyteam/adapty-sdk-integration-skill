@@ -39,6 +39,25 @@ const REFERENCE_PLATFORM_OVERRIDES = {
   'testing-setup-ios': 'ios',
 }
 
+/**
+ * Migration references are cross-platform: they map another SDK's concepts
+ * onto Adapty's and delegate platform code to references/<platform>.md, so no
+ * single aggregate can verify them. They are linted against the UNION of
+ * every platform aggregate instead of being skipped - a skipped file is how
+ * drift hides. The union still catches a symbol that exists on NO platform
+ * (a hallucination, or a rename that landed everywhere); it cannot catch
+ * "iOS-only symbol used in a Flutter context", which is the accepted cost.
+ *
+ * Prefix-matched, and the platform list is DERIVED, so adding
+ * migration-superwall.md or a whole new platform needs no edit here.
+ */
+const isMigrationReference = (reference) => reference.startsWith('migration')
+
+function platformsFor(reference, available) {
+  if (!isMigrationReference(reference)) return [REFERENCE_PLATFORM_OVERRIDES[reference] ?? reference]
+  return available.filter((r) => !isMigrationReference(r) && !(r in REFERENCE_PLATFORM_OVERRIDES))
+}
+
 // ---------- symbol extraction ----------
 
 // Negative lookbehind: `'adapty.customerUserId'` as a storage-key string is not an API claim.
@@ -120,9 +139,9 @@ function extractSymbols(markdown) {
  * top of it would be pure duplication) plus pages the reference itself
  * links that live OUTSIDE the platform section (shared guides etc.).
  */
-function collectDocUrls(platform, markdown) {
-  const urls = new Set([`${DOCS_BASE}${platform}-llms-full.txt`])
-  for (const m of markdown.matchAll(/https:\/\/adapty\.io\/docs\/([a-z0-9-]+(?:\.(?:md|txt))?)/g)) {
+function collectDocUrls(platforms, markdown) {
+  const urls = new Set(platforms.map((platform) => `${DOCS_BASE}${platform}-llms-full.txt`))
+  for (const m of markdown.matchAll(/https:\/\/adapty\.io\/docs\/([a-z0-9_-]+(?:\.(?:md|txt))?)/g)) {
     const slug = m[1]
     if (slug === 'llms.txt' || slug === 'llms') continue // the global index carries no code
     urls.add(/\.(md|txt)$/.test(slug) ? `${DOCS_BASE}${slug}` : `${DOCS_BASE}${slug}.md`)
@@ -152,12 +171,11 @@ function symbolFoundInCorpus(symbol, corpus) {
 
 // ---------- main ----------
 
-async function lintReference(reference, allowlist, undocumented) {
-  const platform = REFERENCE_PLATFORM_OVERRIDES[reference] ?? reference
+async function lintReference(reference, allowlist, undocumented, available) {
   const markdown = await readFile(join(REFERENCES_DIR, `${reference}.md`), 'utf8')
   const symbols = extractSymbols(markdown)
 
-  const urls = collectDocUrls(platform, markdown)
+  const urls = collectDocUrls(platformsFor(reference, available), markdown)
   const fetchFailures = []
   const pages = await mapLimit(urls, FETCH_CONCURRENCY, async (url) => {
     try {
@@ -210,7 +228,7 @@ let infraFailed = false
 for (const reference of references) {
   let result
   try {
-    result = await lintReference(reference, allowlist, undocumented)
+    result = await lintReference(reference, allowlist, undocumented, available)
   } catch (error) {
     console.error(`${reference}: INFRA ERROR - ${error.message}`)
     infraFailed = true

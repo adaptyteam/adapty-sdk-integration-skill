@@ -673,18 +673,13 @@ Present the iOS checklist to the user with the exact product IDs from Phase 3 al
 
 ### Android
 
-Android requires separate setup in Google Play Console. Key steps:
-1. Create products (subscriptions or one-time purchases) in **Google Play Console → Monetize → Products**
-2. Connect Google Play to Adapty in **App settings → Android SDK** (provide Service Account key and Package name)
-3. Configure Real-Time Developer Notifications in **App settings → Android SDK**
-4. Create a closed testing track and add a test account to it
-5. Use the Google Play sandbox (a physical Android device signed in with the test account; internal test track allows instant sandbox purchases)
+Read and follow `references/testing-setup-android.md` (in this skill directory). It contains the full step-by-step checklist for:
+1. Creating products in Google Play Console
+2. Connecting Google Play to Adapty (Service Account key, Package name) and enabling Real-Time Developer Notifications
+3. Designing the flow in Flow Builder — template, AI generator, or from scratch *(Flow Builder only)*
+4. Sandbox testing — adding a license tester, uploading to a closed track, making a test purchase, verifying results
 
-There is no dedicated `testing-setup-android.md` in this skill yet. Fetch the relevant doc if needed:
-```bash
-curl -s https://adapty.io/docs/initial-android.md
-curl -s https://adapty.io/docs/test-purchases-in-sandbox.md
-```
+Present the Android checklist to the user with the exact product IDs from Phase 3 already filled in.
 
 ---
 

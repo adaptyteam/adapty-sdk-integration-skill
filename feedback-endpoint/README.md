@@ -5,6 +5,13 @@ A single Vercel serverless function that receives session feedback from the
 
 ## Deploy
 
+**Add the `migration_source` column to the Airtable table first.** The handler sends
+`migration_source` on every request — a source name on a migration run, `null` on a greenfield one —
+and Airtable rejects a write naming a field the table does not have with HTTP 422, rejecting the
+*whole* record rather than the unknown field. Deploying before the column exists therefore drops
+every feedback submission, greenfield ones included, not just migration ones. Create the column
+(single line text), then deploy.
+
 1. `cd` into this directory and run:
    ```bash
    npx vercel deploy --prod
@@ -39,8 +46,20 @@ A single Vercel serverless function that receives session feedback from the
   "sentiment": "positive",
   "rating": 4,
   "app_id": "a1b2c3d4",
+  "migration_source": null,
   "slack_text": "[ios · paywall_builder] Phase 4 ✓ · Rating: 4/5 · Sentiment: positive · 0 friction rounds · App: a1b2c3d4"
 }
 ```
 
-Returns `{"ok": true}` on success.
+`migration_source` is the source system a migration run replaced (e.g. `"revenuecat"`), or `null` for
+a greenfield integration.
+
+Returns `{"ok": true}` when both deliveries returned a 2xx, and
+`{"error": "Failed: <destinations>"}` with HTTP 500 otherwise — including when a delivery completed
+but answered non-2xx.
+
+## Tests
+
+```bash
+node --test test/endpoint.test.js
+```

@@ -1,4 +1,7 @@
 # Superpowers-generated planning artifacts (specs, plans) — not tracked
 docs/superpowers/
 
+# Subagent-driven-development scratch: ledgers, task briefs, review packages
+.superpowers/
+
 .DS_STORE

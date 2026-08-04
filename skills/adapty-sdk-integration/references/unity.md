@@ -635,17 +635,11 @@ Note: When building for iOS from Unity, always open `Unity-iPhone.xcworkspace` i
 
 ### Android testing
 
-Read the Android testing guide:
-```bash
-curl -s https://adapty.io/docs/testing-on-android.md
-```
-
-Key steps:
-1. Create products in Google Play Console (requires the app to be uploaded at least once as an internal test track)
-2. Connect Google Play to Adapty: App settings → Android SDK → add Service Account credentials
-3. Configure Google Play Real-Time Developer Notifications (RTDN) in App settings → Android SDK
-4. Add test accounts as **License Testers** in Google Play Console → Setup → License Testing
-5. Build a signed APK/AAB and upload to the internal test track, or use a debug build with the test account
+Follow `references/testing-setup-android.md` (in this skill directory) for:
+1. Creating products in Google Play Console
+2. Connecting Google Play to Adapty (Service Account key, Package name) and enabling Real-Time Developer Notifications
+3. Designing the paywall in Paywall Builder *(Paywall Builder only)*
+4. Sandbox testing — adding a license tester, uploading to a closed track, making a test purchase, verifying results
 
 ---
 
