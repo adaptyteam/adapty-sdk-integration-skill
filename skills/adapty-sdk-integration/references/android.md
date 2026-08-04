@@ -548,6 +548,8 @@ Read and follow `references/testing-setup-android.md` (in this skill directory).
 3. Designing the flow in Flow Builder — template, AI generator, or from scratch *(Flow Builder only)*
 4. Sandbox testing — adding a license tester, making a test purchase on a real device or emulator, verifying results in the Adapty dashboard Event Feed
 
+If you received this playbook on its own, without this skill's directory, that checklist file is not available to you — fetch https://adapty.io/docs/google-play-store-connection-configuration.md, https://adapty.io/docs/enable-real-time-developer-notifications-rtdn.md and https://adapty.io/docs/testing-on-android.md instead. They cover the connection, notification and sandbox-testing steps; creating the store products and designing the flow are console and dashboard work with no docs substitute.
+
 Present the checklist to the user with the exact product IDs from Phase 3 already filled in.
 
 ---
