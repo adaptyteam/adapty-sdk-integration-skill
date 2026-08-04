@@ -119,7 +119,7 @@ Then:
 - **Derive access levels from whatever the source calls entitlements.** No such concept → default `premium`, noted in `ADAPTY_SETUP.md`.
 - **Record every entity you could not map instead of approximating it.** A source concept with no Adapty equivalent (a source-only wrapper type, a "purchases are completed by <source>" mode, a source-only store or web-billing target) is dropped and listed — never emulated, and never silently ported on a guess.
 - **Remove the source SDK and every line that used it**, then grep the project for the source's symbols to confirm nothing executable remains. Leaving both SDKs initialized double-reports purchases.
-- Keep the source's working UI. Swapping the SDK underneath a functioning custom paywall is the migration's job; replacing that UI is a separate decision the user has to ask for.
+- Keep the source's working UI. Swapping the SDK underneath a functioning custom paywall is the migration's job; replacing that UI is a separate decision the user has to ask for — and `paywallApproach == flow_builder` on a project whose paywall screen the app renders itself *is* them asking it. That combination is the one migration that retires the app's own UI, and it has its own sequence and its own hazards: read `references/migration-flow-rebuild.md` before you touch that screen or create a placement (section 7).
 
 ---
 
@@ -179,3 +179,11 @@ Then:
 ## 6. When a call site does not map one-to-one
 
 Read `references/migration-architecture.md` **on demand only** — when a source call site has no one-to-one Adapty equivalent and you need to decide how to restructure it. Do not load it by default; the rules above cover the mapping itself.
+
+---
+
+## 7. When the app's own paywall screen is being retired for a flow
+
+Read `references/migration-flow-rebuild.md` **on demand only** — when `paywallApproach` is `flow_builder` and the project renders its paywall itself (layout, copy, and product list written by hand). It owns the sequence for that case, and two rules that override what you would otherwise do from this file: **no placement is created with the CLI on such a run** (the flow needs that developer ID, and a placement created on it blocks the flow placement with that ID — the same reservation as section 3's builder-paywall rule, reached by a different route), and the paywall screen's copy, assets, and locales are extracted into the handoff *before* any code changes, since the user rebuilds the screen in a visual editor from what you wrote down.
+
+Do not load it on any other run. A migration that keeps the app's paywall UI — every `custom` and `observer` run, and every `flow_builder` run where the source's paywall came out of a visual builder rather than the app's own code — is fully covered by the sections above.
