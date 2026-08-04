@@ -678,16 +678,11 @@ curl -s https://adapty.io/docs/test-purchases-in-sandbox.md
 ```
 
 **Android testing:**
-```bash
-curl -s https://adapty.io/docs/testing-on-android.md
-```
-
-Required steps:
-1. Google Play Console: create the app, add In-App Products / Subscriptions (use product IDs from Phase 3)
-2. Connect Google Play to Adapty: package name, service account key, RTDN notifications
-3. Add your Google account as a license tester in Play Console → Setup → License Testing
-4. Upload a signed APK to internal testing track and opt in with the tester account
-5. Make a test purchase, verify it appears in Adapty dashboard **Event Feed**
+Read and follow `references/testing-setup-android.md` (in this skill directory). It contains the full step-by-step checklist for:
+1. Creating products in Google Play Console
+2. Connecting Google Play to Adapty (Service Account key, Package name) and enabling Real-Time Developer Notifications
+3. Designing the flow in Flow Builder — template, AI generator, or from scratch *(Flow Builder only)*
+4. Sandbox testing — adding a license tester, uploading to a closed track, making a test purchase, verifying results
 
 Present the checklist to the user with the actual product IDs from Phase 3 already filled in. Both platforms should be tested if the app targets both iOS and Android.
 

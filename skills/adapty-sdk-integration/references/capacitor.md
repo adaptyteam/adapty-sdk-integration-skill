@@ -601,10 +601,7 @@ Do not proceed to the manual checklist until the app launches cleanly on both pl
 
 ## Before you can test: manual steps
 
-Read and follow `references/testing-setup-ios.md` (in this skill directory) for iOS setup. For Android, consult:
-```bash
-curl -s https://adapty.io/docs/test-purchases-in-sandbox.md
-```
+Read and follow `references/testing-setup-ios.md` (in this skill directory) for iOS setup, and `references/testing-setup-android.md` (in this skill directory) for Android setup.
 
 The full checklist covers:
 

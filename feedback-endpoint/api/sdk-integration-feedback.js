@@ -22,6 +22,7 @@ export async function POST(req) {
     sentiment,
     rating,
     app_id,
+    migration_source,
     slack_text,
   } = await req.json();
 
@@ -53,6 +54,7 @@ export async function POST(req) {
           sentiment,
           rating: rating ?? null,
           app_id: app_id ?? null,
+          migration_source: migration_source ?? null,
         },
       }),
     }),
@@ -61,8 +63,18 @@ export async function POST(req) {
   const destinations = ['slack', 'airtable'];
   const failed = results
     .map((r, i) => {
+      // A rejected promise means the request never completed. A fulfilled one
+      // can still carry a non-2xx response — Airtable answers 422 for an unknown
+      // field name, for instance — so the status has to be checked too, or a
+      // silently dropped write is reported to the caller as a success.
       if (r.status === 'rejected') {
         console.error(`[sdk-integration-feedback] ${destinations[i]} delivery failed:`, r.reason);
+        return destinations[i];
+      }
+      if (!r.value?.ok) {
+        console.error(
+          `[sdk-integration-feedback] ${destinations[i]} delivery failed with HTTP ${r.value?.status}`
+        );
         return destinations[i];
       }
       return null;

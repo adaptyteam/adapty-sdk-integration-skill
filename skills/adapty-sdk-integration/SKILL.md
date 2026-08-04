@@ -1,6 +1,6 @@
 ---
 name: adapty-sdk-integration
-description: Use when a user wants to integrate Adapty SDK into a mobile app, set up in-app purchases with Adapty, or add a paywall to their app. Triggers on "integrate Adapty", "add Adapty to my app", "set up subscriptions", "add a paywall", or similar.
+description: Use when a user wants to integrate Adapty SDK into a mobile app, set up in-app purchases with Adapty, add a paywall to their app, or move to Adapty from another purchase system. Triggers on "integrate Adapty", "add Adapty to my app", "set up subscriptions", "add a paywall", "migrate from RevenueCat", "replace RevenueCat with Adapty", "move off Superwall", or similar.
 ---
 
 # Adapty SDK Integration
@@ -20,6 +20,8 @@ Maintain these variables in your context throughout the session. Update them as 
 | `feedbackEnabled` | boolean | `false` | Phase 0 consent ask |
 | `sessionToken` | string | `""` | Phase 0 setup |
 | `platform` | string | `""` | Phase 1 project analysis |
+| `migrationSource` | string | `""` | Phase 1 project analysis (`""` = greenfield) |
+| `migrationSourceVersion` | string | `""` | Phase 1 project analysis |
 | `paywallApproach` | string | `""` | Phase 2 questions |
 | `integrations` | array | `[]` | Phase 2 questions |
 | `appPreference` | string | `""` | Phase 2 questions (`existing` or `new`) |
@@ -77,10 +79,16 @@ Read the project structure to identify platform and existing code patterns:
 
 Also check for:
 - Existing authentication system (affects user identification step)
-- Existing purchase code (may indicate Observer mode is better)
+- Existing purchase code (triggers the migration branch below)
 - Target iOS/Android version (affects SDK compatibility)
 
-**State update:** Set `platform` to the detected platform (`ios`, `android`, `flutter`, `react-native`, `unity`, `kmp`, or `capacitor`). Set `phasesCompleted = 1`.
+**Pre-existing purchase system — the migration trigger.** Grep the dependency manifests that exist (`package.json`, `pubspec.yaml`, `Podfile`, `Package.swift`, the gradle files, `Packages/manifest.json`) and the Xcode project file for any purchase or paywall SDK, store plugin, or direct StoreKit / Google Play Billing use. Answer one question here: does this project already sell purchases through something? Do not classify the source in this phase.
+
+On a hit, load `references/migration.md` in addition to the platform reference and identify the source there with its section 2 table, which owns the signals, the first-match order, and where the version comes from. Then set `migrationSource` to one of `revenuecat`, `superwall`, `qonversion`, `store-plugin`, `native-store`, set `migrationSourceVersion` to the source's installed version, and load `references/migration-<migrationSource>.md` too when that file exists. You are the setter for both variables; the migration reference records them only if you did not. No hit → leave both empty, load no migration reference, and treat the integration as greenfield.
+
+If a launcher (for example the Adapty CLI) already told you the source, take it and skip the detection grep — but still load `references/migration.md` and still resolve `migrationSourceVersion` from the project, since a launcher never supplies the version.
+
+**State update:** Set `platform` to the detected platform (`ios`, `android`, `flutter`, `react-native`, `unity`, `kmp`, or `capacitor`). Set `migrationSource` and `migrationSourceVersion` as above, or leave both empty for a greenfield project. Set `phasesCompleted = 1`.
 
 Load the platform-specific reference file from the `references/` subdirectory (`references/ios.md`, `references/android.md`, etc.).
 
@@ -156,6 +164,13 @@ Note the **app ID** and **Public SDK key** from the output. Both `apps list` and
 
 Every product must be linked to an access level.
 
+**If `migrationSource` is not empty:** derive the access levels from the source's own entitlements per `references/migration.md` section 3 instead of defaulting to `premium`. Still run the list command below when the app already exists, to see what is there. Create one access level per active source entitlement, with `--sdk-id` set to that entitlement's own identifier so existing code that gates on the string keeps working — never collapse several entitlements onto `premium`:
+
+```bash
+# both --sdk-id and --title are required
+npx adapty@latest access-levels create --app <APP_ID> --sdk-id <ACCESS_LEVEL_ID> --title "<TITLE>"
+```
+
 **If `appPreference` is `new`:** The default `premium` access level is created automatically with every new app. Skip the list command — use `premium` as the access level ID directly.
 
 **If `appPreference` is `existing`:** List the existing access levels to get the correct ID:
@@ -198,6 +213,8 @@ Use this to determine the path through Steps 4 and 5:
 | Any answer | None | Proceed with creation |
 
 ### Step 4: Create products
+
+**If `migrationSource` is not empty:** do not open with the staged store-product-ID interview below. Take the products from the source's catalog, code, and config per `references/migration.md` section 3, and ask the user only for what the code does not cover — their answers complement the identifiers you found, never overwrite them. Return here for the `products create` command syntax and the immutability rules, which apply identically.
 
 **If `appPreference` is `new`:** Always create products — do not run a list check.
 
@@ -262,6 +279,8 @@ Repeat for each product to create.
 ### Step 5: Create paywall/flow and placement
 
 **Prerequisite: do not start this step until at least one product has been successfully created (or confirmed to exist) in Step 4.** A paywall/flow without products is a non-functional empty shell — if Step 4 deferred product creation, defer this step the same way: create nothing now and put the full command sequence (paywall, then placement) into ADAPTY_SETUP.md right after the deferred `products create` commands, keeping the placement ID consistent with the one used in code.
+
+**If `migrationSource` is not empty:** skip the locations interview below. Placements come from the source's offerings, not from the project's UI: create one per offering the app actually uses — the source's current/default one plus any referenced in code by name — with the developer ID equal to the source's own offering identifier, per `references/migration.md` section 3. Offerings the app never uses get listed in `ADAPTY_SETUP.md`, not created. An offering whose paywall was built in the source's own visual builder gets nothing created here at all: that placement ID is reserved for the Adapty flow that replaces it, and a placement created on it blocks that flow permanently. `main` in this step's examples is greenfield-only — use the source's identifier instead, and when you defer a command into `ADAPTY_SETUP.md` for an identifier you inferred rather than recovered, write a `<PLACEMENT_ID>` slot, never a literal (`references/migration.md` section 5).
 
 First, analyze the project to identify natural locations to show the paywall/flow. Look for:
 - Onboarding flows (welcome screens, feature intro screens)
@@ -347,6 +366,10 @@ Proceed to Phase 4 with the values you collected from the CLI output above.
 
 ## Phase 4: Implement — stage by stage
 
+**If `migrationSource` is not empty and `paywallApproach` is not `observer`:** you are replacing, not inserting. Work call site by call site — swap each of the source's calls for its Adapty equivalent, then remove the source from the dependencies and delete the code that is now dead. The stage order and checkpoints below still apply. When a call site does not map one-to-one, read `references/migration-architecture.md`.
+
+**If `migrationSource` is not empty and `paywallApproach` is `observer`:** delete nothing. The user chose to keep their existing purchase infrastructure, so the source's purchase code stays in place and only event tracking routes through Adapty, per the platform reference's Observer mode section.
+
 Follow the platform-specific file for the exact doc URLs and implementation order. For each stage:
 
 1. **Read the listed docs** (fetch the `.md` URLs) before writing any code
@@ -380,7 +403,7 @@ When a checkpoint fails:
 
 ## Closing review
 
-Once the integration is functionally working — the paywall or flow appears and a sandbox purchase completes — always finish with a short closing review before you wrap up. Do this every time you conclude a working integration: it is not optional, and it still applies even if you already glanced at the release notes during the build, or the user seems ready to stop.
+Once the integration is functionally working — the paywall or flow appears and a sandbox purchase completes — or once it has gone as far as it can because Steps 4 and 5 deliberately deferred the products, paywall, and placement, always finish with a short closing review before you wrap up. Do this every time you conclude a working integration: it is not optional, and it still applies even if you already glanced at the release notes during the build, or the user seems ready to stop.
 
 Pull the release checklist as your reference:
 
@@ -389,6 +412,8 @@ curl -s "https://adapty.io/docs/release-checklist.md?ref=skill-<sessionToken>"
 ```
 
 Treat it as a pointer list, not a script — don't narrate it or walk through it line by line, and don't re-verify things already done. Skim it only to pick out a few still-relevant items and their links (e.g. server notifications, privacy policy, going to production), and offer those to the user as a brief "before you ship" list of suggested next steps. Keep it to a few bullets.
+
+**If `migrationSource` is not empty:** before you wrap up, re-read `references/migration.md` section 5 and check the `ADAPTY_SETUP.md` you wrote against it subsection by subsection — every one is mandatory, including the ones whose answer is "nothing to do". The two most often dropped: reconnecting the stores and re-pointing App Store Server Notifications / Google Play RTDN, and the historical data import decision. Add anything missing, with that section's plain `https://adapty.io/docs/<page>` links — no `.md`, no `?ref=` tag, since a human with no copy of this skill reads that document.
 
 Then continue to the feedback step below (if enabled).
 
@@ -421,7 +446,7 @@ POST all fields in a single request to Adapty's feedback endpoint. Replace upper
 ```bash
 curl -s -X POST "https://feedback-endpoint-eandreeva-twrs-projects.vercel.app/api/sdk-integration-feedback" \
   -H "Content-Type: application/json" \
-  -d "{\"platform\": \"PLATFORM\", \"paywall_approach\": \"PAYWALL_APPROACH\", \"integrations\": \"INTEGRATIONS_STRING\", \"phases_completed\": PHASES_COMPLETED, \"checkpoints_passed\": CHECKPOINTS_PASSED, \"friction_rounds\": FRICTION_ROUNDS, \"sentiment\": \"SENTIMENT\", \"rating\": RATING_OR_NULL, \"app_id\": APP_ID_OR_NULL, \"slack_text\": \"[PLATFORM · PAYWALL_APPROACH] Phase PHASES_COMPLETED ✓ · Rating: RATING/5 · Sentiment: SENTIMENT · FRICTION_ROUNDS friction rounds · App: APP_ID\"}"
+  -d "{\"platform\": \"PLATFORM\", \"paywall_approach\": \"PAYWALL_APPROACH\", \"integrations\": \"INTEGRATIONS_STRING\", \"phases_completed\": PHASES_COMPLETED, \"checkpoints_passed\": CHECKPOINTS_PASSED, \"friction_rounds\": FRICTION_ROUNDS, \"sentiment\": \"SENTIMENT\", \"rating\": RATING_OR_NULL, \"app_id\": APP_ID_OR_NULL, \"migration_source\": MIGRATION_SOURCE_OR_NULL, \"slack_text\": \"[PLATFORM · PAYWALL_APPROACH] Phase PHASES_COMPLETED ✓ · Rating: RATING/5 · Sentiment: SENTIMENT · FRICTION_ROUNDS friction rounds · App: APP_ID\"}"
 ```
 
 `INTEGRATIONS_STRING` is a comma-separated string of integration keys, e.g. `amplitude, appsflyer` or left empty.
@@ -429,10 +454,12 @@ curl -s -X POST "https://feedback-endpoint-eandreeva-twrs-projects.vercel.app/ap
 If `rating` is null, omit `· Rating: RATING/5` from `slack_text`.
 `APP_ID_OR_NULL` is the `appId` state value as a quoted string (e.g. `"a1b2c3d4"`), or `null` if it was never captured (user abandoned before Phase 3).
 If `appId` is empty/null, send `"app_id": null` and omit ` · App: APP_ID` from `slack_text`.
+`MIGRATION_SOURCE_OR_NULL` is the `migrationSource` state value as a quoted string (e.g. `"revenuecat"`), or `null` for a greenfield integration.
+If `migrationSource` is set, add ` · from MIGRATION_SOURCE` inside the bracketed prefix of `slack_text` — e.g. `[ios · flow_builder · from revenuecat]`; omit it when it is null.
 
 Example with real values:
 ```bash
 curl -s -X POST "https://feedback-endpoint-eandreeva-twrs-projects.vercel.app/api/sdk-integration-feedback" \
   -H "Content-Type: application/json" \
-  -d '{"platform": "ios", "paywall_approach": "paywall_builder", "integrations": "amplitude, appsflyer", "phases_completed": 4, "checkpoints_passed": 5, "friction_rounds": 0, "sentiment": "positive", "rating": 4, "app_id": "a1b2c3d4", "slack_text": "[ios · paywall_builder] Phase 4 ✓ · Rating: 4/5 · Sentiment: positive · 0 friction rounds · App: a1b2c3d4"}'
+  -d '{"platform": "ios", "paywall_approach": "paywall_builder", "integrations": "amplitude, appsflyer", "phases_completed": 4, "checkpoints_passed": 5, "friction_rounds": 0, "sentiment": "positive", "rating": 4, "app_id": "a1b2c3d4", "migration_source": null, "slack_text": "[ios · paywall_builder] Phase 4 ✓ · Rating: 4/5 · Sentiment: positive · 0 friction rounds · App: a1b2c3d4"}'
 ```

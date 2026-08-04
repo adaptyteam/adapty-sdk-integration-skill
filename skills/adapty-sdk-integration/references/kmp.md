@@ -713,17 +713,11 @@ Both platforms require store-side setup before sandbox testing works.
 
 Present the iOS checklist with the exact iOS product IDs from Phase 3 already filled in (`--ios-product-id` values).
 
-**For Android:** Fetch the Android testing guide:
-```bash
-curl -s https://adapty.io/docs/testing-on-android.md
-```
-
-Key Android testing setup steps:
-1. Publish the app to at least **internal testing** track in Google Play Console (needed to test billing)
-2. Add a **license tester** email in Google Play Console → Setup → License testing
-3. Connect Google Play to Adapty: App settings → Android SDK (service account key, bundle ID)
-4. Configure **Real-Time Developer Notifications (RTDN)** in App settings → Android SDK
-5. Make a test purchase using the license tester account on a physical Android device
+**For Android:** Read and follow `references/testing-setup-android.md` (in this skill directory). It covers:
+1. Creating products in Google Play Console
+2. Connecting Google Play to Adapty (Service Account key, Package name) and enabling Real-Time Developer Notifications
+3. Designing the flow in Flow Builder — template, AI generator, or from scratch *(Flow Builder only)*
+4. Sandbox testing — adding a license tester, uploading to a closed track, making a test purchase, verifying results
 
 Present the Android checklist with the exact Android product IDs from Phase 3 already filled in (`--android-product-id` values).
 

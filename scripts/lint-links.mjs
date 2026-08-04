@@ -10,6 +10,8 @@
  *   can't DISCOVER them, which degrades on-demand routing.
  * - external links (github, stores, consoles) are checked as-is; failures
  *   are warnings, not errors - many of these sites answer 403/999 to bots.
+ * - revenuecat.com/docs pages are checked as-is; a dead one is a hard
+ *   failure, since the migration references instruct fetching it.
  *
  * Usage:  node scripts/lint-links.mjs
  * Exit codes: 0 = clean (warnings allowed), 1 = dead docs links, 2 = infra error.
@@ -20,6 +22,15 @@ import {dirname, join, relative} from 'node:path'
 import {fileURLToPath} from 'node:url'
 
 import {DOCS_BASE, fetchLlmsTxt, fetchText, mapLimit} from './shared.mjs'
+
+/**
+ * Foreign docs the skill instructs agents to fetch (RevenueCat migration
+ * guides). A 404 here costs a migrating agent a turn exactly as an Adapty
+ * one does, so these are errors, not warnings. Checked AS-IS: RevenueCat's
+ * own llms.txt already carries .md where applicable, so no suffixing.
+ */
+const FOREIGN_DOCS_BASES = ['https://www.revenuecat.com/docs/']
+const isForeignDocs = (url) => FOREIGN_DOCS_BASES.some((base) => url.startsWith(base))
 
 const SKILL_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'adapty-sdk-integration')
 const REPO_ROOT = join(SKILL_DIR, '..', '..')
@@ -95,7 +106,7 @@ const verdicts = new Map(
     const isDocs = url.startsWith(DOCS_BASE)
     const variant = isDocs ? agentFetchVariant(url) : url
     const error = await checkUrl(variant)
-    return [url, {error, isDocs, variant}]
+    return [url, {error, isDocs, isForeign: isForeignDocs(url), variant}]
   }),
 )
 
@@ -103,7 +114,7 @@ let errors = 0
 let warnings = 0
 let infraProblems = 0
 for (const {file, line, url} of mentions) {
-  const {error, isDocs, variant} = verdicts.get(url)
+  const {error, isDocs, isForeign, variant} = verdicts.get(url)
   if (isDocs) {
     if (error?.dead) {
       console.log(`DEAD DOCS LINK  ${url}  (${file}:${line}) - ${error.dead} for the agent-fetchable variant`)
@@ -117,6 +128,14 @@ for (const {file, line, url} of mentions) {
         console.log(`NOT IN LLMS.TXT  ${url}  (${file}:${line}) - works, but agents can't discover it`)
         warnings++
       }
+    }
+  } else if (isForeign) {
+    if (error?.dead) {
+      console.log(`DEAD DOCS LINK  ${url}  (${file}:${line}) - ${error.dead}`)
+      errors++
+    } else if (error?.infra && !/HTTP (403|405|999)/.test(error.infra)) {
+      console.log(`INFRA           ${url}  (${file}:${line}) - could not verify (${error.infra})`)
+      infraProblems++
     }
   } else if (error?.dead || (error?.infra && !/HTTP (403|405|999)/.test(error.infra))) {
     // 403/405/999 = alive but bot-hostile (API endpoints, package registries) - not a finding.
