@@ -603,6 +603,8 @@ Do not proceed to the manual checklist until the app launches cleanly on both pl
 
 Read and follow `references/testing-setup-ios.md` (in this skill directory) for iOS setup, and `references/testing-setup-android.md` (in this skill directory) for Android setup.
 
+If you received this playbook on its own, without this skill's directory, those checklist files are not available to you — fetch https://adapty.io/docs/app-store-connection-configuration.md, https://adapty.io/docs/enable-app-store-server-notifications.md and https://adapty.io/docs/app-store-test.md for iOS, and https://adapty.io/docs/google-play-store-connection-configuration.md, https://adapty.io/docs/enable-real-time-developer-notifications-rtdn.md and https://adapty.io/docs/testing-on-android.md for Android. They cover the connection, notification and sandbox-testing steps; creating the store products and designing the paywall are console and dashboard work with no docs substitute.
+
 The full checklist covers:
 
 **iOS (App Store Connect + Adapty Dashboard):**
