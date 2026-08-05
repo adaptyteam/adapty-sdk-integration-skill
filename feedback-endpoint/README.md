@@ -1,39 +1,65 @@
 # Adapty SDK Integration — Feedback Endpoint
 
-A single Vercel serverless function that receives session feedback from the
-`adapty-sdk-integration` Claude skill and forwards it to Slack and Airtable.
+Receives session feedback from the `adapty-sdk-integration` skill and from the
+Adapty CLI (`adapty integrate` / `adapty migrate`), and forwards it to Slack and Airtable.
 
-## Deploy
+One implementation, two deployments:
 
-**Add the `migration_source` column to the Airtable table first.** The handler sends
-`migration_source` on every request — a source name on a migration run, `null` on a greenfield one —
-and Airtable rejects a write naming a field the table does not have with HTTP 422, rejecting the
-*whole* record rather than the unknown field. Deploying before the column exists therefore drops
-every feedback submission, greenfield ones included, not just migration ones. Create the column
-(single line text), then deploy.
+| File | Runs on | Role |
+|---|---|---|
+| `src/validate.js` | both | Reads and clamps the body; owns what is refused outright |
+| `src/deliver.js` | both | Fans the payload out to Slack and Airtable; owns what counts as a failure |
+| `src/handler.js` | both | Request in, response out: validate, then deliver |
+| `src/index.js` | Cloudflare Workers | The deployment we run |
+| `api/sdk-integration-feedback.js` | Vercel | Legacy address, kept alive for published skill versions |
 
-1. `cd` into this directory and run:
-   ```bash
-   npx vercel deploy --prod
-   ```
+## Why both
 
-2. Set the following environment variables in the Vercel dashboard
-   (Project → Settings → Environment Variables):
+The Vercel URL is baked into skill versions that are already installed and into
+published CLI builds. They keep sending there for as long as they exist, so that
+address cannot be retired — but it also should not be a second implementation.
+Setting `FORWARD_URL` on the Vercel deployment turns it into a relay: it passes
+the request to the Worker verbatim and returns the Worker's verdict unchanged.
+Credentials, validation and delivery logic then live in one place.
 
-   | Variable | Value |
-   |---|---|
-   | `SLACK_WEBHOOK_URL` | Your Slack Incoming Webhook URL |
-   | `AIRTABLE_PAT` | Airtable Personal Access Token (scope: `data.records:write`) |
-   | `AIRTABLE_BASE_ID` | Airtable Base ID (starts with `app`) |
-   | `AIRTABLE_TABLE` | Table name inside the base (e.g. `Table 1`) |
+## Deploy (Cloudflare Workers)
 
-3. The stable production URL is:
-   `https://feedback-endpoint-eandreeva-twrs-projects.vercel.app/api/sdk-integration-feedback`
-   This is already set in SKILL.md. Update it if the project is redeployed under a different team.
+**Add any new Airtable column before deploying code that sends it.** Airtable
+answers HTTP 422 for a field the table does not have and rejects the *whole*
+record, so a deploy that runs ahead of the column drops every submission, not
+just the ones carrying the new field. Order is always: column → Worker → senders.
+
+```bash
+cd feedback-endpoint
+npx wrangler secret put SLACK_WEBHOOK_URL   # Slack Incoming Webhook URL
+npx wrangler secret put AIRTABLE_PAT        # Airtable PAT, scope data.records:write
+npx wrangler secret put AIRTABLE_BASE_ID    # starts with "app"
+npx wrangler secret put AIRTABLE_TABLE      # table name inside the base
+npx wrangler deploy
+```
+
+Routine changes do not need any of that: merging to `main` deploys the Worker
+through `.github/workflows/feedback-endpoint-deploy.yml`, which needs two repo
+secrets — `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. Without them the
+workflow runs the tests and skips the deploy, so it is safe before provisioning.
+
+The route lives in `wrangler.toml`, commented out until the hostname exists. Both
+`/sdk-integration-feedback` and `/api/sdk-integration-feedback` are served, so the
+relay can forward the legacy path unchanged.
+
+## Cutover
+
+1. Deploy the Worker and confirm a POST reaches Slack and Airtable.
+2. Point new senders at the Worker URL: `SKILL.md` in this repo, and
+   `DEFAULT_ENDPOINT` in the Adapty CLI's `src/lib/agent/telemetry.ts`.
+3. Set `FORWARD_URL` on the Vercel deployment to the Worker URL. Old clients
+   keep working; nothing else about that project needs to change.
+4. Leave the Vercel deployment running. It costs nothing and it is the only
+   thing serving already-installed versions.
 
 ## Endpoint
 
-`POST /api/sdk-integration-feedback`
+`POST /sdk-integration-feedback` (also `/api/sdk-integration-feedback`)
 
 ```json
 {
@@ -52,9 +78,9 @@ every feedback submission, greenfield ones included, not just migration ones. Cr
 ```
 
 `migration_source` is the source system a migration run replaced (e.g. `"revenuecat"`), or `null` for
-a greenfield integration.
+a greenfield integration. The CLI sends a subset of these fields; missing ones land as `null`.
 
-Returns `{"ok": true}` when both deliveries returned a 2xx, and
+Returns `{"ok": true}` when both deliveries returned a 2xx,
 `{"error": "Failed: <destinations>"}` with HTTP 500 otherwise — including when a delivery completed
 but answered non-2xx.
 
@@ -95,3 +121,6 @@ our compute runs. What only we can know is the schema, which is why the shape ch
 ```bash
 node --test test/endpoint.test.js
 ```
+
+No network: `fetch` is stubbed and the credentials are passed in as an argument,
+the same way the Worker receives its bindings.
