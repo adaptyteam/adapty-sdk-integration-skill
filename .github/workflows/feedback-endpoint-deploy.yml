@@ -1,0 +1,59 @@
+# Deploys the feedback Worker when its sources change on main, so adding a
+# field is a merged PR rather than someone's laptop.
+#
+# Two things make this safe to merge before Cloudflare is provisioned:
+#   1. the deploy step no-ops when CLOUDFLARE_API_TOKEN is absent, so CI does
+#      not go red while the account and the domain are still being set up;
+#   2. the delivery secrets (Slack webhook, Airtable PAT) never travel through
+#      CI - they are set once with `wrangler secret put` and live in Cloudflare.
+#
+# Tests run first: a Worker that deploys green and drops every record is worse
+# than one that never deployed.
+
+name: feedback-endpoint-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'feedback-endpoint/**'
+      - '.github/workflows/feedback-endpoint-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: feedback-endpoint
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Endpoint tests
+        run: node --test test/endpoint.test.js
+
+      - name: Check for deploy credentials
+        id: creds
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: echo "present=${CLOUDFLARE_API_TOKEN:+yes}" >> "$GITHUB_OUTPUT"
+
+      - name: Skip deploy (not provisioned yet)
+        if: steps.creds.outputs.present != 'yes'
+        run: echo "::notice::CLOUDFLARE_API_TOKEN is not set - ran the tests, skipping the deploy."
+
+      - name: Deploy Worker
+        if: steps.creds.outputs.present == 'yes'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: feedback-endpoint

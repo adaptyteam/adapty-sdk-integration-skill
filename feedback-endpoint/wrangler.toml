@@ -1,0 +1,23 @@
+# Cloudflare Worker for the feedback endpoint.
+#
+# Secrets are NOT here - they are set once per environment and never committed:
+#   wrangler secret put SLACK_WEBHOOK_URL
+#   wrangler secret put AIRTABLE_PAT
+#   wrangler secret put AIRTABLE_BASE_ID
+#   wrangler secret put AIRTABLE_TABLE
+
+name = "adapty-skill-feedback"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# No workers.dev address. The only URL that should exist is the one on an
+# Adapty domain: it goes into published packages and the public skill repo,
+# where old versions keep sending to it for years, so it can never move.
+workers_dev = false
+
+# Uncomment once infra provisions the hostname, and keep the path identical to
+# the one the Vercel deployment served so the relay can forward verbatim:
+# routes = [
+#   { pattern = "hooks.adapty.io/sdk-integration-feedback", zone_name = "adapty.io" },
+#   { pattern = "hooks.adapty.io/api/sdk-integration-feedback", zone_name = "adapty.io" },
+# ]
