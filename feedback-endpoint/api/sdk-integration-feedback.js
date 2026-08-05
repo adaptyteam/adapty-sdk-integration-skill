@@ -4,14 +4,24 @@
  * Accepts session feedback from the adapty-sdk-integration Claude skill
  * and forwards it to Slack and Airtable.
  *
+ * The body is validated before anything leaves here (see src/validate.js):
+ * the endpoint is public and unauthenticatable, and `slack_text` reaches an
+ * Adapty Slack channel verbatim.
+ *
  * Environment variables (set in Vercel dashboard):
  *   SLACK_WEBHOOK_URL   — Slack Incoming Webhook URL
  *   AIRTABLE_PAT        — Airtable Personal Access Token (data.records:write)
  *   AIRTABLE_BASE_ID    — Airtable Base ID (e.g. appXXXXXXXXXXXXXX)
  *   AIRTABLE_TABLE      — Airtable table name (e.g. Table 1)
  */
+import { readFeedback } from '../src/validate.js';
 
 export async function POST(req) {
+  const result = await readFeedback(req);
+  if (!result.ok) {
+    return Response.json({ error: result.error }, { status: result.status });
+  }
+
   const {
     platform,
     paywall_approach,
@@ -24,7 +34,7 @@ export async function POST(req) {
     app_id,
     migration_source,
     slack_text,
-  } = await req.json();
+  } = result.payload;
 
   const { SLACK_WEBHOOK_URL, AIRTABLE_PAT, AIRTABLE_BASE_ID, AIRTABLE_TABLE } = process.env;
 
@@ -52,9 +62,9 @@ export async function POST(req) {
           checkpoints_passed,
           friction_rounds,
           sentiment,
-          rating: rating ?? null,
-          app_id: app_id ?? null,
-          migration_source: migration_source ?? null,
+          rating,
+          app_id,
+          migration_source,
         },
       }),
     }),
