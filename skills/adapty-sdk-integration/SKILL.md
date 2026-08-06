@@ -226,7 +226,7 @@ Use this to determine the path through Steps 4 and 5:
 
 - **Does not set prices.** The CLI has no `--price` flag. Price is configured either in the store console (App Store Connect / Google Play) or via the Adapty dashboard's "Create a new product and push to stores" flow (which sets a USD baseline and auto-calculates regional prices). If the user specifies a price, tell them the CLI path can't set it, and ask whether they want to set it in the store console later, or switch to the dashboard push-to-stores flow instead.
 - **`--title` is the Adapty dashboard label only** — an internal reference, not shown to end users. Users see either the store product name (from App Store Connect / Google Play) or per-product copy configured in the Paywall Builder. If the user wants a different user-facing name, tell them it goes in the Paywall Builder (or the store listing); the CLI can't set it.
-- **Does not create products in the stores.** The CLI creates Adapty products that *reference* store product IDs. The actual store products must exist (or be created later) in App Store Connect / Google Play Console.
+- **Does not create products in the stores.** The CLI creates Adapty products that *reference* store product IDs. The actual store products must exist (or be created later) in App Store Connect / Google Play Console — or, for web sales, in Stripe / Paddle.
 
 **Google Play prerequisite (Android targets):**
 
@@ -234,17 +234,21 @@ Google Play blocks creating in-app products and subscriptions in the Console unt
 
 **Store product IDs are IMMUTABLE in Adapty** — once a product is created, its store IDs can never be changed; the only fix is deleting and recreating the product (losing its paywall attachments). So NEVER create a product with a placeholder or guessed store ID. When real IDs don't exist yet, create no products — write the exact ready-to-run `products create` commands (with `<REAL_PRODUCT_ID>` slots) into ADAPTY_SETUP.md instead, and for Android explain the ordering: build → upload a signed AAB to internal testing → create the real products in Google Play Console (see `references/testing-setup-android.md`, Part 1) → run the deferred commands.
 
+Immutability covers **every** store binding, including the web ones (`--stripe-product-id`/`--stripe-price-id`, `--paddle-product-id`/`--paddle-price-id`). `products update` edits only `--title` and `--access-level-id`, so a web binding left out of the create call can never be added afterwards. If the same product is also sold on the web, its web IDs must go into the SAME `products create` call as its mobile IDs — one Adapty product carrying all of them.
+
 **Collecting store product IDs — a staged conversation, skippable at every step:**
 
 1. **Which stores?** Use `AskUserQuestion` with mutually exclusive options built from the app's target stores — never show an irrelevant store (iOS-only app → no Google Play option), and never mix a multi-select with a "No" option:
    - Cross-platform: "Yes, in both stores" / "Yes, in the App Store only" / "Yes, in Google Play only" / "Not yet — skip for now"
    - Single-store app: "Yes, in the App Store" / "Not yet — skip for now" (or the Google Play pair)
    "Not yet" → create no products; defer with commands in ADAPTY_SETUP.md as above.
+   Add a web option ("…and on the web through Stripe/Paddle") only on **evidence** that the user sells on the web: they said so, or the repo/checkout code references Stripe or Paddle. Never offer it speculatively — this is a mobile integration, and an irrelevant option costs the user a decision.
 2. **The IDs, one product at a time.** Even after "yes", the user may prefer not to dig for IDs right now — offer a skip at this stage too, and treat an empty first answer as "skip for now". Per product ask only what the chosen stores need:
    - App Store product ID
    - Google Play product ID — suggest the App Store ID as the default (cross-store products usually share the identifier)
    - **Period** — one of the CLI's `--period` values: `weekly`, `monthly`, `two_months`, `trimonthly`, `semiannual`, `annual`, `lifetime` (lifetime = one-time purchase, not a subscription)
    - Google Play **base plan ID** — only when the period is NOT `lifetime`; lifetime products never have one
+   - Stripe or Paddle **product ID and price ID** — only when web sales came up in step 1; ask for both together, never one alone
    After each product ask whether to add another. Any number of products is fine — keep looping. A product available in both stores is ONE Adapty product carrying both store IDs, not two. Do NOT assume every product exists in all the selected stores — a specific product may live in only one of them (e.g. an old iOS-only lifetime SKU); if the user's answer leaves that ambiguous, ask, and create the product with only the store IDs it really has.
 
 When they provide IDs:
@@ -252,6 +256,7 @@ When they provide IDs:
 - **iOS**: product ID (e.g. `com.example.app.monthly`)
 - **Android subscriptions**: product ID **and** base plan ID (e.g. `monthly-base`) — both required; the CLI rejects the command without `--android-base-plan-id`
 - **Android one-time purchases**: only the product ID is needed
+- **Stripe / Paddle** (web sales only): product ID **and** price ID — both required; the CLI rejects a lone `--stripe-product-id` or `--paddle-product-id`. Adapty tracks these purchases only once the provider is connected in the dashboard (Stripe/Paddle API keys + webhook), so mention that as a follow-up rather than assuming it is done
 
 ```bash
 # --period options: weekly, monthly, two_months, trimonthly, semiannual, annual, lifetime
@@ -272,7 +277,22 @@ npx adapty@latest products create \
   --access-level-id <ACCESS_LEVEL_ID> \
   --android-product-id "com.example.app.monthly" \
   --android-base-plan-id "monthly-base"
+
+# Same product also sold on the web: one product, all its store bindings in ONE call
+npx adapty@latest products create \
+  --app <APP_ID> \
+  --title "Monthly" \
+  --period monthly \
+  --access-level-id <ACCESS_LEVEL_ID> \
+  --ios-product-id "com.example.app.monthly" \
+  --stripe-product-id "prod_XXX" \
+  --stripe-price-id "price_XXX"
 ```
+
+**NEVER create a web-only product in this flow.** A product whose only bindings are Stripe or Paddle gives StoreKit and Google Play Billing nothing to fetch, so it cannot be purchased in the app. The CLI accepts it (the API allows web-only products), which is exactly why the guard has to live here. Web IDs are an addition to a mobile product, never a replacement:
+
+- User gives web IDs but no App Store / Google Play ID → do not create the product. Ask for the mobile ID, or defer the whole product to ADAPTY_SETUP.md.
+- User says the product is web-only → it belongs on a [web paywall](https://adapty.io/docs/web-paywall), not on the paywall/flow this integration builds. Leave it out and say why.
 
 Repeat for each product to create.
 
