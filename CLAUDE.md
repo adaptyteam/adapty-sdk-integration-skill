@@ -4,20 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-The `adapty-sdk-integration` skill: a portable, Claude-style skill that guides agentic CLIs (Claude Code, GitHub Copilot CLI, OpenAI Codex, Gemini CLI) through integrating the Adapty SDK into a mobile app end-to-end — dashboard setup via the Adapty CLI, SDK install, paywall, store configuration. One repo, three distribution channels: a Claude Code plugin (`.claude-plugin/` holds the marketplace + plugin manifests), the skills.sh CLI, and plain directory copy of `skills/adapty-sdk-integration/` into a tool's skills folder. Keep the skill directory self-contained and format-portable — nothing in it may assume Claude Code specifically.
+Two portable, Claude-style skills for agentic CLIs (Claude Code, GitHub Copilot CLI, OpenAI Codex, Gemini CLI):
+
+- **`adapty-sdk-integration`** — guides an agent through integrating the Adapty SDK into a mobile app end-to-end: dashboard setup via the Adapty CLI, SDK install, paywall, store configuration.
+- **`ads-manager`** — operates Apple Search Ads through the Adapty CLI's `adapty asa` topic: reading performance, changing bids and budgets, keyword work, launching and pausing campaigns.
+
+One repo, three distribution channels: a Claude Code plugin (`.claude-plugin/` holds the marketplace + plugin manifests), the skills.sh CLI, and plain directory copy of a `skills/<name>/` directory into a tool's skills folder. Keep every skill directory self-contained and format-portable — nothing in one may assume Claude Code specifically.
+
+Both skills ship inside the single `adapty-sdk-integration` plugin, because a plugin exposes every skill under `skills/`. Consequence to keep in mind: the plugin's name under-describes what it contains, and installing it for SDK integration also installs the ads skill. Splitting them into separate marketplace entries is an open follow-up.
 
 ## Layout
 
 - `skills/adapty-sdk-integration/SKILL.md` — the skill entry point. Phase-by-phase flow: state tracking → setup (docs-fetching rules, session marker, feedback consent) → project analysis → three user questions → dashboard setup through the Adapty CLI → staged, per-platform implementation → closing review → feedback delivery. Platform-agnostic on purpose; per-platform details belong in references.
 - `skills/adapty-sdk-integration/references/<platform>.md` — one per platform (`ios`, `android`, `flutter`, `react-native`, `unity`, `kmp`, `capacitor`) plus `testing-setup-{ios,android}.md`. Code snippets and the exact docs URLs the agent fetches before writing each piece of code.
 - `skills/adapty-sdk-integration/references/migration.md` — the cross-platform migration spine: source detection, mapping rules from another purchase system's concepts to Adapty's, and the `ADAPTY_SETUP.md` handoff contract. Injected on every run where `migrationSource` is set, alongside the platform reference; kept lean on purpose, since a headless run can't skip past padding. `references/migration-<source>.md` (currently `migration-revenuecat.md`) adds source-specific mapping and is also cross-platform. Two files are the odd ones out, loaded **on demand only** and never injected by default: `references/migration-architecture.md`, when a call site has no one-to-one Adapty equivalent, and `references/migration-flow-rebuild.md`, when `paywallApproach` is `flow_builder` and the app renders its paywall screen itself — the one migration that retires the app's own UI instead of rewiring it. That file owns the two rules the spine can't state generally: no CLI-created placements on such a run (the flow needs those developer IDs), and the screen's copy, assets, and locales get extracted into the handoff before any code changes, because the user rebuilds it in a visual editor from what the agent wrote down.
+- `skills/ads-manager/SKILL.md` — the ads skill's entry point. Ten named workflows (orient, report, launch, harvest keywords, optimization pass, pause/resume, custom product page, diagnose a dead ad, automations, competitor check), a money-safety contract in prohibition + rationalization-table + red-flags form, the shared account surface, the one-question-one-call rule, and the fallback chain. Drives the `adapty asa` topic, added by [adapty-cli#8](https://github.com/adaptyteam/adapty-cli/pull/8) and shipped in `adapty` 0.4.0.
+- `skills/ads-manager/references/asa-management.md` and `asa-metrics.md` — the writing half and the reading half. Management owns per-entity create/update flags, the scope-filter matrix, batch caps, idempotency and the catalog/write budgets; metrics owns entity levels, cohort windows, date-window caps, the metric vocabulary and the analytics pool. The split is load-bearing: the two halves share almost no vocabulary, so a "how did last week go" request loads one file and "add these keywords" the other. `SKILL.md` links into both by exact heading string — `## Scope filters`, `## Writes and idempotency`, `## Status`, `## Cohort windows`, `## The analytics pool` — so renaming a heading breaks the entry point silently.
 - `scripts/` — the two validation lints and their plain-text allowlists (see below).
 - `feedback-endpoint/` — a single Vercel serverless function that receives the end-of-run feedback payload and forwards it to Slack + Airtable. Deployed separately (`npx vercel deploy --prod` from inside that directory); its README documents the env vars and the stable production URL that SKILL.md points at. Has its own tests: `node --test test/endpoint.test.js` from inside that directory.
 - `context7.json` — Context7 indexing config.
 
 ## Validation lints
 
-There is no test suite for the skill itself — the lints are the verification gates. Run them after any edit to SKILL.md or a reference:
+**The lints cover `skills/adapty-sdk-integration/` only.** Both scripts hardcode that path (`scripts/lint-links.mjs:35`), so nothing under `skills/ads-manager/` is checked by them, by CI, or by the daily drift cron — a green run says nothing about that skill. Verify its URLs by hand until the lints are widened, which is an open follow-up.
+
+There is no test suite for the skills themselves — the lints are the verification gates for the one they cover. Run them after any edit to that skill's SKILL.md or a reference:
 
 ```bash
 node scripts/lint-symbols.mjs [platform ...]   # default: all platforms
@@ -33,7 +44,9 @@ Exit codes for both: `0` clean (warnings allowed), `1` findings, `2` infrastruct
 
 CI (`.github/workflows/skill-lints.yml`) runs both lints on PRs and pushes to `main` (red blocks merge) and on a daily cron that catches drift with no skill commit involved — docs renames, SDK releases. A scheduled failure files one deduped `skill-drift` GitHub issue; repeats become comments on it.
 
-## Conventions when editing the skill
+## Conventions when editing the skills
+
+These apply to `adapty-sdk-integration`; the `ads-manager` section below adds its own.
 
 - **Docs URLs are load-bearing.** SKILL.md forbids the runtime agent from guessing slugs — it may only open URLs written in the skill or found in a fetched `llms.txt` index. So every docs URL you add must literally exist (the link lint enforces this); never assemble one from a topic and platform name.
 - **The session marker matters.** SKILL.md tells the runtime agent to mint a random `sessionToken` and tag every docs fetch with `?ref=skill-<sessionToken>` (a docs-analytics marker, documented in SKILL.md's "Session marker" section). Don't remove, rename, or add a literal example token to that format — hardcoded example tokens get copied verbatim by agents, which corrupts the analytics.
@@ -42,4 +55,13 @@ CI (`.github/workflows/skill-lints.yml`) runs both lints on PRs and pushes to `m
 - **New platform = new reference + docs coverage.** Add `references/<platform>.md` and confirm the docs publish `<platform>-llms-full.txt` — the symbol lint builds its ground-truth corpus from it.
 - **New migration source = new reference + spine row.** Add `references/migration-<source>.md`, add a row to the spine's detection table, and add the source to the CLI's picker if the CLI should offer it. No lint edit is needed — the symbol lint prefix-matches `migration*` and derives the platform list.
 - **Migration references are linted against the union corpus.** Their Adapty symbols are still verified, so they may name Adapty APIs; they carry mapping and strategy and delegate platform code to `references/<platform>.md`. Dead `revenuecat.com/docs` links are hard lint failures — take RC URLs from `https://www.revenuecat.com/docs/llms.txt`, never assemble one.
+
+## Conventions when editing `ads-manager`
+
+- **Verify against per-command source, never prose and never flag-set composition.** Ground truth for the `asa` surface is each command's own `static flags` declaration in `adaptyteam/adapty-cli`. The CLI's prose docs contradicted that source in four separate places while this skill was written (`--search` coverage, `--page-size` limits, `--period-unit` casing, `product-pages sync` 200 semantics), and composition misleads in its own way — `orgScopeFlags` contains no `--org`, which is exactly where a hallucinated `--org` list filter came from. Read `src/commands/asa/<topic>/<command>.ts`, not the tables.
+- **The surface moves.** This skill was authored against adapty-cli#8 while it was open, and that branch gained a commit mid-authoring which silently invalidated facts already verified — `--page-size` limits, the request budgets, the 429 retry behaviour. It merged at `47528602`, the commit the current content is verified against. Pin the commit you verify against in your notes and re-check numbers rather than trusting a previous pass, because the next CLI release will do this again.
+- **The safety content is evidence-backed, not authored.** The rationalization table carries exactly two rows, both byte-exact quotes from agents in `docs/superpowers/baselines/2026-08-11-asa-baseline.md`. Never add a row without a real quote from a real run — a fabricated excuse teaches a failure mode nobody exhibited. Red flags are grouped by provenance: those observed in this skill's own baseline, and those adopted from CLI-side reports. Keep the groups separate so a reader can tell which armor rests on measurement.
+- **Match the form to the failure.** Two rules had to be rewritten because the form was wrong, not the content. A rule that governs intent ("never pass `--yes` until the user agrees") is satisfiable by an agent that plans to comply while the command on the page already carries the flag — ground it in an observable mechanism instead (`--yes` deletes the preview the CLI would print). And a rule with no compliant use will get an exception invented for it: the same `--yes` prohibition forbade the flag unconditionally in every realistic request, so it became two conditionals keyed to who runs the command.
+- **Slots beat reminders.** Required elements live in the command templates as slots an agent cannot fill from memory — `--idempotency-key <key>`, and the deliberately clumsy `--<filter-from-that-list-s-matrix-row>`. That token's length is load-bearing: shortening it back to `--<scope-filter>` makes it fillable by guessing and reopens a closed hole.
+- **Changes get pressure-tested, and one clean sample proves nothing.** The scenarios and the twelve-row checklist are in the baseline document. A clean round was twice shown to be luck by re-sampling the identical skill, so a rule is considered closed only after two consecutive clean rounds.
 - SKILL.md and the references are agent-facing prose: imperative, unambiguous, no dead weight. Match the existing voice and structure when editing.
