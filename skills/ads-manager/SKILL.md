@@ -229,7 +229,8 @@ the analytics pool, slow on a cold cache. → `references/asa-metrics.md`.
 1. This file and its two references are the source of truth for the `asa` surface.
 2. `adapty asa <topic> <command> --help` — exact flag syntax for the installed version.
 3. The CLI repo, https://github.com/adaptyteam/adapty-cli (default branch): `README.md`, then
-   `skills/adapty-cli/references/cli-commands.md`. Both can lag the installed CLI; if neither
-   mentions `asa`, the repo has not caught up — that is not evidence the command is missing.
+   `skills/adapty-cli/references/cli-commands.md` — both can lag the installed CLI — then
+   `src/commands/asa/**`, where a command's own `static flags` declaration outranks any table and
+   settles a disagreement between prose and commands.
 
 Do not guess a flag, a command, or a URL path. If none of the three confirms it, say so.

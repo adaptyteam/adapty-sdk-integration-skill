@@ -6,7 +6,7 @@ A skill for agentic coding tools (Claude Code, GitHub Copilot CLI, OpenAI Codex,
 
 **Supported platforms:** iOS · Android · Flutter · React Native · Unity · Kotlin Multiplatform · Capacitor
 
-> **Also in this repo: `ads-manager`.** Every install below ships a second skill that runs your Apple Search Ads through the Adapty CLI — reading campaign, ad group and keyword performance, changing bids and budgets, harvesting search terms, launching and pausing campaigns. It needs the `adapty asa` commands, which are **not in a released CLI yet** ([adapty-cli#8](https://github.com/adaptyteam/adapty-cli/pull/8)), so it will not be usable until that ships. See [Managing Apple Search Ads](#managing-apple-search-ads) below.
+> **Also in this repo: `ads-manager`.** Every install below ships a second skill that runs your Apple Search Ads through the Adapty CLI — reading campaign, ad group and keyword performance, changing bids and budgets, harvesting search terms, launching and pausing campaigns. Needs `adapty` **0.4.0 or newer** for the `adapty asa` commands. See [Managing Apple Search Ads](#managing-apple-search-ads) below.
 
 ## Quickstart
 
@@ -96,9 +96,9 @@ You'll be asked for your Adapty credentials and a few decisions along the way �
 
 The `ads-manager` skill in this repo operates Apple Search Ads through the Adapty CLI. It comes with every install above — you don't add anything.
 
-**Requires `adapty asa`, which is not released yet** ([adapty-cli#8](https://github.com/adaptyteam/adapty-cli/pull/8)). Until it merges and ships, the commands this skill drives do not exist.
+**Requires `adapty` 0.4.0 or newer** (`npm install -g adapty`), which is where the `adapty asa` commands ship. You also need a connected Apple Search Ads account and an active Ads Manager subscription — `adapty asa whoami` tells you where you stand.
 
-Once it does, open your terminal in any directory and ask for it:
+Open your terminal in any directory and ask for it:
 
 ```
 /ads-manager
