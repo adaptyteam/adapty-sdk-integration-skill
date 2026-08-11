@@ -53,6 +53,12 @@ belongs to `campaigns create`, and the equivalent on the lists that take scope f
 session's first list as much as its fifth — a filter changes the query the server ranks, while page
 size only changes how much of the wrong answer you see.
 
+**Two entities the user named separately are two lookups.** "The best-performing campaign" and "the
+brand ad group" are not parent and child unless the user said so. Resolve each by its own name
+(`ad-groups list --search <name>`), and never scope one lookup with an id produced by resolving the
+other — that filter asserts a relationship the user did not state, and the write that follows lands
+somewhere plausible and wrong without erroring. More than one match is where you ask, not pick.
+
 **`--idempotency-key` is a required slot**, distinct per write in a chain and per batch within a
 write. The CLI's auto key covers a network retry inside one invocation, not the person who
 re-runs your create step after an ambiguous result — new invocation, fresh key, second campaign.
@@ -129,6 +135,7 @@ ask for — propose that in the answer instead.
 - A filter you did not read off that list's own row in the matrix — a create flag such as `--org`,
   or another list's filter, is not one
 - `--yes` on a command you are handing to the user — it deletes the preview they were going to read
+- A lookup scoped by an id that came from resolving a different entity the user named separately
 - A create in a chain of dependent creates with no `--idempotency-key` pinned
 - More than 15 keywords in one call
 - A write whose target you picked by your own definition of "best", "losing" or "terrible"
