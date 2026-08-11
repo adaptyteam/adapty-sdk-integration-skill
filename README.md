@@ -6,6 +6,8 @@ A skill for agentic coding tools (Claude Code, GitHub Copilot CLI, OpenAI Codex,
 
 **Supported platforms:** iOS · Android · Flutter · React Native · Unity · Kotlin Multiplatform · Capacitor
 
+> **Also in this repo: `ads-manager`.** Every install below ships a second skill that runs your Apple Search Ads through the Adapty CLI — reading campaign, ad group and keyword performance, changing bids and budgets, harvesting search terms, launching and pausing campaigns. It needs the `adapty asa` commands, which are **not in a released CLI yet** ([adapty-cli#8](https://github.com/adaptyteam/adapty-cli/pull/8)), so it will not be usable until that ships. See [Managing Apple Search Ads](#managing-apple-search-ads) below.
+
 ## Quickstart
 
 ### Install
@@ -89,6 +91,24 @@ The skill takes over from there. It will:
 5. **Verify each step** with build checks and visual checkpoints before moving on
 
 You'll be asked for your Adapty credentials and a few decisions along the way — the rest is automated.
+
+## Managing Apple Search Ads
+
+The `ads-manager` skill in this repo operates Apple Search Ads through the Adapty CLI. It comes with every install above — you don't add anything.
+
+**Requires `adapty asa`, which is not released yet** ([adapty-cli#8](https://github.com/adaptyteam/adapty-cli/pull/8)). Until it merges and ships, the commands this skill drives do not exist.
+
+Once it does, open your terminal in any directory and ask for it:
+
+```
+/ads-manager
+```
+
+(Or "Use the ads-manager skill" in CLIs that don't map slash commands.)
+
+It covers ten workflows: orienting on your account, reporting performance, launching a campaign, harvesting keywords from search terms, a bid-and-budget optimization pass, pausing or resuming, running ads against a custom product page, diagnosing an ad that isn't serving, rule-based automations, and a competitor check.
+
+**It treats your ad account as live money.** There is no delete and no undo in this surface, so the skill confirms before every write, never invents an ID or a budget, prefers small keyword batches, and pins idempotency keys so a re-run can't double-apply. Reads and automation dry runs are free and it uses them freely.
 
 ## Paywall approaches
 
