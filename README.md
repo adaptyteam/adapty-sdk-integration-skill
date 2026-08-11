@@ -125,6 +125,17 @@ Adapty SDK overviews: [iOS](https://adapty.io/docs/ios-sdk-overview) · [Android
 - An agentic CLI that supports the Claude Skills format — [Claude Code](https://claude.com/claude-code), [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills), [OpenAI Codex](https://developers.openai.com/codex/skills), or [Gemini CLI](https://geminicli.com/docs/cli/skills/)
 - An [Adapty account](https://app.adapty.io/) (free tier works)
 
+### Corporate environments with a domain allowlist
+
+If your agent runs somewhere with restricted outbound network access — Claude Cowork on a corporate plan, a managed sandbox, an egress proxy — an administrator has to allow both:
+
+```
+adapty.io
+*.adapty.io
+```
+
+**List both.** A wildcard does not cover the apex domain in most allowlist implementations, and the apex is where almost everything goes: the skills fetch documentation from `adapty.io/docs/...` (the large majority of requests), the dashboard is `app.adapty.io`, and the Adapty CLI talks to `api-admin.adapty.io` and, for Apple Search Ads, `api-asa-admin.adapty.io`. Allowing only `*.adapty.io` blocks the docs the agent reads before writing any code.
+
 ## Feedback
 
 At the end of a successful integration, the skill optionally collects anonymous signals (platform, steps completed, rating) — no code, no project details, nothing identifying. Helps the Adapty team improve this guide.
