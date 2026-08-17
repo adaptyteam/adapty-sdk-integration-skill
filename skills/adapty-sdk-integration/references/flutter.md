@@ -28,6 +28,14 @@ flutter --version 2>&1 | head -5
 
 Flutter targets both iOS and Android. Build for the platform most relevant to the current stage, or build both if changes affect both.
 
+**Always run the analyzer first — it is faster than a build and catches every Dart error a build would:**
+
+```bash
+flutter analyze 2>&1 | tail -20
+```
+
+Then build:
+
 ```bash
 # iOS build (outputs to build/ios/)
 flutter build ios --no-codesign --debug 2>&1 | grep -E "error:|warning:|Build complete|FAILED" | head -40
@@ -37,6 +45,8 @@ flutter build apk --debug 2>&1 | grep -E "error:|warning:|BUILD SUCCESSFUL|BUILD
 ```
 
 Use `--no-codesign` for iOS simulator/CI builds — signing is not required to verify correctness.
+
+**When a build genuinely cannot run, the analyzer is the checkpoint.** A package or module with no `ios/` or `android/` directory, or a machine with no Android SDK or no Xcode, cannot produce a build — and Phase 4's rule that checkpoints are never skipped does not mean inventing a passing build. In that case run `flutter analyze` plus `flutter pub get`, and say in your checkpoint report exactly which platforms were **not** built and why. A clean analyzer with resolved dependencies does prove every Adapty symbol you used exists in the installed SDK version; it does not prove the native side links, so never describe it as a successful build.
 
 ### Handle the output
 
