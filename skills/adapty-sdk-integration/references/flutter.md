@@ -47,7 +47,17 @@ Use `--no-codesign` for iOS simulator/CI builds — signing is not required to v
 - `Error: Could not find package "adapty_flutter"` → `flutter pub get` hasn't been run; run it now
 - `Could not resolve dependencies` → version conflict in `pubspec.yaml`; check constraints
 - iOS CocoaPods error → run `cd ios && pod install && cd ..` then rebuild
-- Android `Manifest merger failed` → see Android backup rules in the installation doc (`curl -s https://adapty.io/docs/sdk-installation-flutter.md`)
+- `The package product 'adapty-flutter' requires minimum platform version 15.0` → the iOS deployment
+  target is still below 15.0. **Raising it in `ios/Podfile` alone does not fix this.** The Xcode project
+  carries its own copy, so also set `IPHONEOS_DEPLOYMENT_TARGET` to `15.0` in
+  `ios/Runner.xcodeproj/project.pbxproj` — it appears once per build configuration, so expect several
+  occurrences and change all of them:
+
+  ```bash
+  grep -c "IPHONEOS_DEPLOYMENT_TARGET" ios/Runner.xcodeproj/project.pbxproj
+  ```
+
+- Android `Manifest merger failed` → see Android backup rules in the installation doc (`curl -s "https://adapty.io/docs/sdk-installation-flutter.md?ref=skill-<sessionToken>"`)
 - Signing errors → use `--no-codesign` on iOS; not blocking
 
 Rebuild after each fix. Do not move to the next stage until the build is clean.
@@ -57,6 +67,15 @@ Rebuild after each fix. Do not move to the next stage until the build is clean.
 ## Recommended architecture
 
 Before writing any Adapty code, create these files. They establish patterns the rest of the integration builds on.
+
+**On a migration run this section yields to the smallest-diff rule.** When `migrationSource` is set, the
+app already has somewhere to keep its keys and probably its own user handling, and
+`references/migration-architecture.md`'s "What NOT to restructure" governs: adapt what exists instead of
+adding a parallel structure. Concretely — if the project already has a constants file, put the Adapty
+values there rather than creating `app_constants.dart`; and skip `user_manager.dart` unless the app needs
+the customer user ID for something of its own, since Adapty already stores it on the profile. Introducing
+these files anyway produces a diff a reviewer cannot trace to a source call site, which is the thing that
+rule exists to prevent.
 
 ### app_constants.dart
 
@@ -288,7 +307,7 @@ The SDK key comes from `AppConstants` — already set in the recommended archite
 
 **Gotcha:** "Public API key is missing" or silent failure → the placeholder wasn't replaced with the real key from App settings → General → API keys.
 
-**Android-specific gotcha:** If the build fails with `Manifest merger failed` → see the Android backup rules troubleshooting section at the bottom of `curl -s https://adapty.io/docs/sdk-installation-flutter.md`.
+**Android-specific gotcha:** If the build fails with `Manifest merger failed` → see the Android backup rules troubleshooting section at the bottom of `curl -s "https://adapty.io/docs/sdk-installation-flutter.md?ref=skill-<sessionToken>"`.
 
 ---
 
@@ -300,11 +319,11 @@ Choose the section matching the user's paywall approach.
 
 Read before writing code:
 ```bash
-curl -s https://adapty.io/docs/flutter-quickstart-paywalls.md
-curl -s https://adapty.io/docs/flutter-get-pb-paywalls.md
-curl -s https://adapty.io/docs/flutter-present-paywalls.md
-curl -s https://adapty.io/docs/flutter-handling-events.md
-curl -s https://adapty.io/docs/flutter-handle-paywall-actions.md
+curl -s "https://adapty.io/docs/flutter-quickstart-paywalls.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/flutter-get-pb-paywalls.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/flutter-present-paywalls.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/flutter-handling-events.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/flutter-handle-paywall-actions.md?ref=skill-<sessionToken>"
 ```
 
 **v4 API names:** Flow Builder uses the new `getFlow` / `AdaptyFlow` / `createFlowView` / `AdaptyUIFlowView` / `AdaptyUIFlowsEventsObserver` family. The same APIs also render existing Paywall Builder paywalls — no dashboard changes are required for users migrating from Paywall Builder. You no longer pass a `locale` when fetching (localization resolves automatically on render), the observer registers via `setFlowsEventsObserver`, and all `paywallViewDid*` callbacks are now `flowViewDid*`. Products are still `AdaptyPaywallProduct`.
@@ -376,11 +395,11 @@ All other observer callbacks are optional. The default `flowViewDidPerformAction
 
 Read before writing code:
 ```bash
-curl -s https://adapty.io/docs/flutter-quickstart-manual.md
-curl -s https://adapty.io/docs/fetch-paywalls-and-products-flutter.md
-curl -s https://adapty.io/docs/present-remote-config-paywalls-flutter.md
-curl -s https://adapty.io/docs/flutter-making-purchases.md
-curl -s https://adapty.io/docs/flutter-restore-purchase.md
+curl -s "https://adapty.io/docs/flutter-quickstart-manual.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/fetch-paywalls-and-products-flutter.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/present-remote-config-paywalls-flutter.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/flutter-making-purchases.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/flutter-restore-purchase.md?ref=skill-<sessionToken>"
 ```
 
 **Fetch the flow and its products:**
@@ -406,21 +425,35 @@ Future<void> loadPaywallData() async {
 
 **Make a purchase:**
 
+`makePurchase` returns an `AdaptyPurchaseResult`, not a profile. It is a sealed class, so switch over
+it — and note that **cancellation and a pending purchase are results, not errors**. Do not detect either
+in the `catch` block: a pending purchase may still complete later, and reporting it as a failure tells the
+user their payment did not go through when it may yet.
+
 ```dart
 Future<void> purchaseProduct(AdaptyPaywallProduct product) async {
   try {
-    final profile = await Adapty().makePurchase(product: product);
-    final hasAccess =
-        profile?.accessLevels[AppConstants.accessLevelId]?.isActive ?? false;
-    if (hasAccess) {
-      // Unlock premium content
+    final purchaseResult = await Adapty().makePurchase(product: product);
+    switch (purchaseResult) {
+      case AdaptyPurchaseResultSuccess(profile: final profile):
+        final hasAccess =
+            profile.accessLevels[AppConstants.accessLevelId]?.isActive ?? false;
+        if (hasAccess) {
+          // Unlock premium content
+        }
+        break;
+      case AdaptyPurchaseResultPending():
+        // Deferred payment (Ask to Buy, offline cash). Not a failure — tell the
+        // user it is pending; the profile stream delivers access if it completes.
+        break;
+      case AdaptyPurchaseResultUserCancelled():
+        // User dismissed the sheet. No error UI.
+        break;
+      default:
+        break;
     }
   } on AdaptyError catch (e) {
-    if (e.code == AdaptyErrorCode.paymentCancelled) {
-      // User cancelled — no action needed
-    } else {
-      debugPrint('Purchase failed ${e.code}: ${e.message}');
-    }
+    debugPrint('Purchase failed ${e.code}: ${e.message}');
   }
 }
 ```
@@ -430,8 +463,12 @@ Future<void> purchaseProduct(AdaptyPaywallProduct product) async {
 ```dart
 Future<void> restorePurchases() async {
   try {
+    // Non-nullable: restorePurchases returns an AdaptyProfile or throws.
     final profile = await Adapty().restorePurchases();
-    // Check access level as above
+    final hasAccess =
+        profile.accessLevels[AppConstants.accessLevelId]?.isActive ?? false;
+    // Tell the user the outcome either way — a restore that finds nothing
+    // succeeds, so silence reads as a broken button.
   } on AdaptyError catch (e) {
     debugPrint('Restore failed ${e.code}: ${e.message}');
   }
@@ -454,9 +491,9 @@ Future<void> restorePurchases() async {
 
 Read before writing code:
 ```bash
-curl -s https://adapty.io/docs/observer-vs-full-mode.md
-curl -s https://adapty.io/docs/implement-observer-mode-flutter.md
-curl -s https://adapty.io/docs/report-transactions-observer-mode-flutter.md
+curl -s "https://adapty.io/docs/observer-vs-full-mode.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/implement-observer-mode-flutter.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/report-transactions-observer-mode-flutter.md?ref=skill-<sessionToken>"
 ```
 
 **Checkpoint:** After a sandbox purchase through the existing purchase flow, the transaction appears in the Adapty dashboard **Event Feed**.
@@ -469,7 +506,7 @@ curl -s https://adapty.io/docs/report-transactions-observer-mode-flutter.md
 
 Read before writing code:
 ```bash
-curl -s https://adapty.io/docs/flutter-check-subscription-status.md
+curl -s "https://adapty.io/docs/flutter-check-subscription-status.md?ref=skill-<sessionToken>"
 ```
 
 **What to do:** After a purchase, check `profile.accessLevels['premium']?.isActive` to grant or deny access to paid features. For real-time updates, listen to `didUpdateProfileStream` instead of polling.
@@ -517,7 +554,7 @@ For each integration the user selected in Phase 2, fetch the doc and implement b
 | PostHog | `posthog` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ### Attribution integrations
@@ -532,7 +569,7 @@ curl -s https://adapty.io/docs/<slug>.md
 | Singular | `singular` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 **Flutter note:** Attribution SDKs that require platform-specific setup (e.g., AppsFlyer) must be configured separately for both iOS (`ios/`) and Android (`android/`). The Adapty integration call itself is the same Dart code on both platforms.
@@ -556,14 +593,14 @@ await Adapty().updateAttribution(
 | Pushwoosh | `pushwoosh` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ### Webhook / data export
 
 ```bash
-curl -s https://adapty.io/docs/set-up-webhook-integration.md
-curl -s https://adapty.io/docs/webhook-event-types-and-fields.md
+curl -s "https://adapty.io/docs/set-up-webhook-integration.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/webhook-event-types-and-fields.md?ref=skill-<sessionToken>"
 ```
 
 ---
@@ -581,7 +618,7 @@ If the user says no, skip the rest of this stage.
 
 Read before writing code:
 ```bash
-curl -s https://adapty.io/docs/flutter-quickstart-identify.md
+curl -s "https://adapty.io/docs/flutter-quickstart-identify.md?ref=skill-<sessionToken>"
 ```
 
 **What to do:**
@@ -651,7 +688,7 @@ flutter build apk --debug 2>&1 | grep -E "error:|warning:|BUILD SUCCESSFUL|BUILD
 - Errors in files you wrote → fix them directly and rebuild — do not ask the user
 - `Error: Could not find package` → run `flutter pub get` then rebuild
 - iOS CocoaPods conflict → run `cd ios && pod install && cd ..` then rebuild
-- Android `Manifest merger failed` → fetch the installation doc and apply the backup rules fix: `curl -s https://adapty.io/docs/sdk-installation-flutter.md`
+- Android `Manifest merger failed` → fetch the installation doc and apply the backup rules fix: `curl -s "https://adapty.io/docs/sdk-installation-flutter.md?ref=skill-<sessionToken>"`
 - Signing errors → use `--no-codesign` for iOS; signing is not needed to verify logic
 - Android `launchMode` purchase issue → see Android troubleshooting in installation doc
 
@@ -693,7 +730,7 @@ Run through this before submitting to App Store or Google Play.
 
 Read before releasing:
 ```bash
-curl -s https://adapty.io/docs/release-checklist.md
+curl -s "https://adapty.io/docs/release-checklist.md?ref=skill-<sessionToken>"
 ```
 
 **Checkpoint:** All items confirmed:
@@ -738,7 +775,7 @@ For each item the user picks, fetch the relevant doc and implement it:
 | Web paywalls | `flutter-web-paywall` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ---

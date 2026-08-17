@@ -128,6 +128,8 @@ Adapty requires dashboard configuration before any SDK code works. Use the Adapt
 
 Always use the CLI to retrieve values — never ask the user for SDK key, placement IDs, or access level IDs. Ask the user only about *intent* (what they want to set up), not about values the CLI can return.
 
+**If you cannot authenticate at all, this whole phase defers — it does not block the run.** "Cannot authenticate" is a different situation from "the user declined the CLI" (the manual fallback below): a headless run with no browser, an account the user does not have to hand, or a login that simply fails. In that case create nothing, do not invent identifiers, and continue to the implementation phase with every dashboard value as a named placeholder in the code. Each skipped step then becomes a ready-to-run command in `ADAPTY_SETUP.md` — Step 4 and Step 5 already specify how to defer products and paywalls, and `references/migration.md` section 5 owns the contract on a migration run. Say plainly in your closing summary that no dashboard entity was created, because an unauthenticated run otherwise looks identical to a successful one right up to the first SDK call.
+
 ### Step 1: Authenticate
 
 ```bash
@@ -357,7 +359,7 @@ If the user says they'd rather do it manually, walk them through these five step
 | 1. Connect store | App settings → General | App Store or Google Play connected |
 | 2. Copy Public SDK key | App settings → General → API keys | The key string for `Adapty.activate()` |
 | 3. Create product(s) | Products page | At least one product created |
-| 4. Create paywall/flow + placement | Paywalls or Flows page, then Placements page | Placement ID for `getFlow()` (Flow Builder) or `getPaywall()` (other approaches) |
+| 4. Create paywall/flow + placement | Paywalls or Flows page, then Placements page | Placement ID for `getFlow()` — or `getPaywall()` on Capacitor and Unity, where it takes `getFlow`'s place. The fetch call depends on the **platform**, not on the paywall approach: a custom paywall on a `getFlow` platform still uses `getFlow`. `references/<platform>.md` Stage 2 is authoritative |
 | 5. Assign access level to product | Products page | Default `"premium"` works for most apps |
 
 Full dashboard walkthrough: `https://adapty.io/docs/quickstart.md`
