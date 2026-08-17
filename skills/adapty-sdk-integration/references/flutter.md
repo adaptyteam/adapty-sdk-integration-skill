@@ -435,8 +435,10 @@ Future<void> loadPaywallData() async {
 
 **Make a purchase:**
 
-`makePurchase` returns an `AdaptyPurchaseResult`, not a profile. It is a sealed class, so switch over
-it — and note that **cancellation and a pending purchase are results, not errors**. Do not detect either
+`makePurchase` returns an `AdaptyPurchaseResult`, not a profile. It is a sealed class with exactly three
+cases, so switch over all three and **add no `default:` clause** — the analyzer reports
+`unreachable_switch_default` on an exhaustive sealed switch, and some published examples include one. Note
+also that **cancellation and a pending purchase are results, not errors**. Do not detect either
 in the `catch` block: a pending purchase may still complete later, and reporting it as a failure tells the
 user their payment did not go through when it may yet.
 
@@ -458,8 +460,6 @@ Future<void> purchaseProduct(AdaptyPaywallProduct product) async {
         break;
       case AdaptyPurchaseResultUserCancelled():
         // User dismissed the sheet. No error UI.
-        break;
-      default:
         break;
     }
   } on AdaptyError catch (e) {
