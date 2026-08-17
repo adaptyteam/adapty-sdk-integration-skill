@@ -17,6 +17,26 @@
       "source": "./",
       "category": "development",
       "homepage": "https://adapty.io/docs"
+    },
+    {
+      "name": "apple-ads",
+      "description": "Run and audit Apple Ads from your agent — cohort bid reviews, Market Intelligence keyword opportunities, search-term harvesting, negatives, CPP routing, and read-only account diagnostics through the Adapty CLI.",
+      "source": {
+        "source": "github",
+        "repo": "adaptyteam/apple-ads-cli"
+      },
+      "category": "marketing",
+      "homepage": "https://adapty.io/docs/developer-cli-ads-manager-skill"
+    },
+    {
+      "name": "apple-ads-benchmarks",
+      "description": "Apple Ads benchmarks for subscription apps: TTR, CR, CPT and CPA by country, App Store genre and niche, plus subscriber economics and relative effect studies.",
+      "source": {
+        "source": "github",
+        "repo": "adaptyteam/apple-ads-benchmarks"
+      },
+      "category": "marketing",
+      "homepage": "https://adapty.io/apple-ads-for-subscription-apps/"
     }
   ]
 }
