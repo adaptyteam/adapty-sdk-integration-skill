@@ -96,6 +96,26 @@ and gets postponed past release, at which point the symptom is an empty paywall 
 on first run — a case QA rarely tests. Give it its own subheading, say what breaks without it, and put the
 download step and the `setFallback` call in the same place.
 
+**A custom paywall has to log its own views, and RC gave you no call to port.** RevenueCat measured
+paywall impressions itself, so an RC codebase contains nothing that looks like view logging. Adapty
+cannot know when your own UI put a paywall on screen, so unless you log it, paywall funnels and every
+A/B test result stay empty — with no error, no warning, and a dashboard that looks merely unused rather
+than broken. It is the purest form of the absence-keyed hazard in this file: there is no line to grep
+for and no diff in which the omission appears.
+
+The rule is conditional, and getting it backwards is its own bug:
+
+- **Custom paywall (`paywallApproach == custom`) → you must log the view**, once, when the screen is
+  actually shown to the user. Adapty's docs put it plainly: logging views "needs your input because only
+  you know when a customer sees a paywall."
+- **Paywall Builder or Flow Builder paywall → do not log it.** Those track views automatically, and a
+  manual call on top produces double-counted views — which the docs list as a known cause of a paywall
+  view count showing twice the expected number.
+
+The call is named per platform and per SDK major (`logShowFlow` on Flutter v4+, `logShowPaywall`
+elsewhere), so take the exact spelling from `references/<platform>.md` rather than from here, and put it
+in the same commit as the paywall screen so the two cannot drift apart.
+
 **Nothing is prewarmed.** RC refreshes its offerings cache when the SDK is configured *and again every
 time the app comes to the foreground*, so by the time a user reaches a paywall the data is almost always
 in hand. Adapty fetches a placement only when you ask for one. Migrate the code as-is and the first
