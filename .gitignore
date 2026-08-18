@@ -4,4 +4,10 @@ docs/superpowers/
 # Subagent-driven-development scratch: ledgers, task briefs, review packages
 .superpowers/
 
+# Claude Code local state: per-machine settings and linked worktrees.
+# .claude/worktrees/ holds full checkouts — without this, `git add -A` from the
+# main checkout commits an entire worktree into the repo.
+.claude/settings.local.json
+.claude/worktrees/
+
 .DS_STORE
