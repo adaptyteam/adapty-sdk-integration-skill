@@ -353,7 +353,7 @@ For each integration the user selected in Phase 2, fetch the doc and implement b
 | PostHog | `posthog` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ### Attribution integrations
@@ -368,7 +368,7 @@ curl -s https://adapty.io/docs/<slug>.md
 | Singular | `singular` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ### Messaging / CRM integrations
@@ -380,14 +380,14 @@ curl -s https://adapty.io/docs/<slug>.md
 | Pushwoosh | `pushwoosh` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ### Webhook / data export
 
 ```bash
-curl -s https://adapty.io/docs/set-up-webhook-integration.md
-curl -s https://adapty.io/docs/webhook-event-types-and-fields.md
+curl -s "https://adapty.io/docs/set-up-webhook-integration.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/webhook-event-types-and-fields.md?ref=skill-<sessionToken>"
 ```
 
 ---
@@ -493,7 +493,7 @@ For each item the user picks, fetch the relevant doc and implement it:
 | Custom access levels | `create-access-level`, `assigning-access-level-to-a-product` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ---

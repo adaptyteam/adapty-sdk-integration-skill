@@ -52,7 +52,7 @@ npx cap run android
 **Android backup rules conflict:**
 - Manifest merger failure mentioning `android:fullBackupContent` or `android:dataExtractionRules` → multiple SDKs have conflicting backup configs; see the backup rules troubleshooting section in the installation doc:
   ```bash
-  curl -s https://adapty.io/docs/sdk-installation-capacitor.md
+  curl -s "https://adapty.io/docs/sdk-installation-capacitor.md?ref=skill-<sessionToken>"
   ```
 
 Rebuild after each fix. Do not move to the next stage until the app launches cleanly.
@@ -296,11 +296,11 @@ Choose the section matching the user's paywall approach.
 
 Read before writing code:
 ```
-curl -s https://adapty.io/docs/capacitor-quickstart-paywalls.md
-curl -s https://adapty.io/docs/capacitor-get-pb-paywalls.md
-curl -s https://adapty.io/docs/capacitor-present-paywalls.md
-curl -s https://adapty.io/docs/capacitor-handling-events.md
-curl -s https://adapty.io/docs/capacitor-handle-paywall-actions.md
+curl -s "https://adapty.io/docs/capacitor-quickstart-paywalls.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/capacitor-get-pb-paywalls.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/capacitor-present-paywalls.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/capacitor-handling-events.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/capacitor-handle-paywall-actions.md?ref=skill-<sessionToken>"
 ```
 
 **Key flow:**
@@ -350,11 +350,11 @@ if (paywall.hasViewConfiguration) {
 
 Read before writing code:
 ```
-curl -s https://adapty.io/docs/capacitor-quickstart-manual.md
-curl -s https://adapty.io/docs/fetch-paywalls-and-products-capacitor.md
-curl -s https://adapty.io/docs/present-remote-config-paywalls-capacitor.md
-curl -s https://adapty.io/docs/capacitor-making-purchases.md
-curl -s https://adapty.io/docs/capacitor-restore-purchase.md
+curl -s "https://adapty.io/docs/capacitor-quickstart-manual.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/fetch-paywalls-and-products-capacitor.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/present-remote-config-paywalls-capacitor.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/capacitor-making-purchases.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/capacitor-restore-purchase.md?ref=skill-<sessionToken>"
 ```
 
 **Key flow:**
@@ -426,9 +426,9 @@ const result = await adapty.makePurchase({
 
 Read before writing code:
 ```
-curl -s https://adapty.io/docs/observer-vs-full-mode.md
-curl -s https://adapty.io/docs/implement-observer-mode-capacitor.md
-curl -s https://adapty.io/docs/report-transactions-observer-mode-capacitor.md
+curl -s "https://adapty.io/docs/observer-vs-full-mode.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/implement-observer-mode-capacitor.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/report-transactions-observer-mode-capacitor.md?ref=skill-<sessionToken>"
 ```
 
 **Checkpoint:** After a sandbox purchase through the existing purchase flow, the transaction appears in the Adapty dashboard **Event Feed**.
@@ -441,7 +441,7 @@ curl -s https://adapty.io/docs/report-transactions-observer-mode-capacitor.md
 
 Read before writing code:
 ```bash
-curl -s https://adapty.io/docs/capacitor-check-subscription-status.md
+curl -s "https://adapty.io/docs/capacitor-check-subscription-status.md?ref=skill-<sessionToken>"
 ```
 
 **What to do:** After a purchase, check `profile.accessLevels['premium']?.isActive` to grant or deny access to paid features. Use `adapty.addListener('onLatestProfileLoad')` for real-time updates (already wired in AdaptyService from the recommended architecture) instead of polling.
@@ -484,7 +484,7 @@ For each integration the user selected in Phase 2, fetch the doc and implement b
 | PostHog | `posthog` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ### Attribution integrations
@@ -499,7 +499,7 @@ curl -s https://adapty.io/docs/<slug>.md
 | Singular | `singular` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 **Capacitor note:** Attribution integrations require passing attribution data to Adapty via `adapty.updateAttribution()`. The native attribution SDK (AppsFlyer, Adjust, etc.) runs on the native layer — check whether a Capacitor plugin exists for that SDK, or whether attribution data must be captured natively and bridged.
@@ -513,14 +513,14 @@ curl -s https://adapty.io/docs/<slug>.md
 | Pushwoosh | `pushwoosh` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ### Webhook / data export
 
 ```bash
-curl -s https://adapty.io/docs/set-up-webhook-integration.md
-curl -s https://adapty.io/docs/webhook-event-types-and-fields.md
+curl -s "https://adapty.io/docs/set-up-webhook-integration.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/webhook-event-types-and-fields.md?ref=skill-<sessionToken>"
 ```
 
 ---
@@ -538,8 +538,8 @@ If the user says no, skip the rest of this stage.
 
 Read before writing code:
 ```bash
-curl -s https://adapty.io/docs/capacitor-quickstart-identify.md
-curl -s https://adapty.io/docs/capacitor-identifying-users.md
+curl -s "https://adapty.io/docs/capacitor-quickstart-identify.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/capacitor-identifying-users.md?ref=skill-<sessionToken>"
 ```
 
 **What to do:**
@@ -636,7 +636,7 @@ Run through this before submitting to App Store / Google Play review.
 
 Read before releasing:
 ```bash
-curl -s https://adapty.io/docs/release-checklist.md
+curl -s "https://adapty.io/docs/release-checklist.md?ref=skill-<sessionToken>"
 ```
 
 **Checkpoint:** All items confirmed:
@@ -685,7 +685,7 @@ For each item the user picks, fetch the relevant doc and implement it:
 | Web paywalls | `capacitor-web-paywall` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ---

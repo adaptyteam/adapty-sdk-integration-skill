@@ -565,7 +565,7 @@ For each integration the user selected in Phase 2, fetch the doc and implement b
 | PostHog | `posthog` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ### Attribution integrations
@@ -580,7 +580,7 @@ curl -s https://adapty.io/docs/<slug>.md
 | Singular | `singular` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ### Messaging / CRM integrations
@@ -592,14 +592,14 @@ curl -s https://adapty.io/docs/<slug>.md
 | Pushwoosh | `pushwoosh` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ### Webhook / data export
 
 ```bash
-curl -s https://adapty.io/docs/set-up-webhook-integration.md
-curl -s https://adapty.io/docs/webhook-event-types-and-fields.md
+curl -s "https://adapty.io/docs/set-up-webhook-integration.md?ref=skill-<sessionToken>"
+curl -s "https://adapty.io/docs/webhook-event-types-and-fields.md?ref=skill-<sessionToken>"
 ```
 
 ---
@@ -688,7 +688,7 @@ xcodebuild \
 **BUILD FAILED (Android):**
 - Errors in files you wrote → fix them directly and rebuild
 - `Unresolved reference: Adapty` → dependency not in `commonMain` or `mavenCentral()` missing
-- Manifest merger conflict (`android:fullBackupContent`, `android:dataExtractionRules`) → fetch the troubleshooting section of the install doc: `curl -s https://adapty.io/docs/sdk-installation-kotlin-multiplatform.md`
+- Manifest merger conflict (`android:fullBackupContent`, `android:dataExtractionRules`) → fetch the troubleshooting section of the install doc: `curl -s "https://adapty.io/docs/sdk-installation-kotlin-multiplatform.md?ref=skill-<sessionToken>"`
 - `launchMode` purchase issues → Activity starting purchases must use `standard` or `singleTop`
 
 **BUILD FAILED (iOS):**
@@ -782,7 +782,7 @@ For each item the user picks, fetch the relevant doc and implement it:
 | App Tracking Transparency (iOS) | `kmp-deal-with-att` |
 
 ```bash
-curl -s https://adapty.io/docs/<slug>.md
+curl -s "https://adapty.io/docs/<slug>.md?ref=skill-<sessionToken>"
 ```
 
 ---
