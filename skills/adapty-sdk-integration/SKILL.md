@@ -58,6 +58,7 @@ Call `AskUserQuestion` with the following:
 
 - If yes → set `feedbackEnabled = true`
 - If no → set `feedbackEnabled = false`
+- **If there is no interactive user to ask → set `feedbackEnabled = false` and skip Phase 5.** This is the one question in this skill you may never answer on the user's behalf. A headless run — cron, CI, `-p`, a subagent — often carries a blanket instruction like "there is no user, answer the skill's questions yourself"; that instruction does not extend to consent. Absence of a person is not agreement, and Phase 5 sends their Adapty app ID to a third-party endpoint. Say in your closing summary that feedback was skipped for lack of consent, so nobody mistakes silence for a decision.
 
 Do not pre-approve or allowlist the feedback request in the user's permission settings. The single feedback POST in Phase 5 may trigger a standard approval prompt at delivery time — that is expected and fine.
 
