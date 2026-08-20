@@ -6,13 +6,13 @@ A skill for agentic coding tools (Claude Code, GitHub Copilot CLI, OpenAI Codex,
 
 **Supported platforms:** iOS · Android · Flutter · React Native · Unity · Kotlin Multiplatform · Capacitor
 
-> **Also in this repo: `ads-manager`.** Every install below ships a second skill that runs your Apple Search Ads through the Adapty CLI — reading campaign, ad group and keyword performance, changing bids and budgets, harvesting search terms, launching and pausing campaigns. Needs `adapty` **0.4.0 or newer** for the `adapty asa` commands. See [Managing Apple Search Ads](#managing-apple-search-ads) below.
+> **Also in this repo: `ads-manager` and `flow-generator`.** Every install below ships two more skills. `ads-manager` runs your Apple Search Ads through the Adapty CLI — reading campaign, ad group and keyword performance, changing bids and budgets, harvesting search terms, launching and pausing campaigns; needs `adapty` **0.4.0 or newer** for the `adapty asa` commands. `flow-generator` edits a Flow Builder config through the CLI's `flows` commands — adding a locale, rewriting copy, adding or removing screens, wiring branching — validating and previewing before it saves; needs `adapty` **0.6.0 or newer** (**`adapty@beta`** for the validate and preview commands). See [Managing Apple Search Ads](#managing-apple-search-ads) and [Transforming a Flow Builder config](#transforming-a-flow-builder-config) below.
 
 ## Quickstart
 
 ### Install
 
-This repo holds **two skills** — `adapty-integration` and `ads-manager`. Every command below installs both.
+This repo holds **three skills** — `adapty-integration`, `ads-manager` and `flow-generator`. Every command below installs all three.
 
 #### Claude Code
 
@@ -23,7 +23,7 @@ claude plugin marketplace add adaptyteam/adapty-skills
 claude plugin install adapty-skills@adapty
 ```
 
-Then run `/reload-plugins` inside Claude Code to activate them. One plugin, `adapty-skills`, carries every skill in the repo — installing it gives you all of them.
+Then run `/reload-plugins` inside Claude Code to activate them. One plugin, `adapty-skills`, carries every skill in the repo — installing it gives you all three.
 
 > **Already installed as `adapty-sdk-integration`?** That handle still works and still updates, so nothing breaks if you do nothing. To move over, install the new one and remove the old one — leaving both installed loads the same skills twice:
 >
@@ -42,7 +42,7 @@ The [skills CLI](https://skills.sh) installs into any supported agent — Cursor
 npx skills add adaptyteam/adapty-skills --all
 ```
 
-`--all` is `--skill '*' --agent '*' -y`: both skills, every agent it detects, no prompts. Drop it and the CLI asks which of the two you want, which is fine at a keyboard but hangs in a script.
+`--all` is `--skill '*' --agent '*' -y`: every skill, every agent it detects, no prompts. Drop it and the CLI asks which of the three you want, which is fine at a keyboard but hangs in a script.
 
 For one skill only, name it:
 
@@ -58,7 +58,7 @@ npx skills update
 
 #### Tool-specific installs
 
-Both skills are portable directories — `skills/adapty-integration/` and `skills/ads-manager/`. Every CLI below reads the same Claude-style `SKILL.md` format, so copying the directories in place works. The `skills/*` glob takes both.
+All three skills are portable directories — `skills/adapty-integration/`, `skills/ads-manager/` and `skills/flow-generator/`. Every CLI below reads the same Claude-style `SKILL.md` format, so copying the directories in place works. The `skills/*` glob takes all of them.
 
 **GitHub Copilot CLI**:
 
@@ -126,6 +126,33 @@ Open your terminal in any directory and ask for it:
 It covers ten workflows: orienting on your account, reporting performance, launching a campaign, harvesting keywords from search terms, a bid-and-budget optimization pass, pausing or resuming, running ads against a custom product page, diagnosing an ad that isn't serving, rule-based automations, and a competitor check.
 
 **It treats your ad account as live money.** There is no delete and no undo in this surface, so the skill confirms before every write, never invents an ID or a budget, prefers small keyword batches, and pins idempotency keys so a re-run can't double-apply. Reads and automation dry runs are free and it uses them freely.
+
+## Transforming a Flow Builder config
+
+The `flow-generator` skill edits an [Adapty Flow Builder](https://adapty.io/docs/adapty-flow-builder) flow as JSON. It comes with every install above too.
+
+**It transforms a flow that exists — it does not author one from nothing.** Product UUIDs, icon SVG markup, uploaded images and videos, and your project's theme can't be invented; transforming your own flow inherits all of them, so everything the skill writes is real. Point it at a flow you already have, or ask it to start a new one from a copy of one.
+
+The skill reads and writes the config with the Adapty CLI, so you don't export or upload anything by hand. **Requires `adapty` 0.6.0 or newer** (`npm install -g adapty`) for `flows` and `flows config get` / `update`. The `flows config validate` and `flows config preview` commands are newer still and currently ship in the beta channel only — `npm install -g adapty@beta` if you want them; the skill falls back to its own checklist and asks you to preview by hand if they're missing.
+
+It runs five phases: authenticate, work out whether to create a flow or edit an existing one, validate the config, preview it and iterate until it looks right, then save and hand the publish back to you. Validate and preview both run on a local file, so the agent gets it right before anything reaches your dashboard.
+
+Ask for it:
+
+```
+/flow-generator
+```
+
+(Or "Use the flow-generator skill" in CLIs that don't map slash commands.)
+
+Four transforms:
+
+- **Add a locale** — extend the flow's locales and fill in every localizable field
+- **Rewrite copy** — change wording without touching structure
+- **Screens** — add, remove, or reorder, repairing the navigation that a deletion breaks
+- **Branching and conditions** — selectable groups, option ids, and the conditional actions that route on them
+
+**It saves to a draft; it never publishes.** There is no publish command in the CLI and no delete either, so both stay yours. Every write after the first carries the flow's `updated_at` as an optimistic lock, so a save can't quietly overwrite an edit someone else made in the meantime — it fails instead. It asks before creating a product. And because a config can save cleanly and still not render, the agent screenshots the preview and looks at it before telling you it's done.
 
 ## Paywall approaches
 
