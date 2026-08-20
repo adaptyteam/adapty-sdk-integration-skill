@@ -32,7 +32,7 @@ import {DOCS_BASE, fetchLlmsTxt, fetchText, mapLimit} from './shared.mjs'
 const FOREIGN_DOCS_BASES = ['https://www.revenuecat.com/docs/']
 const isForeignDocs = (url) => FOREIGN_DOCS_BASES.some((base) => url.startsWith(base))
 
-const SKILL_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'adapty-sdk-integration')
+const SKILL_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'adapty-integration')
 const REPO_ROOT = join(SKILL_DIR, '..', '..')
 const FETCH_CONCURRENCY = 3
 
