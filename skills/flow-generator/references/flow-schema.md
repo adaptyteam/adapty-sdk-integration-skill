@@ -473,16 +473,51 @@ produced a **byte-identical render**. Authoring it buys one warning per text ele
 else, so **do not add it to text you create**. Leave it where you found it — stripping a key you
 did not add is an unrequested edit — but there is no reason to write a new one.
 
-## The bundled schema and catalog
-
-Three official artifacts ship in this directory. **Query them; never read one whole** — the schema
-is 239KB and the catalog 428KB, and either will swamp a run.
+## The schema, the catalog, and the two different validators
 
 | File | What it is | How to use it |
 | :--- | :--- | :--- |
-| `flow.schema.json` | draft-2020-12 JSON Schema, 196 definitions, rooted at `$defs.IFlow`. **Snapshot of schemaVersion 10.** | `grep -n '"purchase"' flow.schema.json`, or `jq '.["$defs"].IOldPriceElementProps' flow.schema.json` |
+| **the JSON Schema** — *not bundled* | draft-2020-12, 196 definitions, rooted at `$defs.IFlow`. **Published and versioned**, so fetch it rather than shipping a copy that rots. | `curl -sSfL -o "$SCHEMA" https://schemastore.adaptybuilder.com/latest.json` once per session, then `grep -n '"purchase"' "$SCHEMA"` or `jq '.["$defs"].IFillLayer' "$SCHEMA"`. **Never read it whole** — 239KB. |
 | `component-catalog.json` | 36 ready-made component templates with named slots | `jq -r '.components[].id' component-catalog.json`, then `jq '.components[]\|select(.id=="footer")'` |
-| `preview-with-playwright.mjs` | headless screenshot capture, feeding the render page's file input | `npx playwright install chromium` once; skip it if you already have a browser tool |
+| `validate-with-schema.mjs` | schema-validates a config — the gap `flows config validate` leaves | see below |
+| `preview-with-playwright.mjs` | headless screenshot via the render page's file input | `npx playwright install chromium` once; skip it if you already have a browser tool |
+
+A snapshot used to ship here and no longer does. At the moment it was removed the bundled copy was
+**byte-identical** to the published one, which is exactly the argument against bundling: it buys
+nothing today and silently goes stale tomorrow.
+
+### Shape and publishability are two different checks — run both
+
+They do not overlap, and neither one subsumes the other:
+
+- **`flows config validate` answers *is this publishable*.** It does **not** check the shape of most
+  props — it accepts `fill: "banana"` and `schemaVersion: 999` without complaint.
+- **The schema check answers *are these props well-formed*.** It knows nothing about
+  publishability.
+
+So a clean `validate` is not evidence your shapes are right, and a clean schema check is not
+evidence the flow will publish. Run the schema check first (it needs no network round trip against
+your flow), then `validate`, then look at a render.
+
+```bash
+npx --yes --package=ajv@8 node references/validate-with-schema.mjs \
+  --config flow.working.json --baseline flow.backup.json
+```
+
+**Always pass `--baseline`.** The schema tracks the newest `schemaVersion` while most live flows are
+older, so an unbaselined run on a v9 flow reports **hundreds** of pre-existing mismatches, none of
+them yours. The baseline is the pristine copy from `get`, and diffing against it leaves only what
+your edit caused. Without it, the output is background noise and will train you to ignore a real
+finding.
+
+It caches the schema at `$TMPDIR/adapty-flow.schema.json` for a day — the same file you grep.
+`--refresh` re-downloads; `--schema <path|url>` points elsewhere. Exit 0 clean, 1 with a JSON path
+per problem:
+
+```
+  /screens/0/elements/map/el_em3n23qPxZ/props/width/type
+      must be equal to one of the allowed values (fixed, fill, hug, auto)
+```
 
 ### Trust order: the live validator, then the config you fetched, then the schema
 

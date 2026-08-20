@@ -62,26 +62,34 @@ one taken in Linux CI. `render-baseline/` is gitignored deliberately: it is a lo
 different renderers. Both configs that broke the builder render fine here, so a clean render
 means "this looked right at this size", never "the flow opens".
 
-## `schema-check.py` — validating against the official schema
+## `schema-check.py` — validating against the published schema
 
 ```bash
-python3 tests/schema-check.py tests/fixtures/*.json      # summary per file
-python3 tests/schema-check.py --verbose config.json      # every error
+python3 tests/schema-check.py tests/fixtures/*.json                    # summary per file
+python3 tests/schema-check.py --baseline live.json edited.json         # only what YOUR edit caused
+python3 tests/schema-check.py --verbose --refresh config.json          # every error, re-fetch schema
 ```
 
-Validates a config against `skills/flow-generator/references/flow.schema.json` (the official
-draft-2020-12 snapshot). Needs `jsonschema`. **It is the weakest of the gates** — read the trust
-order in `flow-schema.md` first. The snapshot is schemaVersion **10** and most live flows are **9**,
-so a v9 config will report shape errors that are not defects; never "fix" a v9 flow to satisfy it.
+Fetches the schema from `https://schemastore.adaptybuilder.com/latest.json` and caches it for a day
+at `$TMPDIR/adapty-flow.schema.json` — the same path and lifetime the official
+`validate-with-schema.mjs` uses, so both share one download. Needs `jsonschema`. (A default
+`Python-urllib` User-Agent gets a 403 from that host, hence the explicit one.)
 
-It suppresses one class of error by design. Expression nodes (`JSONVariable` / `JSONConstant`) are
-declared as a `oneOf` over two **identical** permissive branches, commented *"shape intentionally
-opaque, validated by the transformer"* — so every value matches both and `oneOf` always fails. That
-fires on every `purchase` payload and every conditional predicate, including in real builder
-exports, so it is a schema artifact rather than a finding. The count is still reported.
+**Pass `--baseline` whenever you are checking an edit.** The schema tracks the newest
+`schemaVersion` and most live flows are older, so an unbaselined run on a v9 flow reports every
+pre-existing mismatch. Measured on `onboarding-quiz-paywall.json`: **28 errors unbaselined, 0
+baselined against itself**, and a single deliberately broken `width.type` surfaces as exactly one
+finding. Without the baseline that finding would have been one line in twenty-nine.
 
-What it is genuinely good for: typo-class errors in something you authored — a misspelled element
-`type`, a non-existent enum value, a prop borrowed from a different element.
+**Two checks, not one.** `flows config validate` answers *is this publishable* and skips most prop
+shapes — it accepts `fill: "banana"`. This answers *are the props well-formed* and knows nothing
+about publishability. Neither is evidence about the other.
+
+It suppresses one class of error the schema creates by construction: expression nodes
+(`JSONVariable` / `JSONConstant`) are a `oneOf` over two **identical** permissive branches, commented
+*"shape intentionally opaque, validated by the transformer"*, so every value matches both and `oneOf`
+always fails. That fires on every `purchase` payload in real builder exports too. The count is still
+reported.
 
 ## `preserve-builder-state.py` — do not clobber the builder's own work
 

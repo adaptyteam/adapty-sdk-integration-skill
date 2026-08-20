@@ -22,6 +22,7 @@ adapty flows create --app <APP_UUID> --name <name>            # row only; always
 adapty flows get    <FLOW_ID> --app <APP_UUID>
 adapty flows config get      <FLOW_ID> --app <APP_UUID> --json     # 404 until first write
 adapty flows config validate <FLOW_ID> --app <APP_UUID> (--config-file <f|-> | --config <json>)
+                                     [--source <caller>]
 adapty flows config preview  <CONFIG_FILE> [--screen <id>] [--device <id>] [--orientation …]
 adapty flows config update   <FLOW_ID> --app <APP_UUID> \
     (--config-file <file|-> | --config <json-string>) \
@@ -117,7 +118,25 @@ discarded, so never park anything there.
 
 Write the result to a local file. Phases 3 and 4 both work on that file, with nothing saved yet.
 
-### 3. Validate
+### 3. Check the shape, then validate
+
+**Two checks, and they do not overlap.** `flows config validate` answers *is this publishable* and
+does **not** check the shape of most props — it accepts `fill: "banana"` and `schemaVersion: 999`.
+A schema check answers *are these props well-formed* and knows nothing about publishability. A clean
+run of either is not evidence about the other.
+
+```bash
+npx --yes --package=ajv@8 node references/validate-with-schema.mjs \
+  --config flow.working.json --baseline flow.backup.json
+```
+
+**Always pass `--baseline`** — the pristine copy from step 2. The published schema tracks the newest
+`schemaVersion` while most live flows are older, so an unbaselined run on a v9 flow reports hundreds
+of pre-existing mismatches, none of them yours; the baseline leaves only what your edit caused.
+Details and the fetch-and-cache line in
+[flow-schema.md → the two different validators](references/flow-schema.md).
+
+Then the server-side check:
 
 ```
 jq '.config' flow.working.json | adapty flows config validate --app $APP $FLOW \
@@ -134,8 +153,8 @@ no path means the document is malformed *structurally*, not at an element: diff 
 you fetched, or bisect the edit. **Warnings are advisory and usually pre-existing** — fix the
 errors, and do not report warnings as though they blocked anything.
 
-**A clean validate is weaker than it sounds.** It passes plenty of malformed props without
-complaint, so it is a floor, not a proof — which is why the checklist below still runs.
+**A clean validate is weaker than it sounds.** It skips whole prop subtrees, so it is a floor and
+not a proof — which is why the schema check above and the checklist below both still run.
 
 **Read the verdict, not the exit code.** Exit 1 means either "not publishable" *or* "the call
 failed", and the two are indistinguishable from the status alone. With `--json` they are not:

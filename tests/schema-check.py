@@ -13,20 +13,55 @@ What it is not: authority. The live `validate` outranks it, and the config you f
 it on shape.
 
 Usage:
-    tests/schema-check.py <config.json> [...]        # summary per file
-    tests/schema-check.py --verbose <config.json>    # every error, deepest path first
+    tests/schema-check.py <config.json> [...]                  # summary per file
+    tests/schema-check.py --baseline live.json new.json        # only what YOUR edit caused
+    tests/schema-check.py --verbose <config.json>              # every error, deepest first
+
+Pass --baseline whenever you are checking an edited config: the schema is a v10 snapshot and a
+v9 flow mismatches it in hundreds of pre-existing places that are not yours.
 Exit: 0 clean, 1 findings, 2 infrastructure problem.
 """
-import json, sys, os
+import json, os, sys, tempfile, time, urllib.request
 from collections import Counter
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-SCHEMA = os.path.join(HERE, '..', 'skills', 'flow-generator', 'references', 'flow.schema.json')
+# The schema is published and versioned, not bundled — a shipped snapshot buys nothing and
+# goes stale. Cached to the same path the official `validate-with-schema.mjs` uses, and for
+# the same day, so the two share one download and grep the same file.
+SCHEMA_URL = 'https://schemastore.adaptybuilder.com/latest.json'
+CACHE = os.path.join(tempfile.gettempdir(), 'adapty-flow.schema.json')
+CACHE_MAX_AGE = 24 * 60 * 60
+
+
+def load_schema(refresh=False):
+    fresh = (not refresh and os.path.exists(CACHE)
+             and time.time() - os.path.getmtime(CACHE) < CACHE_MAX_AGE)
+    if not fresh:
+        try:
+            # a default Python-urllib User-Agent gets a 403 from this host; curl does not
+            req = urllib.request.Request(SCHEMA_URL, headers={'User-Agent': 'adapty-flow-tools'})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                body = r.read()
+            json.loads(body)                      # refuse to cache junk
+            open(CACHE, 'wb').write(body)
+        except Exception as exc:
+            if not os.path.exists(CACHE):
+                raise RuntimeError(f'could not fetch {SCHEMA_URL}: {exc}') from exc
+            print(f'  (fetch failed, using cached copy: {exc})', file=sys.stderr)
+    return json.load(open(CACHE))
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith('-')]
-    verbose = '--verbose' in sys.argv or '-v' in sys.argv
+    argv = sys.argv[1:]
+    baseline = None
+    if '--baseline' in argv:
+        i = argv.index('--baseline')
+        try:
+            baseline = argv[i + 1]
+        except IndexError:
+            print('--baseline needs a file', file=sys.stderr); return 2
+        argv = argv[:i] + argv[i + 2:]
+    args = [a for a in argv if not a.startswith('-')]
+    verbose = '--verbose' in argv or '-v' in argv
     if not args:
         print(__doc__)
         return 2
@@ -35,11 +70,13 @@ def main():
     except ImportError:
         print('INFRA: pip install jsonschema', file=sys.stderr)
         return 2
-    if not os.path.exists(SCHEMA):
-        print(f'INFRA: schema not found at {SCHEMA}', file=sys.stderr)
+    try:
+        schema = load_schema('--refresh' in argv)
+    except RuntimeError as exc:
+        print(f'INFRA: {exc}', file=sys.stderr)
         return 2
-    schema = json.load(open(SCHEMA))
     validator = jsonschema.Draft202012Validator(schema)
+
 
     # Known false positive, by construction in the schema itself: expression nodes
     # (`JSONVariable` / `JSONConstant`) are declared as a `oneOf` over two IDENTICAL
@@ -58,6 +95,21 @@ def main():
         branches = e.validator_value if isinstance(e.validator_value, list) else []
         return any('intentionally opaque' in str(b.get('$comment', '')) for b in branches)
 
+    # A baseline turns "hundreds of pre-existing v9-vs-v10 mismatches" into "what my edit
+    # caused". Without it the output trains you to ignore real findings. Same reasoning as
+    # the official `validate-with-schema.mjs --baseline`.
+    def fingerprints(path):
+        cfg = json.load(open(path))
+        if isinstance(cfg.get('config'), dict):
+            cfg = cfg['config']
+        out = set()
+        for e in validator.iter_errors(cfg):
+            if not opaque_expression(e):
+                out.add(('.'.join(str(x) for x in e.absolute_path), e.message))
+        return out
+
+    pre = fingerprints(baseline) if baseline else set()
+
     findings = 0
     for path in args:
         cfg = json.load(open(path))
@@ -65,11 +117,14 @@ def main():
             cfg = cfg['config']
         raw = list(validator.iter_errors(cfg))
         suppressed = [e for e in raw if opaque_expression(e)]
-        errs = sorted((e for e in raw if not opaque_expression(e)),
+        errs = sorted((e for e in raw if not opaque_expression(e)
+                       and ('.'.join(str(x) for x in e.absolute_path), e.message) not in pre),
                       key=lambda e: list(e.absolute_path))
+        ignored_pre = len([e for e in raw if not opaque_expression(e)]) - len(errs)
         name = os.path.basename(path)
         ver = cfg.get('schemaVersion')
         note = f' [{len(suppressed)} opaque-expression false positives suppressed]' if suppressed else ''
+        if baseline: note += f' [{ignored_pre} pre-existing ignored]'
         if not errs:
             print(f'{name:34} OK      (schemaVersion {ver} vs schema v10){note}')
             continue
