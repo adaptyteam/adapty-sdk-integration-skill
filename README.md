@@ -1,4 +1,4 @@
-# adapty-sdk-integration
+# adapty-skills
 
 [![skills.sh](https://skills.sh/b/adaptyteam/adapty-sdk-integration-skill)](https://skills.sh/adaptyteam/adapty-sdk-integration-skill)
 
@@ -12,7 +12,7 @@ A skill for agentic coding tools (Claude Code, GitHub Copilot CLI, OpenAI Codex,
 
 ### Install
 
-This repo holds **two skills** — `adapty-sdk-integration` and `ads-manager`. Every command below installs both.
+This repo holds **two skills** — `adapty-integration` and `ads-manager`. Every command below installs both.
 
 #### Claude Code
 
@@ -20,10 +20,19 @@ From your shell:
 
 ```bash
 claude plugin marketplace add adaptyteam/adapty-sdk-integration-skill
-claude plugin install adapty-sdk-integration@adapty
+claude plugin install adapty-skills@adapty
 ```
 
-Then run `/reload-plugins` inside Claude Code to activate them. One plugin carries both skills — the plugin is named after the first one, but installing it gives you both.
+Then run `/reload-plugins` inside Claude Code to activate them. One plugin, `adapty-skills`, carries every skill in the repo — installing it gives you all of them.
+
+> **Already installed as `adapty-sdk-integration`?** That handle still works and still updates, so nothing breaks if you do nothing. To move over, install the new one and remove the old one — leaving both installed loads the same skills twice:
+>
+> ```bash
+> claude plugin install adapty-skills@adapty
+> claude plugin uninstall adapty-sdk-integration@adapty
+> ```
+>
+> The skill you invoke is now `/adapty-integration` (previously `/adapty-sdk-integration`).
 
 #### Any agentic CLI (skills CLI)
 
@@ -49,7 +58,7 @@ npx skills update
 
 #### Tool-specific installs
 
-Both skills are portable directories — `skills/adapty-sdk-integration/` and `skills/ads-manager/`. Every CLI below reads the same Claude-style `SKILL.md` format, so copying the directories in place works. The `skills/*` glob takes both.
+Both skills are portable directories — `skills/adapty-integration/` and `skills/ads-manager/`. Every CLI below reads the same Claude-style `SKILL.md` format, so copying the directories in place works. The `skills/*` glob takes both.
 
 **GitHub Copilot CLI**:
 
@@ -85,10 +94,10 @@ Docs: [Gemini CLI Skills](https://geminicli.com/docs/cli/skills/).
 Open your mobile project in your agentic CLI and run:
 
 ```
-/adapty-sdk-integration
+/adapty-integration
 ```
 
-(In CLIs that don't map slash commands to skills, just say "Use the adapty-sdk-integration skill" instead.)
+(In CLIs that don't map slash commands to skills, just say "Use the adapty-integration skill" instead.)
 
 The skill takes over from there. It will:
 

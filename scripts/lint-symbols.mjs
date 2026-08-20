@@ -30,7 +30,7 @@ import {fileURLToPath} from 'node:url'
 import {DOCS_BASE, fetchLlmsTxt, fetchText, mapLimit} from './shared.mjs'
 
 const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url))
-const REFERENCES_DIR = join(SCRIPTS_DIR, '..', 'skills', 'adapty-sdk-integration', 'references')
+const REFERENCES_DIR = join(SCRIPTS_DIR, '..', 'skills', 'adapty-integration', 'references')
 const FETCH_CONCURRENCY = 3
 
 /** Non-platform references are linted against the platform they belong to. */

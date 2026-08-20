@@ -1,5 +1,5 @@
 ---
-name: adapty-sdk-integration
+name: adapty-integration
 description: Use when a user wants to integrate Adapty SDK into a mobile app, set up in-app purchases with Adapty, add a paywall to their app, or move to Adapty from another purchase system. Triggers on "integrate Adapty", "add Adapty to my app", "set up subscriptions", "add a paywall", "migrate from RevenueCat", "replace RevenueCat with Adapty", "move off Superwall", or similar.
 ---
 
