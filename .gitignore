@@ -5,3 +5,12 @@ docs/superpowers/
 .superpowers/
 
 .DS_STORE
+
+# Raw un-sanitized flow exports (real product UUIDs, real media URLs) — never committed
+tests/fixtures-raw/
+
+# Local render baselines — machine-specific (font rasterization), not a CI gate
+tests/render-baseline/
+tests/.render/
+
+__pycache__/
