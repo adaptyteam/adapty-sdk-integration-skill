@@ -16,6 +16,20 @@ check it. The skills themselves are prose; testing those means running agents ag
 | `vpn-timer-draft.json` | countdown timer, four uploaded custom fonts, no products |
 | `tabs-paywall.json` | the five-element tabs composite, three `const` product purchases — **confirmed to render** |
 
+**Why these are tracked and not gitignored.** The shipped skill never reads them — it has zero
+references to `tests/fixtures/` — so they are not skill content and a runtime agent never sees one.
+They are tracked for two reasons that outlive any single session:
+
+1. **They are the regression corpus for the tooling.** Every check in `verify-fixture.py` was added
+   after a real defect and then run against all four to confirm it does not false-positive. That
+   caught a wrong rule once already: a hex-fill check, added in the belief that a raw hex in a `fill`
+   is ignored, **fired on two of these fixtures** — which is how the real cause (opacity is a 0-100
+   percentage) was found instead of shipping a rule that contradicts real builder output.
+2. **They are the evidence for the skill's counted claims.** `flow-schema.md` asserts things like
+   "257 hierarchy nodes, 126 carrying children", "37 localizable `content` fields, 42 in total" and
+   "234 of 246 positions are relative". Those are only falsifiable while the corpus is present, and
+   the skill's entire voice depends on being measured rather than assumed.
+
 `tabs-paywall.json` is the one with unusual standing: it is the artifact that resolved the tabs
 crash, so it is evidence rather than just coverage. Sanitizing it does **not** change its render
 (verified), because remapped product UUIDs only reach purchase payloads, not layout.
