@@ -15,6 +15,8 @@ Both skills ship inside the single `adapty-skills` plugin, because a plugin expo
 
 `marketplace.json` also carries a **deprecated `adapty-sdk-integration` entry** pointing at the same `source: "./"`, so installs made under the old plugin name keep resolving and keep updating. Verified: `plugin details` through either handle reports the same plugin identity and the same skill inventory. Drop that entry only after the docs stop teaching the old handle — never before, or you break the installs it exists to protect.
 
+**Three namespaces, renamed together:** the GitHub repo is `adapty-skills`, the plugin is `adapty-skills`, and the SDK skill is `adapty-integration` (the ads and flow skills keep their names). They are independent namespaces that happen to agree now — a future change to one does not imply the others. Note the repo rename has no alias mechanism the way the plugin does: GitHub redirects git and web traffic from the old name indefinitely, but **`raw.githubusercontent.com` does not follow renames**, so any consumer fetching raw file URLs breaks the moment the rename lands and must be updated in the same wave. The redirect also dies permanently if anything is ever created at `adaptyteam/adapty-sdk-integration-skill` again, so never reuse that name.
+
 ## Layout
 
 - `skills/adapty-integration/SKILL.md` — the skill entry point. Phase-by-phase flow: state tracking → setup (docs-fetching rules, session marker, feedback consent) → project analysis → three user questions → dashboard setup through the Adapty CLI → staged, per-platform implementation → closing review → feedback delivery. Platform-agnostic on purpose; per-platform details belong in references.

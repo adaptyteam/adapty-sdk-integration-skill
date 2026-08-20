@@ -1,6 +1,6 @@
 # adapty-skills
 
-[![skills.sh](https://skills.sh/b/adaptyteam/adapty-sdk-integration-skill)](https://skills.sh/adaptyteam/adapty-sdk-integration-skill)
+[![skills.sh](https://skills.sh/b/adaptyteam/adapty-skills)](https://skills.sh/adaptyteam/adapty-skills)
 
 A skill for agentic coding tools (Claude Code, GitHub Copilot CLI, OpenAI Codex, Gemini CLI) that guides you through integrating the [Adapty](https://adapty.io) SDK into a mobile app end-to-end — dashboard setup, SDK install, paywall, and store configuration — step by step, with the agent doing the work and pointing you to the right docs when input is needed.
 
@@ -19,7 +19,7 @@ This repo holds **two skills** — `adapty-integration` and `ads-manager`. Every
 From your shell:
 
 ```bash
-claude plugin marketplace add adaptyteam/adapty-sdk-integration-skill
+claude plugin marketplace add adaptyteam/adapty-skills
 claude plugin install adapty-skills@adapty
 ```
 
@@ -39,7 +39,7 @@ Then run `/reload-plugins` inside Claude Code to activate them. One plugin, `ada
 The [skills CLI](https://skills.sh) installs into any supported agent — Cursor, Copilot, Codex, Gemini CLI, Zed, Amp, and more:
 
 ```bash
-npx skills add adaptyteam/adapty-sdk-integration-skill --all
+npx skills add adaptyteam/adapty-skills --all
 ```
 
 `--all` is `--skill '*' --agent '*' -y`: both skills, every agent it detects, no prompts. Drop it and the CLI asks which of the two you want, which is fine at a keyboard but hangs in a script.
@@ -47,7 +47,7 @@ npx skills add adaptyteam/adapty-sdk-integration-skill --all
 For one skill only, name it:
 
 ```bash
-npx skills add adaptyteam/adapty-sdk-integration-skill --skill ads-manager
+npx skills add adaptyteam/adapty-skills --skill ads-manager
 ```
 
 Skills installed this way don't update automatically; to get the latest version later, run:
@@ -63,8 +63,8 @@ Both skills are portable directories — `skills/adapty-integration/` and `skill
 **GitHub Copilot CLI**:
 
 ```bash
-git clone https://github.com/adaptyteam/adapty-sdk-integration-skill.git
-cp -r adapty-sdk-integration-skill/skills/* ~/.copilot/skills/
+git clone https://github.com/adaptyteam/adapty-skills.git
+cp -r adapty-skills/skills/* ~/.copilot/skills/
 ```
 
 Docs: [About agent skills (GitHub)](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills).
@@ -72,8 +72,8 @@ Docs: [About agent skills (GitHub)](https://docs.github.com/en/copilot/concepts/
 **OpenAI Codex CLI** — under `~/.agents/skills/` (personal) or `<repo>/.agents/skills/` (project):
 
 ```bash
-git clone https://github.com/adaptyteam/adapty-sdk-integration-skill.git
-cp -r adapty-sdk-integration-skill/skills/* ~/.agents/skills/
+git clone https://github.com/adaptyteam/adapty-skills.git
+cp -r adapty-skills/skills/* ~/.agents/skills/
 ```
 
 Docs: [Codex Skills](https://developers.openai.com/codex/skills).
@@ -81,10 +81,10 @@ Docs: [Codex Skills](https://developers.openai.com/codex/skills).
 **Gemini CLI** — install command, or drop the folders in place:
 
 ```bash
-gemini skills install https://github.com/adaptyteam/adapty-sdk-integration-skill
+gemini skills install https://github.com/adaptyteam/adapty-skills
 # or manually:
-git clone https://github.com/adaptyteam/adapty-sdk-integration-skill.git
-cp -r adapty-sdk-integration-skill/skills/* ~/.gemini/skills/
+git clone https://github.com/adaptyteam/adapty-skills.git
+cp -r adapty-skills/skills/* ~/.gemini/skills/
 ```
 
 Docs: [Gemini CLI Skills](https://geminicli.com/docs/cli/skills/).
