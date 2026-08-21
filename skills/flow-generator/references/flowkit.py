@@ -259,7 +259,10 @@ def icon(name, *, size_pt=22, color_id=None, weight='regular', position=None, **
 
 
 def product(children=(), *, product_id, group_id, default=False, **kw):
-    """A selectable plan card. The `selectableGroups` entry on the screen must use `group_id`.
+    """A selectable plan card — the member type for a `product` group. For any other group
+    type (`single_choice`, `multi_choice`, `toggle`) use `selectable()` instead.
+
+    The `selectableGroups` entry on the screen must use `group_id`.
 
     A price variable resolves only against a screen's DECLARED products, and only the builder
     writes that declaration — so bind the product here and put the price in the copy.
@@ -268,6 +271,30 @@ def product(children=(), *, product_id, group_id, default=False, **kw):
     node['type'] = 'product'
     node['props'].update({'groupId': group_id, 'default': default,
                           'product': {'id': product_id}})
+    if not node['states']:
+        node['states'] = [{'id': 'selected', 'type': 'system'}]
+    return node
+
+
+GROUP_MEMBER_TYPES = ('product', 'selectable', 'tab-item')
+
+
+def selectable(children=(), *, group_id, default=False, custom_id=None, **kw):
+    """A member of a NON-product selectable group: `single_choice`, `multi_choice`, `toggle`.
+
+    The element type matters and a stack will not do. `IStackElementProps` has no `groupId` and
+    no `default`, so a stack carrying them is not a group member -- the props are ignored, it
+    never receives the `selected` state, and **tapping it does nothing**. Verified against real
+    exports: members are `product` for a product group, `selectable` for single/multi/toggle,
+    `tab-item` inside tabs. Nothing else.
+
+    `custom_id` is the handle the choice is reported under (a real quiz uses "rock", "hiphop").
+    """
+    node = stack(children, **kw)
+    node['type'] = 'selectable'
+    node['props'].update({'groupId': group_id, 'default': default})
+    if custom_id is not None:
+        node['props']['customId'] = custom_id
     if not node['states']:
         node['states'] = [{'id': 'selected', 'type': 'system'}]
     return node

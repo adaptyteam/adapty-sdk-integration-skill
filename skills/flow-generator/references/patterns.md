@@ -80,17 +80,29 @@ render. Where a skeleton here disagrees with a flow you have seen render, the re
 
 ### A toggle
 
-There is no `toggle` element. The group type is what makes it one.
+There is no `toggle` *element* — the group type is what makes it one — but the member is a
+**`selectable`**, and that part is not optional.
 
 ```json
 "selectableGroups": [{"id": "notifications", "type": "toggle"}]
 ```
 ```json
-{"id": "el_…", "type": "stack",
- "props": {"groupId": "notifications", "default": true, "layout": {…}},
+{"id": "el_…", "type": "selectable",
+ "props": {"groupId": "notifications", "default": true, "customId": "trip_updates",
+           "layout": {…}},
  "states": [{"id": "selected", "type": "system"}],
  "propsByState": {"selected": {"fill": {…}}}}
 ```
+
+> **This section previously said `type: "stack"`, and that does not work.** `IStackElementProps`
+> has no `groupId` and no `default`, so a stack carrying them is not a group member: the props are
+> ignored, it never receives the `selected` state, and **tapping it does nothing**. The failure is
+> silent — the config saves, passes a schema check, and renders — and it was shipped to a user
+> before anyone noticed the switch would not flip. `tests/verify-fixture.py` now fails on it.
+>
+> Verified against real exports, the member type is dictated by the group: `product` for a
+> product group, `selectable` for `single_choice` / `multi_choice` / `toggle`, `tab-item` inside
+> tabs. Nothing else is a member.
 
 Swap `type` to `single_choice` for pick-one, `multi_choice` for pick-several. The element does
 not change — only the group type and how many members carry `default`.

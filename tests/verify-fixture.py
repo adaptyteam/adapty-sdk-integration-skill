@@ -185,6 +185,18 @@ def check(path):
                        f'(builder reports "Unknown Product Id"). Wrap the price block in a '
                        f'`product` element, even if the design has no visible plan card.')
 
+        # A group member's ELEMENT TYPE is load-bearing. IStackElementProps has no groupId
+        # and no default, so a stack carrying them is not a member: the props are ignored, it
+        # never gets the `selected` state, and tapping it does nothing. Real exports use
+        # `product` for product groups, `selectable` for single/multi/toggle, `tab-item` in tabs.
+        legal_members = {'product', 'selectable', 'tab-item'}
+        for eid, e in s['elements']['map'].items():
+            if (e.get('props') or {}).get('groupId') and e['type'] not in legal_members:
+                bad.append(f'{eid}: type `{e["type"]}` carries groupId '
+                           f'`{e["props"]["groupId"]}` but only {sorted(legal_members)} can be '
+                           f'group members — a stack with groupId is inert and will not respond '
+                           f'to taps')
+
         # Group `type` against the four legal values. This is here because an invalid
         # type is one of the two defects that broke the Flow Builder in this project's
         # history (flow-schema.md trap 10) and it is invisible to every referential
