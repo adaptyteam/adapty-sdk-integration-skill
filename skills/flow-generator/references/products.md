@@ -127,13 +127,33 @@ stack it replaces while giving the builder something to attach. Evidence for the
 verified export that uses price variables, **every** price-variable holder sits inside a `product`
 element's subtree.
 
-**Adding the `product` element is necessary but not sufficient.** The declaration itself carries a
-`flowProductId` you cannot synthesize, and `config update` does not write one — verified: after a
-write whose screen has a bound `product` element, a fresh `config get` still returned
-`_meta.screens: {}`. Only the builder writes it, on attachment. So the honest handoff is: the config
-now has something attachable, and the user opens the flow in the builder and confirms the product on
-that element (re-picking it once forces the write) before publishing. Do not report price variables
-as fixed on the strength of the element alone.
+**Binding `product.id` on the element is enough — the builder declares it when the flow is
+opened.** Measured end to end: a config written with two `product` elements and
+`_meta.screens: {}` came back from a later `config get` with the declaration filled in, both
+`flowProductId`s minted by the builder, the bindings untouched, and **nobody re-picked anything** —
+the owner simply opened the flow.
+
+So the division of labour is:
+
+| | |
+|---|---|
+| An agent can | bind `product.id`, set `groupId`/`default`, wire `<group>.selectedProduct` |
+| An agent cannot | write `_meta.screens[].products[]` — `config update` does not synthesize it |
+| The builder does | mint `flowProductId` and declare the products, on open |
+
+`flowProductId` is a UUIDv5 but **not over any input the config contains** — 2,944
+namespace/name/version combinations tested against 5 real (screen, product, flowProductId)
+triples, no match, and the same product on two screens gets two different ids. So do not try to
+author one, and do not copy one between flows.
+
+**The practical consequence is a handoff step, not a dead end.** Tell the user to open the flow in
+the builder once before publishing: that is what creates the declaration a price variable resolves
+against. A publish attempted before that first open is what produces *Unknown Product Id*.
+
+Still unverified, so state it as such: that a price variable authored *before* the first open then
+resolves once the declaration appears. The declaration being created is measured; a variable
+resolving on the back of it is not. Static price copy remains the conservative default for a config
+you authored, and is the only option if the flow will be published without being opened.
 
 This was learned by shipping the mistake — a trial paywall with a `const` purchase, no product
 element, and two price variables that the builder rejected as unknown-product on publish.

@@ -96,13 +96,20 @@ def check(path):
     if dang:
         bad.append(f'dangling navigate targets: {dang}')
 
+    # An undeclared-but-bound product is a WARNING, not an error: measured, the Flow Builder
+    # mints the `flowProductId` and writes the declaration the first time someone opens the
+    # flow, keeping the binding as written. An agent cannot author it (the id is a UUIDv5 over
+    # an input the config does not contain), so a config an agent produced is EXPECTED to look
+    # like this and calling it an error just teaches you to ignore findings.
     ms = d.get('_meta', {}).get('screens', {})
     for s, e in els():
         if e['type'] == 'product':
             pid = (e.get('props') or {}).get('product', {}).get('id')
             decl = {p['id'] for p in ms.get(s['id'], {}).get('products', [])}
             if pid not in decl:
-                bad.append(f'product {pid} not declared in _meta.screens[{s["id"]}]')
+                warn.append(f'product {pid} bound on screen {s["id"]} but not yet declared in '
+                            f'_meta.screens — the builder writes that on first open; publishing '
+                            f'before opening the flow gives "Unknown Product Id"')
 
     # A price variable comes in TWO forms, and only one is product-relative:
     #   <productUUID>.prod_price_per_year      — bound to one specific product
@@ -112,6 +119,8 @@ def check(path):
     # Only the first form appears in this corpus; the second was observed in a real
     # Flow Builder screen and is accepted here so a valid file is not rejected.
     allprod = {p['id'] for v in ms.values() for p in v.get('products', [])}
+    bound_products = {(e.get('props') or {}).get('product', {}).get('id')
+                      for _, e in els() if e['type'] == 'product'}
     product_groups = {g['id'] for s in d.get('screens', [])
                       for g in (s.get('selectableGroups') or [])
                       if g.get('type') == 'product'}
@@ -126,7 +135,13 @@ def check(path):
             if head not in product_groups:
                 bad.append(f'group-relative price variable on unknown product group: {v}')
         elif head not in allprod:
-            bad.append(f'price variable references undeclared product: {v}')
+            # Same split as above: if the product is bound to an element on some screen, the
+            # declaration is pending rather than missing, and the builder supplies it on open.
+            if head in bound_products:
+                warn.append(f'price variable {v} awaits a declaration the builder writes on '
+                            f'first open; it renders as its literal token until then')
+            else:
+                bad.append(f'price variable references a product bound nowhere: {v}')
 
     for s in d.get('screens', []):
         gids = {(e.get('props') or {}).get('groupId')

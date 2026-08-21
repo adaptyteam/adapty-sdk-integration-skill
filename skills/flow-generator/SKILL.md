@@ -13,9 +13,12 @@ grounded in a document that already works.
 cannot be synthesized:
 
 - **`flowProductId`**, the per-screen product declaration in `_meta.screens[].products[]`. Only the
-  Flow Builder writes it. It is not a plain UUIDv5 over the obvious inputs — 84 namespace/name
-  combinations tested against 12 real pairs, no match — so a config you author cannot resolve price
-  variables, and its prices belong in the copy. See [products.md](references/products.md).
+  Flow Builder writes it, and it is not a UUIDv5 over anything the config contains (2,944
+  combinations tested against 5 real triples). This is a **handoff step, not a dead end**: binding
+  `product.id` on a `product` element is all an agent needs to do, and the builder declares the
+  products the first time someone opens the flow. Tell the user to open it once before publishing —
+  a publish before that first open is what produces *Unknown Product Id*. See
+  [products.md](references/products.md).
 - **Uploaded assets.** An image you do not have is an empty values map, never a made-up URL
   (trap 5).
 - **Real store prices.** They come from the store, not from Adapty; `products create` has no price
