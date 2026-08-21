@@ -217,6 +217,168 @@ two non-relative elements, so this has precedent; a fixed container does not.
 The one honest exception is a row of several small links (Restore · Terms · Privacy): the row is a
 fixed container because each link is separately tappable and carries its own action.
 
+### A connected timeline, where a rail must reach the next chip
+
+A vertical timeline is rows of `[track, text]`, where the track is a column holding a circular
+chip and, beneath it, a connector rail. Getting the rail to *touch* the next chip is the whole
+difficulty, and the mechanism is arithmetic rather than styling.
+
+The row is `hug`, so its height is `max(chip + rail, text)`. When `chip + rail` wins, the rail's
+bottom edge lands exactly on the next chip's top edge and the column is continuous **by
+construction**. When the text wins, the row grows, the rail does not, and a gap opens. So:
+
+**Size the rail so `chip + rail` exceeds the tallest text you expect, and let the rail set the row
+pitch.** Measured on a three-row timeline: at a snug rail the column was continuous, and growing a
+single description from two lines to four reopened a **49px** gap. The same timeline with a longer
+rail stayed continuous under both the original and the grown copy. Copy grows for reasons outside
+your control — a rewrite, or a locale, since translations run longer than their source — so pick the
+generous number, not the one that just barely fits today.
+
+Two things that look like the fix and are not:
+
+- **`position: absolute` plus `zIndex`, to overlap the rail under the next chip.** `zIndex` is real
+  (it lives inside `position`, not at the top level of props) and it *is* honoured — inverting it
+  moved the rail above the chips. But `absolute` pulls the rail out of flow, so the row collapses to
+  text height and the rail stops setting the pitch: measured, a **61px** break plus rails painted
+  over the icons. A z-order tool cannot fix a layout-flow problem. Note also that `zIndex` appears in
+  **no** real export and **no** catalog template, so it sits at the bottom of the evidence order.
+- **`height: {type: "fill"}` on the rail**, to stretch it to whatever the row needs. It collapses
+  inside a hug-height parent — see trap 13 in `flow-schema.md`.
+
+Derive the number from the reference if you have one: measure its chip-to-chip pitch in pixels,
+divide by (image width ÷ device points), and subtract the chip. On the paywall this was built
+against, 190px and 142px at 1.544x gave pitches of 123pt and 92pt, so rails of ~77 and ~46.
+
+Verify by measurement, never by eye: walk the painted runs down the track column and assert **zero
+gaps**. A rail that stops one pixel short looks like a design choice in a screenshot.
+
+### A selectable plan card
+
+The commonest paywall shape there is, and the one most likely to be rebuilt from scratch. Radio
+and product-card shapes below are lifted from `tests/fixtures/onboarding-quiz-paywall.json` (a real
+export); the assembly is **verified by render**.
+
+Three parts have to agree, and the group id is what ties them together:
+
+```json
+"selectableGroups": [{"id": "plans", "type": "product"}]
+```
+
+The card itself is a **`product` element**, not a stack — that is what makes it selectable and what
+a product attaches to. Exactly one card in the group carries `"default": true`:
+
+```json
+{ "id": "el_Plan1", "type": "product", "caption": "Plan Individual",
+  "props": {
+    "width": {"type": "fill"}, "height": {"type": "hug"},
+    "layout": {"direction": "horizontal", "alignH": "start", "alignV": "center",
+               "distribution": {"type": "gap", "gap": 14}},
+    "padding": {"top": 14, "left": 16, "right": 16, "bottom": 14},
+    "borderRadius": {"tl": 16, "tr": 16, "bl": 16, "br": 16},
+    "position": {"type": "relative"},
+    "groupId": "plans", "default": true,
+    "product": {"id": "<product-uuid from `adapty products list`>"} },
+  "states": [{"id": "selected", "type": "system"}],
+  "propsByState": {"selected": {"border": {"color": {"type": "color-style", "colorId": "ink"},
+                                           "style": "solid", "width": 1}}} }
+```
+
+The radio indicator is **two nested stacks, and the inner one has no fill at all** until selected.
+Getting this wrong is what makes every card look selected at once:
+
+```json
+{ "id": "el_Ring", "type": "stack", "caption": "Radiobutton",
+  "props": {"width": {"type": "fixed", "value": 24}, "height": {"type": "fixed", "value": 24},
+            "borderRadius": {"tl": 9999, "tr": 9999, "bl": 9999, "br": 9999},
+            "fill": [{"type": "color", "color": {"type": "color-style", "colorId": "white"}}],
+            "border": {"color": {"type": "color-style", "colorId": "gray-200"},
+                       "style": "solid", "width": 1},
+            "layout": {"direction": "horizontal", "alignH": "center", "alignV": "center",
+                       "distribution": {"type": "gap", "gap": 0}},
+            "position": {"type": "relative"}},
+  "states": [],
+  "propsByState": {"selected": {"border": {"color": {"type": "color-style", "colorId": "gray-800"},
+                                           "style": "solid", "width": 1}}} }
+```
+
+with a dot inside it — note **no `fill` key in `props`**, only in `propsByState`:
+
+```json
+{ "id": "el_Dot", "type": "stack", "caption": "Dot",
+  "props": {"width": {"type": "fixed", "value": 8}, "height": {"type": "fixed", "value": 8},
+            "borderRadius": {"tl": 9999, "tr": 9999, "bl": 9999, "br": 9999},
+            "position": {"type": "relative"}},
+  "states": [],
+  "propsByState": {"selected": {"fill": {"type": "color",
+                                         "color": {"type": "color-style", "colorId": "gray-800"}}}} }
+```
+
+`states: []` on both is correct — the `selected` state is contributed by the enclosing `product`
+element, and the indicator only supplies the styling for it.
+
+The confirm button buys **the group's selection**, never a hardcoded product:
+
+```json
+"interactions": [{"id": "int_buy", "trigger": "tap", "actions": [
+  {"id": "act_buy", "type": "purchase",
+   "payload": {"product": {"type": "var", "variableId": "plans.selectedProduct"}}}]}]
+```
+
+**Write the prices as plain text, not price variables.** A price variable resolves only against a
+screen's declared products in `_meta.screens[].products[]`, that declaration carries a
+`flowProductId` which cannot be synthesized, and **only the Flow Builder writes it** — so on a card
+you authored, a variable renders as the literal `{{uuid.prod_price}}` and fails publish with
+*Unknown Product Id*. Put the price in the copy, and tell the user to attach the products in the
+builder and swap the text for variables if they want them live. See
+[products.md](products.md) — this is the same constraint from the other direction.
+
+**A tick badge is not a radio dot, and the difference bites.** The dot above works because when
+unselected it has *nothing to draw* — no fill, no children. A tick badge has a **glyph child**, and
+that glyph paints whether or not the badge is selected: styling only the circle via `propsByState`
+leaves a ghost tick sitting on every unselected card. Hide the container instead, and give the row
+holding it a fixed height so the cards do not change size:
+
+```json
+{ "id": "el_Tick", "type": "stack", "caption": "Tick",
+  "props": {"width": {"type": "fixed", "value": 26}, "height": {"type": "fixed", "value": 26},
+            "borderRadius": {"tl": 9999, "tr": 9999, "bl": 9999, "br": 9999},
+            "visibility": {"type": "hidden"},
+            "layout": {"direction": "horizontal", "alignH": "center", "alignV": "center",
+                       "distribution": {"type": "gap", "gap": 0}},
+            "position": {"type": "relative"}},
+  "states": [],
+  "propsByState": {"selected": {"visibility": {"type": "visible"},
+                                "fill": [{"type": "color",
+                                          "color": {"type": "color-style", "colorId": "accent"}}]}} }
+```
+
+The rule generalises: **`propsByState` restyles an element, it does not suppress what is inside
+it.** Anything with children needs `visibility` — and hiding collapses the layout, so reserve the
+space deliberately (trap 14 in [flow-schema.md](flow-schema.md)).
+
+### A side-by-side docked footer
+
+Two buttons on one row at the bottom, each with its own action. The trap is treating it as one
+fixed container holding two relative children: the container swallows the taps (same failure as
+[a bottom-docked button](#a-bottom-docked-button)). Each button is **its own `fixed` element**,
+one anchored left and one right, and their widths have to add up:
+
+```json
+"props": {"position": {"type": "fixed", "left": 11, "bottom": 18},
+          "width": {"type": "fixed", "value": 170}, "height": {"type": "fixed", "value": 50}}
+```
+```json
+"props": {"position": {"type": "fixed", "right": 11, "bottom": 18},
+          "width": {"type": "fixed", "value": 182}, "height": {"type": "fixed", "value": 50}}
+```
+
+Never set `left` **and** `right` on either one — that stretches it to full width and the two
+overlap. Budget the row explicitly: `left + w1 + gap + w2 + right` should equal the device width
+(here `11 + 170 + 17 + 182 + 11 = 391` on a 390pt phone). And leave the screen enough
+`padding.bottom` to clear the whole bar, or the docked row lands on top of the last content —
+measure it rather than assuming, with
+[`tests/render-measure.py`](../../../tests/render-measure.py).
+
 ### A back button, and authoring an icon that does not exist yet
 
 `navigateBack` needs no target — it pops the stack:

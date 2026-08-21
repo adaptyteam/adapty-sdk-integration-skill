@@ -5,10 +5,26 @@ description: Use when a user wants to change an Adapty flow by editing its build
 
 # Flow generator
 
-Read an Adapty flow's builder config, transform it, check the result, and write it back. The
-config is a real document with real ids — product UUIDs, `flowProductId`, icon SVG markup,
-uploaded assets and the `theme` cannot be synthesized, which is why you always start from a
-config that exists.
+Read an Adapty flow's builder config, transform it, check the result, and write it back.
+Transforming a config that exists is the default, and the safer path: everything you emit is then
+grounded in a document that already works.
+
+**Authoring a new flow is also in scope**, and three things — and only these three — genuinely
+cannot be synthesized:
+
+- **`flowProductId`**, the per-screen product declaration in `_meta.screens[].products[]`. Only the
+  Flow Builder writes it. It is not a plain UUIDv5 over the obvious inputs — 84 namespace/name
+  combinations tested against 12 real pairs, no match — so a config you author cannot resolve price
+  variables, and its prices belong in the copy. See [products.md](references/products.md).
+- **Uploaded assets.** An image you do not have is an empty values map, never a made-up URL
+  (trap 5).
+- **Real store prices.** They come from the store, not from Adapty; `products create` has no price
+  flag.
+
+Everything else is reachable: product UUIDs from `adapty products list` (or `products create`),
+`theme` colours sampled off a reference screenshot, and icon SVG authored and then render-verified.
+When you do author, [`references/flowkit.py`](references/flowkit.py) owns the mechanical parts —
+the `hierarchy`/`map` split above all — and [patterns.md](references/patterns.md) owns the shapes.
 
 ## The CLI surface
 
@@ -205,6 +221,22 @@ config and measured, and both still rendered. They lost a selected-tab highlight
 else, which is visible to someone who knows what the screen should look like and invisible to
 any "did anything draw" test. The structural rows catch them for free; keep walking them.
 
+**If the user gave you a reference image, compare against the image — not your memory of it.**
+Save the attachment to a file the moment you receive it, and re-open it beside every render you
+take. A description you wrote after one look is not the reference: building from one produced a
+timeline whose rail *width* was right to the pixel and whose *continuity, colour order and last-row
+rail* were all wrong, none of which was visible without the two images side by side. If the image
+has already dropped out of context, it is recoverable — user attachments are stored base64 in the
+session transcript (`~/.claude/projects/<project>/<session>.jsonl`, blocks with
+`"type":"image"`) — so extract it rather than guessing again.
+
+Comparing means *measuring*, not glancing. `tests/render-measure.py` does it for either image —
+`--row Y` for widths, `--column X0:X1` for painted runs and the gaps between them, and
+`--scale <image-width>:<device-points>` to convert a reference's pixels into the numbers you put in
+a config.
+That is how the rail was confirmed correct at 46/38 while the eye kept insisting it was too narrow,
+and how the real defect — a 14px break between connector and chip — was found.
+
 Three things it is blind to. Knowing them is what keeps a screenshot from becoming an overclaim:
 
 - **A stranded variable.** The render prints an unresolved reference as its literal token, so a
@@ -218,6 +250,11 @@ Three things it is blind to. Knowing them is what keeps a screenshot from becomi
   for overflow, because translated text is routinely longer than its source.
 - **Anything resolving at runtime.** Real prices, store currency, user input. Placeholder `$0.00`
   prices and broken asset URLs are usually the preview lacking data, not a defect you introduced —
+  and a price variable in particular renders as the full literal `{{<uuid>.prod_price}}`, which is
+  *far longer than any price*. It wraps to extra lines and can push text under a docked CTA, so the
+  screenshot shows an overlap that will not exist once the price resolves. **Never restyle a layout
+  to fix crowding you only see around a token.** Substitute a plausible price into a throwaway copy
+  of the config, render that, and judge the layout at production text length.
   render the source too and compare before blaming your own edit.
 
 **A clean preview does not prove the builder will open the flow.** The preview page and the
@@ -282,6 +319,22 @@ that, pick a shape and **say what you picked** — whether you dropped `status` 
 them, and that the user must direct the import at the flow they actually mean. Measured: three
 agents on one round split on this silently-ish, which is exactly the kind of divergence a sentence
 in the report resolves.
+
+**A 409 means someone else edited the flow, and it is the lock working — never force past it.**
+The write is rejected with `statusCode: 409` and a message naming the person: *"This flow
+configuration was already updated by <name>. Reload before saving to avoid overwriting their
+changes."* Nothing was written. The recovery is **re-`get`, re-apply your change to the config you
+just fetched, write again** — never retry the same body against a newer `updated_at`, and never
+reach for the version you built locally, because that is precisely the content that would erase
+their work.
+
+Re-applying means editing *their* config, not diffing yours over it. Fetch, make your specific
+change to the fetched document, and write that — a config the user has opened in the builder may
+differ from your local copy in ways you did not author, including a **`schemaVersion` migration**
+(see [flow-schema.md → the schema is not the authority](references/flow-schema.md)). And check what
+actually changed before you re-apply: a 409 sometimes means the user deliberately removed something
+you added, in which case putting it back is not a merge but a reversal. Diff element captions and
+copy against your own version, and if the difference looks intentional, **ask rather than restore**.
 
 **Read it back.** `flows config get` again and diff against what you sent. A faithful round trip
 is normal — 108 of 108 elements on a real screen — so a difference here is a real finding, and

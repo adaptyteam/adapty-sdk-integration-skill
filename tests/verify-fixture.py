@@ -155,6 +155,19 @@ def check(path):
             thin_opacity(e.get('propsByState'), f'{eid}.propsByState')
         thin_opacity(s['props'], f'screen {s["id"]}')
 
+        # A price variable resolves only against the screen's DECLARED products, and only
+        # the builder can declare one — by attaching it to a `product` element. A screen with
+        # price variables but no product element is therefore unattachable, not merely
+        # unattached: the builder rejects it with "Unknown Product Id" on publish. A `const`
+        # purchase payload buys a product but declares nothing, so it does not satisfy this.
+        has_price_var = 'prod_price' in json.dumps(s)
+        has_product_el = any(e['type'] == 'product' for e in s['elements']['map'].values())
+        if has_price_var and not has_product_el:
+            bad.append(f'screen {s["id"]}: uses price variables but has no `product` element, '
+                       f'so no product can ever be attached and the variables cannot resolve '
+                       f'(builder reports "Unknown Product Id"). Wrap the price block in a '
+                       f'`product` element, even if the design has no visible plan card.')
+
         # Group `type` against the four legal values. This is here because an invalid
         # type is one of the two defects that broke the Flow Builder in this project's
         # history (flow-schema.md trap 10) and it is invisible to every referential

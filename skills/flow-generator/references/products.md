@@ -94,6 +94,50 @@ rather than a specific product. Observed in a live Flow Builder screen and **in 
 its exact field names are unverified: preserve it verbatim where found, never author one, never
 convert a `<productUUID>.prod_price_per_*` reference into it.
 
+### A price variable REQUIRES a `product` element on the screen — even with no plan card
+
+Buying and declaring are different things, and only declaring makes variables resolve.
+
+The chain, end to end:
+
+1. A price variable `<productUUID>.prod_price` resolves against **that screen's declared
+   products** — nothing else.
+2. Declarations live in `_meta.screens[<screenId>].products[]`, each with a `flowProductId`.
+3. **Only the Flow Builder writes those**, and it writes them when a product is attached to a
+   **`product` element**.
+4. So a screen with no `product` element has nothing to attach a product *to* — which means no
+   declaration is possible, which means the variable can never resolve. Not "needs an attachment
+   pass": **unattachable**.
+
+The failure is explicit once you publish:
+
+```
+Unknown Product Id
+Rich-text variable "<uuid>.prod_price" references unknown product or product group "<uuid>"
+```
+
+**A `const` purchase payload does not help.** It buys the product perfectly well and needs no
+declaration — see the section below, which is true and easy to over-read. It declares nothing, so a
+screen whose CTA carries a `const` purchase still cannot resolve a price variable.
+
+**So: if a screen shows a price, it needs a `product` element, whatever the design looks like.**
+A single-plan paywall with no visible picker still wraps its price block in one — give it the
+`groupId` of a `product`-typed group and `default: true`, and it renders exactly like the plain
+stack it replaces while giving the builder something to attach. Evidence for the shape: in the one
+verified export that uses price variables, **every** price-variable holder sits inside a `product`
+element's subtree.
+
+**Adding the `product` element is necessary but not sufficient.** The declaration itself carries a
+`flowProductId` you cannot synthesize, and `config update` does not write one — verified: after a
+write whose screen has a bound `product` element, a fresh `config get` still returned
+`_meta.screens: {}`. Only the builder writes it, on attachment. So the honest handoff is: the config
+now has something attachable, and the user opens the flow in the builder and confirms the product on
+that element (re-picking it once forces the write) before publishing. Do not report price variables
+as fixed on the strength of the element alone.
+
+This was learned by shipping the mistake — a trial paywall with a `const` purchase, no product
+element, and two price variables that the builder rejected as unknown-product on publish.
+
 ### A purchase can bind a product with no `product` element
 
 **Verified by render.** A three-tab paywall whose three CTAs each carried

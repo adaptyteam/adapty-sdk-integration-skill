@@ -437,6 +437,45 @@ reference (`{"type": "color-style", "colorId": "clr_X"}`) carries no `opacity`; 
 translucency you need the `hex` form, and then the percentage applies. And `hex` accepts an 8-digit
 value (`#FFFFFFD9`) carrying its own alpha, seen in a real export with no `opacity` key beside it.
 
+### 12. A gradient that ends on the page colour shortens the element
+
+A fade-out gradient whose last stop *is* the background makes the element's tail invisible, so it
+renders shorter than it is. Measured: timeline connectors specified at the correct length ended
+**14px short** of the next chip, once per row, because the gradient closed on the page's own
+`#F1F1F4`. The config was right and every structural check passed; only the render disagreed, and
+only under measurement — by eye it read as "the connectors are too short", which sends you off
+resizing an element that was never the wrong size.
+
+Ending a fade one step short of the background (`#EDE9F0` against a `#F1F1F4` page) restores it.
+When something must *connect* two elements, verify by walking the painted runs down that column and
+asserting **zero gaps** — never by looking.
+
+### 13. `height: {type: "fill"}` collapses inside a hug-height parent
+
+`fill` resolves against a parent with a definite height. Give it a `hug` parent and it collapses to
+roughly zero rather than expanding to the sibling content's height. Measured on the same timeline:
+switching a connector from `fixed` to `fill` — to make it stretch to whatever the row needed —
+shrank it from 62 to a ~16px stub and crushed the row spacing. Inside a hug-height row, a stretch
+has to be an explicit number; the row then takes its height from `chip + rail` whenever that exceeds
+the text, which is what makes the ends meet.
+
+### 14. `visibility: hidden` collapses the space, it does not reserve it
+
+`props.visibility` is an object, not a boolean, and it has a third form:
+
+```json
+"visibility": {"type": "hidden"}       // or "visible", or
+"visibility": {"type": "conditional", "condition": { … }}
+```
+
+Hiding an element removes it from layout entirely rather than leaving a hole where it was.
+Measured: two plan cards identical but for a tick badge shown only on the selected one came out
+**25pt different in height**, because the hidden card's badge contributed nothing. If two
+state-varying siblings have to stay the same size, put the toggled element inside a wrapper with
+a **fixed** height and hide the element rather than the wrapper.
+
+It round-trips through `config update` unchanged, including inside `propsByState`.
+
 ## The transform service is the authoritative validator
 
 Publishing runs the config through a **transform service**, and that is the only checker in this
@@ -524,8 +563,25 @@ per problem:
 The schema is a **static snapshot and it is not the authority.** Three ways it misleads, all
 documented by its own publishers:
 
-- **It is v10; most live flows are v9.** Check `config.schemaVersion` first. A write never migrates
-  a flow, so a v9 flow stays v9. Use the schema for *what fields exist*, not *how they are shaped*.
+- **It is v10; most live flows are v9.** Check `config.schemaVersion` first. A `config update`
+  never migrates a flow, so a v9 flow stays v9 across any number of CLI writes. Use the schema for
+  *what fields exist*, not *how they are shaped*.
+
+  **But the Flow Builder does migrate, on save.** Measured: a flow written at `schemaVersion 9` came
+  back as **10** after the user opened it in the builder and saved, with all of its fills rewritten
+  from objects to arrays. So the version you fetched is only good until someone touches the editor —
+  which has a sharp consequence for any local build you are holding: **re-`get` before every write,
+  and apply your change to the config you just fetched.** Pushing a v9 file you generated earlier
+  over a flow the builder has since migrated silently downgrades it and converts every fill back.
+  This is the concrete reason the workflow re-fetches on a 409 instead of retrying the same body.
+
+  **Authoring a config from nothing is the one case with no form to preserve — use the current
+  one.** "Keep the input's shape" has no input to point at, so author at the newest
+  `schemaVersion` with **array fills**, which is what the builder itself now writes. Measured:
+  a new paywall authored at v9 out of habit collected 10 schema findings, every one of them the
+  `fill` object-versus-array difference and none a real defect; re-authoring the same document at
+  v10 came back clean. This is *not* licence to convert an existing flow — a flow you fetched
+  stays at its own version.
 - **Its `required` lists are unreliable.** It marks `defaultLocale` required and the validator
   accepts a config without it. **Never add a field just because the schema calls it required** —
   match the config you fetched. (Omitting `status` and `id` is separately safe: measured across many
@@ -546,6 +602,28 @@ how a tint over an image is expressed. Measured across four real exports plus on
 So the version rule is the explanation, not a law: a v9 flow carrying array fills exists and works.
 Which is why the operating rule is unchanged and is the safe one either way — **read the form the
 input uses and keep it.** Author the array form only in a config that already uses it.
+
+### `effects` renders — a drop shadow is available, and measured
+
+`props.effects` is an **array** of effect objects, valid on stacks, products, text and most other
+elements. A drop shadow requires every one of `type`, `enabled`, `x`, `y`, `blur`, `spread`,
+`color`:
+
+```json
+"effects": [{"type": "drop-shadow", "enabled": true, "x": 0, "y": 2,
+             "blur": 10, "spread": 0,
+             "color": {"type": "hex", "hex": "#101828", "opacity": 6}}]
+```
+
+`opacity` here is the 0-100 percentage of trap 11, not a fraction — `6` is a 6% shadow.
+`inner-shadow` is the other `type`; there is also an `IBlurEffect`.
+
+Worth stating because the evidence order says otherwise at first glance: `effects` appears in the
+schema but in **no** real export and **no** catalog template, which normally means treat it as
+unproven. It was confirmed by a control render instead — a card's painted edge measured **7px**
+with the shadow and **2px** with it stripped, everything else identical. It also round-trips
+through `config update` unchanged. So it is usable; it just has no precedent to copy from, which
+means keeping a border underneath it is still the conservative choice.
 
 ### `old-price` is the strikethrough element — measured
 
