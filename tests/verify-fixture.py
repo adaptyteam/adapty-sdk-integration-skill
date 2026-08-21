@@ -108,9 +108,9 @@ def check(path):
             decl = {p['id'] for p in ms.get(s['id'], {}).get('products', [])}
             if pid not in decl:
                 warn.append(f'product {pid} bound on screen {s["id"]} but not yet declared in '
-                            f'_meta.screens — the builder writes that when it SAVES (an edit, '
-                            f'or publishing). Device preview before that returns HTTP 422 '
-                            f'missing_flow_product_id, and publishing fixes it')
+                            f'_meta.screens, so device preview returns HTTP 422 '
+                            f'missing_flow_product_id until the builder saves. For an authored '
+                            f'flow, declare it yourself: flowkit.predeclare()')
 
     # A price variable comes in TWO forms, and only one is product-relative:
     #   <productUUID>.prod_price_per_year      — bound to one specific product

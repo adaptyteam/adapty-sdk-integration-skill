@@ -151,6 +151,24 @@ def main():
           isinstance(rail['props']['fill'], list)
           and rail['props']['fill'][0]['type'] == 'gradient')
     check('_meta.screens is left empty (builder-owned)', cfg['_meta']['screens'] == {})
+
+    # predeclare(): the provisional declaration that lets a NEW draft preview on a device
+    pids = ['db3cfae2-5266-4678-85b3-b2ea535301ce', 'a80615bd-86b5-4851-b895-a343fa7db228']
+    dec = fk.predeclare('scr_pro', pids)
+    entries = dec['scr_pro']['products']
+    check('predeclare emits one entry per product', [e['id'] for e in entries] == pids)
+    check('predeclare emits only id and flowProductId',
+          all(set(e) == {'id', 'flowProductId'} for e in entries))
+    check('predeclare is deterministic', fk.predeclare('scr_pro', pids) == dec)
+    check('predeclare is screen-scoped',
+          fk.predeclare('scr_other', pids)['scr_other']['products'][0]['flowProductId']
+          != entries[0]['flowProductId'])
+    # the exact pair that was verified to preview on an unpublished draft
+    check('predeclare reproduces the verified-previewing pair',
+          [e['flowProductId'] for e in entries]
+          == ['63d3e909-2581-5762-9345-c2423730e27a', '55258fb4-6310-5e4e-9086-7ea4d71f9418'])
+    check('config(meta_screens=...) carries it through',
+          fk.config(screens=[], meta_screens=dec)['_meta']['screens'] == dec)
     check('opacity, when given, is a percentage not a fraction',
           fk.hex_color('#101828', opacity=6)['opacity'] == 6)
 

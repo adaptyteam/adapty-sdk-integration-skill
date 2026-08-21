@@ -147,6 +147,32 @@ namespace/name/version combinations tested against 5 real (screen, product, flow
 triples, no match, and the same product on two screens gets two different ids. So do not try to
 author one, and do not copy one between flows.
 
+### Declare the products yourself, and a new flow previews on a device immediately
+
+**This is the route to prefer for a flow you authored.** Write the `_meta.screens` declaration in
+the config you send:
+
+```json
+"_meta": {"screens": {"scr_x": {"products": [
+  {"id": "<product-uuid>", "flowProductId": "<any stable uuid>"}]}}}
+```
+
+Measured: a **draft** flow, never published and never opened in the builder, carrying two
+fabricated `flowProductId`s, previewed on a real device with no errors. The transform service
+checks that a declaration is **present and internally consistent** — not that the value is the one
+the builder would have minted. `flowkit.predeclare(screen_id, product_ids)` generates one.
+
+The value cannot be computed (19,776 namespace/name/version combinations over 4 triples with full
+provenance — app, flow, screen, element and product ids all known — produce no match), so this is
+a provisional handle, not the right answer. Two limits:
+
+- **Never do this when rewriting an existing flow.** Carry the live `_meta.screens` forward
+  instead; replacing a real declaration with a provisional one is a regression.
+- `flowProductId` is a server-side handle and this project does not know what else it keys. Treat
+  a provisional value as good for previewing, and expect the builder to replace it when it saves.
+
+### Without a declaration, device preview fails until the builder saves
+
 ### Device preview fails on a freshly authored flow, and publishing fixes it
 
 Tell the user this **before** they try it, because the error is alarming and self-healing:
@@ -154,9 +180,11 @@ Tell the user this **before** they try it, because the error is alarming and sel
 > Transform service returned HTTP 422 — `missing_flow_product_id` (once per bound product) and
 > `unknown_product_id` (once per price variable)
 
-Measured sequence on a flow written entirely through the CLI: *preview on device* → 422 with those
-four errors; **publish** → the declaration is written and the preview works. Nothing was broken and
-nothing needed repairing; the declaration simply did not exist yet.
+Measured sequence on a flow written entirely through the CLI with `_meta.screens: {}`: *preview on
+device* → 422 with those four errors; **publish** → the builder writes the declaration and the
+preview works. Nothing was broken; the declaration simply did not exist yet. An edit in the builder
+does the same thing (status → `dirty`), so a publish is not required — but neither is needed at all
+if you declare the products yourself, as above.
 
 The reason is that **device preview is a stricter gate than `config update`.** The write endpoint
 does not run the transform service, so a config with no declaration saves cleanly. Device preview

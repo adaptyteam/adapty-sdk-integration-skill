@@ -29,6 +29,7 @@ Run `tests/test-flowkit.py` after touching it.
         typography=[("h1", "H1", 28, "bold"), ("body", "Body", 16, "regular")],
     )
 """
+import uuid
 
 SCHEMA_VERSION = 10          # authoring uses the current version; a FETCHED flow keeps its own
 
@@ -336,11 +337,49 @@ def screen(screen_id, nodes, *, caption=None, fill_=None, padding=None,
     return out
 
 
+PREDECLARE_NS = uuid.UUID('1b671a64-40d5-491e-99b0-da01ff1f3341')
+
+
+def predeclare(screen_id, product_ids):
+    """A provisional `_meta.screens` declaration, so a NEW flow previews on a device
+    immediately instead of only after the builder has saved it.
+
+    Why this exists: the transform service (which device preview and publish run, and
+    `config update` does not) rejects a bound product with no declaration --
+    `missing_flow_product_id` -- and every price variable pointing at it with
+    `unknown_product_id`. Without a declaration the first successful device preview comes only
+    after someone opens the flow in the builder and saves it. "Publish it to preview it" is not
+    a workflow you can hand a user.
+
+    The `flowProductId` values here are FABRICATED, and deliberately so. The real derivation is
+    server-side -- 19,776 namespace/name/version combinations over 4 triples with full
+    provenance (app, flow, screen, element, product) produce no match. Measured: the service
+    checks that a declaration is present and internally consistent, not that the value is the
+    builder's own, so a draft carrying these previews on a real device with no publish and no
+    builder visit.
+
+    Two limits, both important:
+
+      * When REWRITING a flow, never call this -- carry the live `_meta.screens` forward
+        instead. Overwriting a real declaration with a provisional one is a regression.
+      * `flowProductId` is a server-side handle whose other uses are unknown to this project.
+        Treat a provisional value as good for previewing, and expect the builder to replace it
+        on its next save.
+    """
+    return {screen_id: {'products': [
+        {'id': pid, 'flowProductId': str(uuid.uuid5(PREDECLARE_NS, f'{screen_id}:{pid}'))}
+        for pid in product_ids]}}
+
+
 def config(*, screens, colors=(), typography=(), icons=(), locales=(('en', 'English'),),
-           default_locale='en', variables=(), components=None):
-    """The document. `_meta.screens` is left EMPTY on purpose — it is builder-owned bookkeeping
-    carrying `flowProductId`, which cannot be synthesized. When REWRITING an existing flow,
-    merge the live `_meta.screens` in afterwards or you wipe its product attachments."""
+           default_locale='en', variables=(), components=None, meta_screens=None):
+    """The document.
+
+    `_meta.screens` defaults to EMPTY, which is correct when rewriting a flow -- it is
+    builder-owned bookkeeping and you should merge the live value in rather than inventing one.
+    For a NEW flow, pass `meta_screens=predeclare(screen_id, [product_ids])` so it previews on a
+    device without being published first.
+    """
     return {
         'schemaVersion': SCHEMA_VERSION,
         'locales': [{'id': c, 'code': c, 'name': n} for c, n in locales],
@@ -353,6 +392,7 @@ def config(*, screens, colors=(), typography=(), icons=(), locales=(('en', 'Engl
             'typography': [{'id': i, 'name': n, 'settings': {'size': s, 'weight': w}}
                            for i, n, s, w in typography],
         },
-        '_meta': {'icons': list(icons), 'fonts': [], 'screens': {}},
+        '_meta': {'icons': list(icons), 'fonts': [],
+                  'screens': dict(meta_screens) if meta_screens else {}},
         'screens': list(screens),
     }

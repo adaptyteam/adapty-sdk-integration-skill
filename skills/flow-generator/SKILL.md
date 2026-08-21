@@ -14,13 +14,13 @@ cannot be synthesized:
 
 - **`flowProductId`**, the per-screen product declaration in `_meta.screens[].products[]`. Only the
   Flow Builder writes it, and it is not a UUIDv5 over anything the config contains (2,944
-  combinations tested against 5 real triples). This is a **handoff step, not a dead end**: binding
-  `product.id` on a `product` element is all an agent needs to do, and the builder writes the
-  declaration when it **saves** — an edit, or publishing. Warn the user that **device preview fails
-  until the flow is published**, with a 422 naming `missing_flow_product_id` and
-  `unknown_product_id`; that is expected on a newly authored flow and publishing fixes it. Price
-  variables authored beforehand do then resolve, verified. See
-  [products.md](references/products.md).
+  combinations over 4 triples with full provenance). But you do not need the real value: the
+  transform service only checks that a declaration is **present and consistent**, so **write a
+  provisional one and a brand-new draft previews on a device straight away** — measured, with no
+  publish and no builder visit. Use `flowkit.predeclare(screen_id, product_ids)`. Omit it and
+  device preview returns 422 (`missing_flow_product_id`, `unknown_product_id`) until the builder
+  saves the flow. When *rewriting* a flow, never generate one — carry the live `_meta.screens`
+  forward. See [products.md](references/products.md).
 - **Uploaded assets.** An image you do not have is an empty values map, never a made-up URL
   (trap 5).
 - **Real store prices.** They come from the store, not from Adapty; `products create` has no price

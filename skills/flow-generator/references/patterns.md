@@ -283,6 +283,12 @@ a product attaches to. Exactly one card in the group carries `"default": true`:
                                            "style": "solid", "width": 1}}} }
 ```
 
+**Put the selected LOOK in `propsByState`, never on whichever card starts selected.** `default:
+true` sets the initial *selection*, not the styling. Give every card the same neutral border and let
+`propsByState.selected` recolour it — bake an accent border onto the default card instead and it
+stays there forever while only the indicator moves, which reads as "selection is broken on every
+other card". Measured on a shipped flow, from a build that had the skeleton above in front of it.
+
 The radio indicator is **two nested stacks, and the inner one has no fill at all** until selected.
 Getting this wrong is what makes every card look selected at once:
 
