@@ -679,6 +679,48 @@ Schema-legal on text props (`enum: ["top","middle","bottom"]`) and emitted by th
 reported `unsupported_text_typography_setting` by the transform service, and removing it from 93
 elements rendered byte-identically. Legal, inert, one warning per element. Do not author it.
 
+## Making a field mandatory: disable the button, not the field
+
+No input has a `required` prop and none has an error-message prop, so "this field is mandatory"
+is not something an input can say. The mechanism is a **disabled state on the button**, driven by
+a condition — which is what the source app in the reference screenshots does too (Continue starts
+greyed and activates once the field has content).
+
+The state is a *system* state with an id of exactly `disabled`, and unlike the other system states
+it takes a `condition`:
+
+```json
+"states": [{"id": "disabled", "type": "system", "condition": { …expression… }}],
+"propsByState": {"disabled": {"fill": [{"type": "color", "color": {…grey…}}]}}
+```
+
+`ExpressionType` is a closed set: `const`, `var`, `switch`, `&&`, `||`, `==`, `!=`, `has`,
+`notHas`, **`empty`**, **`notEmpty`**, `in`, `notIn`, `>`, `<`, `size`, `assign`, `concat`. The
+binary and structural shapes are known from a rendering export:
+
+```json
+{"type": "var",    "variableId": "quiz.selectedOptionId"}
+{"type": "const",  "value": "rock"}
+{"type": "==",     "left": {…}, "right": {…}}
+{"type": "&&",     "predicates": [{…}, {…}]}
+{"type": "switch", "cases": [[<predicate>, <result>]], "default": <result>}
+```
+
+**Two things are NOT established, so do not write them from memory:** the operand key a *unary*
+predicate like `empty` uses (`==` uses `left`/`right`; a unary op might use `left`, or `value`, or
+`predicates`), and how an input's value is addressed as a variable — its `customId`, or something
+like `<customId>.value`. A probe covering four candidates was built for exactly this; fill in the
+answer here once it is known rather than guessing, because the schema cannot check it (see below)
+and there is no working `validate`.
+
+**The schema cannot check a condition at all.** `IDynamicProductValue` is a `oneOf` over two
+branches that both accept any `{"type": <string>}` and carry the comment *"shape intentionally
+opaque, validated by the transformer"*. Every real expression matches **both**, so `oneOf` always
+fails. `tests/schema-check.py` suppresses this class — and had to be widened to look for the
+opaque `oneOf` anywhere in the error tree, because a condition nested inside a state's own union
+pushes the real cause off the deepest path and reported four errors for one schema limitation.
+Never reshape a condition to satisfy the schema; it has no opinion worth having here.
+
 ## Conditions cannot compare numbers — enumerate equality instead
 
 **`ExpressionType` lists `<` and `>`. They do not work.** A gate written as

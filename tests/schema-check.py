@@ -86,14 +86,26 @@ def main():
     # conditional predicate, trips it. Verified on a real builder export, not just on
     # authored configs, so suppressing it is reading the schema correctly rather than
     # excusing our own output.
-    def opaque_expression(err):
-        e = err
-        while e.context:
-            e = sorted(e.context, key=lambda x: -len(list(x.absolute_path)))[0]
+    def _is_opaque_oneof(e):
         if e.validator != 'oneOf':
             return False
         branches = e.validator_value if isinstance(e.validator_value, list) else []
         return any('intentionally opaque' in str(b.get('$comment', '')) for b in branches)
+
+    def opaque_expression(err):
+        # Look for the opaque `oneOf` ANYWHERE in the context tree, not only at the deepest
+        # leaf. An expression nested under something that is itself a union -- a `condition`
+        # inside a state, which sits inside `anyOf[custom, system]` -- pushes the real cause
+        # off the deepest path, so a leaf-only check misses it and reports four errors for one
+        # schema limitation. Measured: a disabled-state condition (`{"type": "empty", ...}`)
+        # went from 4 errors to clean, while the fixtures' finding counts did not move.
+        stack = [err]
+        while stack:
+            e = stack.pop()
+            if _is_opaque_oneof(e):
+                return True
+            stack.extend(e.context or ())
+        return False
 
     # A baseline turns "hundreds of pre-existing v9-vs-v10 mismatches" into "what my edit
     # caused". Without it the output trains you to ignore real findings. Same reasoning as
