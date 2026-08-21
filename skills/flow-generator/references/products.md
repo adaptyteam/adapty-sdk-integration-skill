@@ -16,10 +16,10 @@ returns — **the same namespace, verified**: a UUID taken out of a real flow ex
 through `adapty products get`, returning that product's title, period and store bindings.
 
 ```
-adapty auth status                              # local only, no network
-adapty apps list --json
-adapty products list --app <UUID> --json        # --page-size max 100, default 20
-adapty products get <PRODUCT_UUID> --app <UUID> --json
+$ADAPTY auth status                             # local only, no network
+$ADAPTY apps list --json
+$ADAPTY products list --app <UUID> --json       # --page-size max 100, default 20
+$ADAPTY products get <PRODUCT_UUID> --app <UUID> --json
 ```
 
 `--app` is required on everything except `apps list`. Never invent a product UUID and never
@@ -37,7 +37,7 @@ as ground truth for a version you have not checked.
 
 And check *which* CLI you are invoking. A globally installed `adapty` is often old — 0.3.0 was
 found on a real machine — so if a command or flag documented here is missing, try
-`npx adapty@beta` before concluding it does not exist.
+`npx --yes adapty@latest` — then `@beta` — before concluding it does not exist.
 
 
 ## The builder owns product binding
@@ -86,13 +86,19 @@ Four consequences, and this file is the authority on all four:
   missing `flowProductId` is a hard stop at publish time, which is exactly why you must not invent
   one and must hand the attachment pass to the user instead.
 
-### Unverified: a second price-variable form
+### VERIFIED ON DEVICE: a second price-variable form that tracks the selection
 
 A second form exists — `<groupId>.selectedProduct.<field>`, e.g.
 `products.selectedProduct.prod_price` — resolving against a `product`-typed selectable group
-rather than a specific product. Observed in a live Flow Builder screen and **in no export**, so
-its exact field names are unverified: preserve it verbatim where found, never author one, never
-convert a `<productUUID>.prod_price_per_*` reference into it.
+rather than a specific product.
+
+**Confirmed in the Adapty app:** a root-level line reading `plans.selectedProduct.prod_price`,
+placed *outside* both product cards, resolved to a real price and **changed as each card was
+tapped**. So it re-resolves on selection rather than binding once, which makes it the correct way
+to write a "then $X — cancel anytime" line under a set of plan cards. Authoring it is fine.
+
+Still true: never convert a `<productUUID>.prod_price_per_*` reference into it, or the reverse.
+They answer different questions — one names a fixed product, the other follows the user.
 
 ### A price variable REQUIRES a `product` element on the screen — even with no plan card
 
@@ -171,8 +177,6 @@ a provisional handle, not the right answer. Two limits:
 - `flowProductId` is a server-side handle and this project does not know what else it keys. Treat
   a provisional value as good for previewing, and expect the builder to replace it when it saves.
 
-### Without a declaration, device preview fails until the builder saves
-
 ### Device preview fails on a freshly authored flow, and publishing fixes it
 
 Tell the user this **before** they try it, because the error is alarming and self-healing:
@@ -235,8 +239,8 @@ Two consequences worth stating, because getting them wrong is what happened firs
 Offer this only when no product in `products list` fits. Two commands:
 
 ```
-adapty access-levels list --app <UUID> --json     # to get --access-level-id
-adapty products create --app <UUID> --access-level-id <UUID> \
+$ADAPTY access-levels list --app <UUID> --json    # to get --access-level-id
+$ADAPTY products create --app <UUID> --access-level-id <UUID> \
                        --period <value> --title <title> \
                        <AT LEAST ONE store binding>
 ```
@@ -306,10 +310,18 @@ period/field agreement.
 This is not advice. Before you write a price variable, and again in the Verify step, check the
 pair:
 
-| Product `--period` | Price field that renders |
-| :--- | :--- |
-| `monthly` | `prod_price_per_month` |
-| `annual` | `prod_price_per_year` |
+| Product `--period` | Price field | Renders? |
+| :--- | :--- | :--- |
+| `monthly` | `prod_price_per_month` | yes |
+| `annual` | `prod_price_per_year` | yes |
+| `annual` | `prod_price_per_month` | **yes** — a real derived figure, confirmed on device |
+| `monthly` | `prod_price_per_year` | **no** — blank, and every referential check still passes |
+
+**The rule is asymmetric, so "must agree" is too strong.** Measured in both directions: a field
+*shorter* than the product's period is derived and renders (an annual product happily fills
+`prod_price_per_month`, which is what "$X/month, billed annually" needs), while a field *longer*
+than the period renders blank. Read that as: the runtime will divide a price down, never
+extrapolate it up.
 
 For any other period, read the field name out of the export you are transforming or out of
 `products get` — do not extrapolate one from the period name.

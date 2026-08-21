@@ -21,3 +21,8 @@ __pycache__/
 .agents/
 agent/
 skills-lock.json
+
+# Claude Code local state: machine-scoped permissions and whole-repo scratch worktrees.
+# `.claude/worktrees/` holds nested checkouts complete with their own .git files — committing it
+# would add thousands of files that are copies of this repo.
+.claude/

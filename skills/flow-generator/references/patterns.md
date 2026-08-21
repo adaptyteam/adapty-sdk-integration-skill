@@ -356,13 +356,37 @@ The confirm button buys **the group's selection**, never a hardcoded product:
    "payload": {"product": {"type": "var", "variableId": "plans.selectedProduct"}}}]}]
 ```
 
-**Write the prices as plain text, not price variables.** A price variable resolves only against a
-screen's declared products in `_meta.screens[].products[]`, that declaration carries a
-`flowProductId` which cannot be synthesized, and **only the Flow Builder writes it** — so on a card
-you authored, a variable renders as the literal `{{uuid.prod_price}}` and fails publish with
-*Unknown Product Id*. Put the price in the copy, and tell the user to attach the products in the
-builder and swap the text for variables if they want them live. See
-[products.md](products.md) — this is the same constraint from the other direction.
+**A price is a rich-text `variable` node in the copy — never literal text.** Literal text is a
+number you made up or one that has gone stale; the variable resolves against the store. A
+product-relative head must name a product declared in `_meta.screens[].products[]`, so on a card you
+authored, **write that declaration yourself in the same update** —
+[products.md → Declare the products yourself](products.md) owns the rules, including the one that
+matters most: never do it when rewriting a flow, where the live declaration is carried forward.
+Skip the declaration and the variable is what breaks: device preview returns 422, publish reports
+*Unknown Product Id*.
+
+**The preview renders the token, not a price**, at ~45 characters — long enough to wrap and shove
+copy under a docked CTA. Judge the layout on a throwaway copy with plausible prices substituted
+(`SKILL.md` phase 4), and never let those substituted numbers reach the config you write.
+
+An earlier version of this section said the opposite — write prices as plain text and let the user
+swap them for variables later. That was the rule before a config could carry its own declaration,
+and it is retired: it makes an authored paywall ship a fabricated price, which is worse than any
+layout defect because the user cannot see that it is wrong. Same distinction as
+[`old-price`](flow-schema.md): check whether a claim is about the *element* or about *what only the
+builder can write*.
+
+**A `propsByState` entry may restyle an element; it must never resize one.** Colour, fill, opacity,
+border *colour* are free. A **border `width`** that differs between base and `selected` changes the
+card's outer size, and in a `width: fill` column every sibling re-measures with it — a real build
+with base `1` / selected `2` made the comparison table above the cards **grow on every tap**, and
+holding the width at `1` while changing only the colour fixed it (user-confirmed on device; the
+same delta was also on the radio rings). If a selected card needs more presence than a colour
+gives it, change its `fill`, not its geometry. Note also what caught this: **nothing did.** The
+config validated, the structural checks passed, and two renders with different `default` cards were
+byte-identical — a selected-state reflow needs a *tap*, which no check in this skill performs. Treat
+any state that touches `border.width`, `width`, `height`, `padding` or `margin` as a defect on
+sight, because you cannot see it.
 
 **A tick badge is not a radio dot, and the difference bites.** The dot above works because when
 unselected it has *nothing to draw* — no fill, no children. A tick badge has a **glyph child**, and
@@ -387,6 +411,44 @@ holding it a fixed height so the cards do not change size:
 The rule generalises: **`propsByState` restyles an element, it does not suppress what is inside
 it.** Anything with children needs `visibility` — and hiding collapses the layout, so reserve the
 space deliberately (trap 14 in [flow-schema.md](flow-schema.md)).
+
+### A single-plan screen: hide the product element, buy with `const`
+
+One product means there is nothing to pick, and a lone `product` card is worse than no card: it
+carries a permanent `selected` look the user cannot change, so the styling says "choice" while the
+screen offers none.
+
+The shape that avoids it uses each mechanism for the one thing it is for:
+
+```json
+{ "id": "el_attachPoint", "type": "product", "caption": "Product attach point (hidden)",
+  "props": {"width": {"type": "hug"}, "height": {"type": "fixed", "value": 0},
+            "visibility": {"type": "hidden"},
+            "groupId": "plans", "default": true,
+            "product": {"id": "<product-uuid>"}, "layout": {…}, "position": {"type": "relative"}},
+  "states": [{"id": "selected", "type": "system"}] }
+```
+```json
+"interactions": [{"id": "int_buy", "trigger": "tap", "actions": [
+  {"id": "act_buy", "type": "purchase",
+   "payload": {"product": {"type": "const", "value": {"id": "<product-uuid>"}}}}]}]
+```
+
+- The **hidden `product` element is the attach point**, and it exists for one reason: a price
+  variable resolves only against a declared product, and only a `product` element can be
+  attached to. Hidden costs nothing — hiding collapses the space (trap 14) — and the price then
+  lives in ordinary copy anywhere on the screen.
+- The **CTA buys with `const`**, which names the product directly and needs no group and no
+  selection. Both facts, with their evidence, are
+  [products.md → a price variable REQUIRES a `product` element](products.md) and
+  [→ a purchase can bind a product with no `product` element](products.md).
+- Keep the `selectableGroups` entry and the element's `groupId` in agreement even though nothing
+  reads the selection — the invariant is bidirectional and a stray `groupId` fails verify.
+
+**Verified by render**, and it is what a reviewer asked for over a visible single card. What is
+*not* yet verified: whether the builder declares a product on a **hidden** element when it saves.
+Provisional declaration via `flowkit.predeclare()` covers device preview meanwhile, so check the
+live `_meta.screens` after the flow has been saved in the builder once before relying on it.
 
 ### A side-by-side docked footer
 

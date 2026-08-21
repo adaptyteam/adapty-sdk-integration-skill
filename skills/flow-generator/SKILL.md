@@ -34,37 +34,80 @@ the `hierarchy`/`map` split above all — and [patterns.md](references/patterns.
 ## The CLI surface
 
 ```
-adapty auth login                                             # browser flow
-adapty auth whoami                                            # verifies the token server-side
-adapty apps list --json                                       # to get <APP_UUID>
+$ADAPTY auth login                                             # browser flow
+$ADAPTY auth whoami                                            # verifies the token server-side
+$ADAPTY apps list --json                                       # to get <APP_UUID>
 
-adapty flows list   --app <APP_UUID> [--page N] [--page-size N]    # page-size max 100
-adapty flows create --app <APP_UUID> --name <name>            # row only; always `draft`
-adapty flows get    <FLOW_ID> --app <APP_UUID>
-adapty flows config get      <FLOW_ID> --app <APP_UUID> --json     # 404 until first write
-adapty flows config validate <FLOW_ID> --app <APP_UUID> (--config-file <f|-> | --config <json>)
-                                     [--source <caller>]
-adapty flows config preview  <CONFIG_FILE> [--screen <id>] [--device <id>] [--orientation …]
-adapty flows config update   <FLOW_ID> --app <APP_UUID> \
+$ADAPTY flows list   --app <APP_UUID> [--page N] [--page-size N]    # page-size max 100
+$ADAPTY flows create --app <APP_UUID> --name <name>            # row only; always `draft`
+$ADAPTY flows get    <FLOW_ID> --app <APP_UUID>
+$ADAPTY flows config get      <FLOW_ID> --app <APP_UUID> --json     # 404 until first write
+$ADAPTY flows config validate <FLOW_ID> --app <APP_UUID> (--config-file <f|-> | --config <json>)
+$ADAPTY flows config preview  <CONFIG_FILE> [--screen <id>] [--device <id>] [--orientation …]
+$ADAPTY flows config update   <FLOW_ID> --app <APP_UUID> \
     (--config-file <file|-> | --config <json-string>) \
     [--expected-updated-at <int>] [--remote-configs <json>]
+$ADAPTY flows media upload    <IMAGE_FILE> --app <APP_UUID>   # exists, but see below: 404s
 ```
 
-**Version floor, and it is split.** `flows` and `flows config get/update` ship in `adapty`
-**0.6.0**. `config validate` and `config preview` ship only in **0.6.1-beta.0** so far. Check with
-`adapty flows config --help`.
+**Version floor, per command.** Read off the published tarballs, not from `--help` and not from
+whatever is installed:
 
-**If the commands are missing, run them through `npx` before concluding anything.** A globally
-installed `adapty` is frequently old — measured on a real machine at `0.3.0`, which has no `flows`
-topic at all — and three agents in a row read that as "validate and preview do not exist here" and
-skipped phases 3 and 4 entirely. They do exist; the invocation was wrong:
+| Command | Present from | In `latest` (0.7.0)? |
+| :--- | :--- | :--- |
+| `flows list` / `create` / `get`, `config get` / `update` | **0.6.0** | yes |
+| `flows config preview` | 0.6.1-beta.0, and **stable since 0.7.0** | **yes** |
+| `flows config validate` | 0.6.1-beta.0, **absent from 0.7.0**, back in 0.8.0-beta.0 | **no** |
+| `flows media upload` | **0.8.0-beta.0** | no |
+
+**So `@beta` is not required for the normal loop.** Stable `latest` carries everything phases 1-5
+depend on, `preview` included. The two commands that need `@beta` are exactly the two whose
+endpoints **404** (below), so reaching for the beta channel buys nothing today — prefer `latest`,
+which is what you want writing to a live dashboard.
+
+**A command can leave stable again.** `config validate` was in 0.6.1-beta.0, is **not** in 0.7.0,
+and returns in 0.8.0-beta.0. So "a later version has it" is not a safe inference from an earlier
+beta, and `latest` is not a superset of the newest beta you tested. Enumerate the version you are
+about to run:
 
 ```bash
-npx adapty@beta flows config --help      # then use `npx adapty@beta …` for every command
+npm view adapty dist-tags
+curl -sS "$(npm view adapty@<version> dist.tarball)" | tar -tzf - | grep 'commands/flows'
 ```
 
-Only after `npx adapty@beta` also fails to offer them may you tell the user they are unavailable.
-Do not compute their absence from a version number you read somewhere.
+**Two of these commands exist in the CLI but 404 against the API — `config validate` and
+`flows media upload`.** Measured on `0.8.0-beta.0`: both parse their flags, authenticate, call
+their endpoint, and get `http_404` back. So *a command being present is not evidence its endpoint
+is deployed*, which is the mirror image of the older trap where `--help` hid commands that did
+work. Consequences, both load-bearing:
+
+- For `validate`, phase 3 owns what to do about it — read the verdict, never the exit code.
+- **`flows media upload` does not yet make uploaded assets reachable.** An image you do not have is
+  still an empty values map, never a made-up URL. Re-test the command before promising a user
+  otherwise — when the endpoint lands, it returns a CDN `url` to reference from a config, and this
+  limit disappears.
+
+**`flows config validate` has no `--source` flag** — an earlier draft of this list carried one and
+it never existed. The command takes `--app`, `--config`/`--config-file` and `--json`, nothing more.
+The general rule this is the second instance of: read the command's own `static flags` in
+`dist/commands/`, and treat any flag in this table you have not seen in that source as suspect.
+
+**Resolve the invocation once, in phase 1, and use that for every command.** A globally installed
+`adapty` is frequently old — measured on a real machine at `0.3.0`, which has no `flows` topic at
+all — and three agents in a row read that as "validate and preview do not exist here" and skipped
+phases 3 and 4 entirely. The commands existed; the invocation was wrong. Every `$ADAPTY` in this
+skill is that resolved invocation:
+
+```bash
+adapty --version                      # >= 0.7.0 ?  ADAPTY="adapty"
+ADAPTY="npx --yes adapty@latest"      # otherwise, and always pass --yes
+```
+
+**`--yes` is not optional.** Without it `npx` asks permission to install an uncached package, and
+a headless run has nobody to answer; every invocation in this project passed it. Only after
+`npx --yes adapty@latest` *and* `npx --yes adapty@beta` both fail to offer a command may you tell
+the user it is unavailable. Never compute a command's absence from a version number you read
+somewhere.
 
 **There is no `flows publish` and no `flows delete`.** Publishing and deleting are dashboard
 actions. Never write a command name the CLI does not have.
@@ -86,14 +129,18 @@ Four facts about the config commands that are not guessable:
 
 ## The five phases
 
-### 1. Authenticate
+### 1. Resolve the invocation, then authenticate
 
-`adapty auth whoami`. It hits the server and prints the name and companies, so it proves the
+**First** set `$ADAPTY` as [the CLI surface](#the-cli-surface) describes — probe `adapty --version`
+and fall back to `npx --yes adapty@latest`. Do it before the first command, not after one fails,
+and print the version you resolved in the same command you run next so the two cannot disagree.
+
+Then `$ADAPTY auth whoami`. It hits the server and prints the name and companies, so it proves the
 token works. Prefer it to `auth status`, which only reports what is stored locally and does not
 verify it — it happily prints `Email: undefined` next to a working token.
 
-If it fails, `adapty auth login` opens a browser. That is the user's to complete; wait for them
-rather than retrying in a loop. Then `adapty apps list --json` for the `<APP_UUID>` every later
+If it fails, `$ADAPTY auth login` opens a browser. That is the user's to complete; wait for them
+rather than retrying in a loop. Then `$ADAPTY apps list --json` for the `<APP_UUID>` every later
 command needs.
 
 ### 2. New flow, or existing flow
@@ -108,7 +155,7 @@ before touching it. Then `flows config get`, and **keep the `updated_at`** for t
 undo, so the copy you fetched is the only way back:
 
 ```bash
-adapty flows config get --app $APP $FLOW --json > flow.working.json
+$ADAPTY flows config get --app $APP $FLOW --json > flow.working.json
 cp flow.working.json flow.backup.json
 ```
 
@@ -126,6 +173,25 @@ catches a wrong flow immediately.
 
 **Confirm the transform.** In scope: add a locale, rewrite copy, add/remove/reorder screens,
 branching and conditions. A request outside those is named as out of scope, not improvised.
+
+**Were you given a design to follow?** Answer it out loud, because it decides who is choosing the
+design. A reference image, an existing screen to copy, or a layout the user spelled out means
+*they* chose it: follow the reference, and compare against the file rather than your memory of it
+(phase 4). **No reference means you are choosing it** — "build me a paywall", "add a paywall
+screen", "make one that converts" — and the request map only turns their nouns into element types;
+it says nothing about what belongs on a screen that sells.
+
+When you are the one choosing, the **`paywall-teardown`** skill is the reference. Invoke it before
+you write anything and build from its list: it returns a **composition** for the screen plus the
+patterns this vertical needs, in priority order, and it names the values it refuses to invent — a rating, a review count, an outcome
+stat, a discount, an uploaded hero. **Put those asks to the user before you write the config**, and
+leave the element out rather than filling it with a plausible number. A screen that ships with an
+element missing is recoverable; one that ships with a fabricated rating is a lie in front of real
+buyers. Build the composition it names — **do not substitute a shape you built last time.** Two
+paywalls in a row came out of this pairing as the same comparison-table-over-plan-cards screen in
+two unrelated verticals, from a build script copied forward rather than a decision. That skill also
+evaluates and corrects the result — see phase 4, where the correction is still free. And reach for it when the user wants to know how good a flow is rather than to change
+it: that answer is a teardown, not a transform.
 
 **Resolve the request into schema terms.** The user's noun is rarely the element `type` — there
 is no `button` and no `toggle` element, and tabs are a five-element composite. Use the request
@@ -160,13 +226,13 @@ Details and the fetch-and-cache line in
 Then the server-side check:
 
 ```
-jq '.config' flow.working.json | adapty flows config validate --app $APP $FLOW \
-    --config-file - --source byo-cli --json
+jq '.config' flow.working.json | $ADAPTY flows config validate --app $APP $FLOW \
+    --config-file - --json
 ```
 
 Advisory and **does not save**. It answers one question — *is this publishable* — and prints
 `Config is publishable.` or `Config is NOT publishable.` It takes the **bare `config`**, not the
-envelope. `--source` is caller attribution; set it when you are not the `adapty` CLI itself.
+envelope. Its only flags are `--app`, `--config`/`--config-file` and `--json`.
 
 **Read the shape of a failure.** An element-level error carries a `Code` and a `Path`
 (`screens["scr_…"].elements.map["el_…"]`) — act on it directly. A bare **`Invalid flow input`** with
@@ -192,7 +258,7 @@ both publishable-looking.
 ### 4. Preview, and iterate until it looks right
 
 ```
-adapty flows config preview draft.json [--screen <id>] [--device iphone-14] [--orientation portrait]
+$ADAPTY flows config preview draft.json [--screen <id>] [--device iphone-14] [--orientation portrait]
 ```
 
 **Fully local**: no `--app`, no flow id, no auth, no network, no save. The whole config rides in
@@ -209,7 +275,7 @@ that captured that into `$URL` and handed it to Chrome silently screenshotted th
 page and nearly reported it as the paywall. Use the bare form:
 
 ```bash
-URL="$(adapty flows config preview draft.json)"
+URL="$($ADAPTY flows config preview draft.json)"
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu \
   --hide-scrollbars --window-size=430,932 --virtual-time-budget=12000 \
   --screenshot=shot.png "$URL"
@@ -242,12 +308,33 @@ a config.
 That is how the rail was confirmed correct at 46/38 while the eye kept insisting it was too narrow,
 and how the real defect — a 14px break between connector and chip — was found.
 
-Three things it is blind to. Knowing them is what keeps a screenshot from becoming an overclaim:
+Six things to know before a screenshot becomes an overclaim — five it cannot show you, and
+one it shows that is not there:
 
 - **A stranded variable.** The render prints an unresolved reference as its literal token, so a
   screen reading `{{name.value}}` looks *pixel-identical* whether its producer still exists or was
   deleted three screens ago — measured, two renders with the same MD5. Whether a consumer still
   has a producer is a Verify question (invariant 12) and preview will never answer it.
+- **A `states[].condition` — but *not* a `visibility` one.** The two behave oppositely and the
+  difference is easy to get backwards. A **`visibility: {"type": "conditional", …}`** condition
+  **is** evaluated: a conditionally-shown button correctly appears or hides in the render, which
+  makes the empty-field state of a form gate genuinely checkable here. A **`states[].condition`**
+  is **not**: every element draws in its base props, measured on the disable-until-filled probe
+  where four buttons carrying `disabled`-state conditions all drew in base teal. That asymmetry is
+  survivable only because a conditional `disabled` state is not a real mechanism anyway — see
+  [flow-schema.md](references/flow-schema.md#making-a-field-mandatory-show-the-button-conditionally).
+  What the render still cannot tell you about a `visibility` condition: **an unresolvable variable
+  is silently treated as empty**, so `empty` over a typo'd id renders exactly like `empty` over a
+  real empty field. Only the *flip* — filling the field and watching the element appear — proves a
+  reference resolves, and that needs the Adapty app. A wrong *operator* name, by contrast, fails
+  closed and the element just vanishes.
+- **It can draw something the device will not — the blindnesses are not all one-directional.**
+  `old-price` renders a struck-through price in this preview and renders **nothing** in the Adapty
+  app (measured, same config). Every other item in this list is preview showing you *less* than
+  reality; this one shows you *more*, which is worse, because a layout built around a phantom
+  element looks correct here and ships broken. Treat an element you have only ever seen in this
+  renderer as unproven no matter how right it looks — see
+  [flow-schema.md](references/flow-schema.md#old-price-a-real-element-that-does-not-draw-on-device).
 - **Selection in any group that is not a product group.** The render simulates a
   `product`-type group's `default` — the chosen plan card shows its selected styling — but
   **ignores a `toggle` group entirely**: measured, flipping `default` between `true` and `false`
@@ -287,6 +374,16 @@ this size", never as "the flow works".
 You can reach the first. Everything below it belongs to the user, which is why the callout in phase 5
 asks for the mobile-app preview explicitly rather than treating a screenshot as sign-off.
 
+**A render that matches the request can still be a weak paywall.** Every check above asks whether
+you built what was asked for; none asks whether the screen sells. **If you chose the design — no
+reference image, no source screen (phase 2) — running the `paywall-teardown` skill over this PNG is
+part of the work, not a courtesy.** Hand it the render *and* the config, since one shows what is
+visible and the other what is there, then **apply** what it ranks *Fix first* or *High* and
+re-render. Findings on a screen you designed yourself are defects, not suggestions: a screen handed
+over with a list of the patterns you skipped is unfinished. This is the cheapest moment for it —
+nothing is written yet, so a correction costs a screenshot instead of a `config update`. Skip it
+only on an edit the user specified literally: a typo fix, a locale add.
+
 **Iterate here.** Anything off, go back and fix it, then re-run phases 3 and 4. Nothing has
 been saved yet, so an iteration costs a screenshot rather than a write.
 
@@ -315,7 +412,7 @@ and ask the user to look — never report the work finished on the strength of a
 Only now:
 
 ```
-adapty flows config update <FLOW_ID> --app <APP_UUID> --config-file draft.json \
+$ADAPTY flows config update <FLOW_ID> --app <APP_UUID> --config-file draft.json \
     --expected-updated-at <int-from-config-get>
 ```
 
@@ -476,6 +573,12 @@ resolve to `nothing`. Real configs contain all of these.
 - [products.md](references/products.md) — `## Where product ids come from`,
   `## The builder owns product binding`, `## Creating a product`. Read it before touching a
   product element; `products create` writes to a live dashboard.
+- the **`paywall-teardown`** skill (ships alongside this one) — what *should* be on the screen and
+  what a change is worth: a pattern library with cross-checks, impact tiers and category playbooks,
+  read forwards as the design reference when the user gave you none, and backwards to grade a
+  render, including your own. It owns every conversion claim and every impact number; this skill
+  owns the JSON. Invoke it in phase 2 whenever you are choosing the design, and again in phase 4 to
+  correct what you built.
 - [patterns.md](references/patterns.md) — `## Where to source a pattern, in order`,
   `## What is safe to lift, and what breaks`, `## Skeletons` for the composites you cannot
   guess: tabs, progress bars, toggles, countdowns.

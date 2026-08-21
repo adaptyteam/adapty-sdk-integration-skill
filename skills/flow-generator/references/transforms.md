@@ -51,6 +51,12 @@ It cannot hold a translation as it stands. Both exits are legitimate:
   ([flow-schema.md trap 10](flow-schema.md)). So converting is defensible, but if you convert:
   say so, name the fields, and tell the user to check those labels first.
 
+**Leaving it bare is safe at the transform service.** A Flow Builder screen carrying bare-string
+`content` on both its text elements went through device preview, and the service's issue list named
+only the font preset and `verticalAlign` — nothing about content shape. So a bare string is not a
+publish blocker and there is no pressure to convert one for validity's sake; convert only when the
+field genuinely needs to translate.
+
 **Your report states** which option you took and how many fields it covered — and if you left
 them bare, it lists the literal strings that stay in the source language.
 

@@ -54,6 +54,17 @@ MIN_DISTINCT_COLOURS = 12
 # unrecognized value renders the words 'Unknown device "..."' on white. That screenshot
 # carries 216 distinct colours from text antialiasing alone, so the colour-count test above
 # passes it. Measured: real screens run 44-76% dominant; the error page is 99.7%.
+#
+# KNOWN FALSE POSITIVE, and do not "fix" it by raising the threshold. A genuinely sparse
+# screen trips this: a light-theme form whose only content is a small label, an outlined
+# input and a conditionally-hidden button measured 134 colours at 99.6% white and was
+# reported BLANK while rendering perfectly. Two lessons. A screen fill that matches the
+# page background leaves no visible frame to contribute pixels, and `visibility:
+# conditional` genuinely removes its element in the empty state — so "sparse" is a correct
+# render here, not a failure. Raising the threshold past 99.6% would re-admit the 99.7%
+# error page, which is the whole reason this guard exists. When a screen you believe in
+# comes back BLANK, look at the PNG (--keep) and judge it; that is the documented workflow
+# and this is exactly the case it is for.
 MAX_DOMINANT_SHARE = 0.92
 # Where --baseline writes reference renders, and what the diff compares against.
 BASELINE_DIR = 'tests/render-baseline'

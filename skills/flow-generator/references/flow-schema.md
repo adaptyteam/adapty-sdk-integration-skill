@@ -99,10 +99,10 @@ the one invariant on this list that a real multi-locale export has never exercis
 | 2 | On a **screen**, `hierarchy` references only ids present in `map`, and every id in `map` appears exactly once in `hierarchy` | adding or removing an element | A hierarchy id absent from `map` renders nothing. **Two hierarchy ids legitimately have no `map` entry, and both must be excluded before you check anything:** `root`, the mandatory wrapper node, on every screen and every component; and any `{"id": "pb_…", "type": "global"}` node, which points into `components` instead. Counting either as a violation reports false corruption — `root` on all 9 screens, `global` once in the corpus. The bijection itself holds for every screen but **not inside `components`**: `timer`'s component has a `progress-bar-loader` in its `map` that no hierarchy node references. A `map` entry the hierarchy never reaches is therefore not proof of corruption and is not yours to prune. |
 | 3 | Every `navigate` action's `payload.screen` names an existing screen | **screen deletion** | **Publish blocker.** A Navigate action with a destination that no longer exists is an incomplete interaction, and [Common issues](https://adapty.io/docs/flow-common-issues.md) names it explicitly: it "also occurs when the destination screen is deleted after the action is set up." The flow will neither preview nor publish. |
 | 4 | Every `product` element's `props.product.id` is declared in `_meta.screens.<thatScreenId>.products[]` | moving a product element to another screen | **Publish blocker** — a product element with no product attached. Declaration is per screen, so a moved element arrives **unattached on its new screen**, and no edit you can make to the JSON clears that. There is no re-keying fix: see [`transforms.md`](transforms.md#decisions-you-must-disclose) decision 2 for the exits, and [`products.md`](products.md) for why binding is not yours to write. |
-| 5 | A price variable resolves by **one of two forms**, and which one decides what it must name. Product-relative — `<productUUID>.prod_price_per_*`, head is a product id declared in `_meta.screens` (in the corpus, always on the same screen that reads it). Group-relative — `<groupId>.selectedProduct.<field>`, head is a `product`-typed `selectableGroups` id, **not** a product id | copy rewrite, moving a screen or element | The price renders empty. Nothing fails loudly. **Validate the head against the form, or you generate a false positive:** checking the first segment of a group-relative variable against the product list rejects a valid file and invites an agent to "repair" correct work. Provenance, precisely: the product-relative form is the only one in the corpus. The **field names are documented** — [Element variables](https://adapty.io/docs/onboarding-variables.md) lists `prod_price` alongside `prod_price_per_{day,week,month,year}`. What is unverified is the group-relative **reference syntax** `<groupId>.selectedProduct.<field>`: it appears in no export and on no docs page, only in a live Flow Builder screen. So treat the fields as known and the syntax as observed-once — preserve it verbatim where you find it, and do not author it. [`products.md`](products.md) owns the handling rules. |
+| 5 | A price variable resolves by **one of two forms**, and which one decides what it must name. Product-relative — `<productUUID>.prod_price_per_*`, head is a product id declared in `_meta.screens` (in the corpus, always on the same screen that reads it). Group-relative — `<groupId>.selectedProduct.<field>`, head is a `product`-typed `selectableGroups` id, **not** a product id | copy rewrite, moving a screen or element | The price renders empty. Nothing fails loudly. **Validate the head against the form, or you generate a false positive:** checking the first segment of a group-relative variable against the product list rejects a valid file and invites an agent to "repair" correct work. Provenance, precisely: the product-relative form is the only one in the corpus. The **field names are documented** — [Element variables](https://adapty.io/docs/onboarding-variables.md) lists `prod_price` alongside `prod_price_per_{day,week,month,year}`. What is unverified is the group-relative **reference syntax** `<groupId>.selectedProduct.<field>`: it appears in no export and on no docs page, only in a live Flow Builder screen. **That syntax is now device-verified and safe to author:** on a real device a root-level line reading `<groupId>.selectedProduct.prod_price` resolved to a real price and **changed as each card was tapped**, so it tracks the live selection rather than resolving once. `prod_price_per_month` on an **annual** product likewise resolved to a real derived figure, so a per-month field does not require a monthly product. Preserve it verbatim where you find it, and authoring it is fine. [`products.md`](products.md) owns the handling rules. |
 | 6 | Every `selectableGroups[].id` has at least one member element carrying that `groupId`, and every `groupId` in use has a declared group | branching edits | A group with no members and a member with no group are both broken selection state. Groups are per screen and typed (`single_choice`, `product`). |
 | 7 | Every `const` compared against `<groupId>.selectedOptionId` matches some member's `customId` | branching edits, renaming an option | The case never matches, so every user takes the `default` branch. Silent — the flow still routes somewhere. |
-| 8 | Every `colorId` and every `font.preset` resolves in **that file's own** `theme` | pasting a screen from another flow | Unresolvable style reference. Never validate these against a remembered list of built-in names — see [Shape traps](#shape-traps). |
+| 8 | Every `colorId` and every `font.preset` resolves in **that file's own** `theme` | pasting a screen from another flow | **A hard 422, confirmed.** A screen pasted in from another flow kept `font.preset: "button-label"`, a preset the destination theme does not define; device preview returned `unknown_font_preset` as **severity `error`**, once per text element, blocking the whole flow. `config update` had saved it without complaint. So this is a publish blocker, not a cosmetic drift — and `tests/verify-fixture.py` catches it, which is the check earning its place. Fix by repointing to a preset the destination theme has, not by adding the source's name to the theme. Never validate these against a remembered list of built-in names — see [Shape traps](#shape-traps). |
 | 9 | Every `family.id` resolves in `_meta.fonts` — via **both** reference paths: an element's `props.font.family.id`, and `theme.typography[].settings.family.id` | pasting a screen from another flow, editing or deleting a typography preset | Unresolvable font reference. **Check both paths or you check nothing**: element-level refs number 7 in `timer` and 0 in both `quiz` and `comparison`, so in `comparison` all three declared fonts are reached only through theme presets, and in `timer` the two paths together are what reach all four. A check that reads only element props would find `comparison`'s `_meta.fonts` entirely unreferenced and could license deleting them. Resolving here also does not mean the font ships — trap 7. |
 | 10 | Every `(name, weight)` icon pair used by an `icon` element appears in `_meta.icons` | adding an icon | `_meta.icons[].raw` carries the literal SVG markup the renderer draws, so an unlisted pair has nothing to draw. `raw` cannot be synthesized. |
 | 11 | Every locale in `locales[]` has an entry in every `_localizable` `values` map | adding a locale | The field falls back or renders empty for that locale. There are three localizable families, not one — trap 1. |
@@ -622,10 +622,12 @@ Worth stating because the evidence order says otherwise at first glance: `effect
 schema but in **no** real export and **no** catalog template, which normally means treat it as
 unproven. It was confirmed by a control render instead — a card's painted edge measured **7px**
 with the shadow and **2px** with it stripped, everything else identical. It also round-trips
-through `config update` unchanged. So it is usable; it just has no precedent to copy from, which
-means keeping a border underneath it is still the conservative choice.
+through `config update` unchanged. **And it draws on a real device — confirmed in the Adapty app**
+on a drop-shadow of `y: 6, blur: 18, #000000 at 8% opacity`, so this one is not a CLI-preview
+artifact the way `old-price` turned out to be. So it is usable; it just has no precedent to copy
+from, which means keeping a border underneath it is still the conservative choice.
 
-### `old-price` is the strikethrough element — measured
+### `old-price`: a real element that does not draw on device
 
 A dedicated element type for a struck-through original price. Built and rendered:
 
@@ -653,9 +655,28 @@ Nothing in the config derives or checks it, so a number pulled from nowhere is a
 discount shown to real users — treat choosing it as the product owner's decision and say so, the
 same way [products.md](products.md) treats a period that does not match its price field.
 
-This corrects an earlier conclusion recorded during this project: that a price strikethrough
-requires either `offer_price` or an annual-versus-monthly pair. Those are the only routes through
-a *`text` element with a price variable*; `old-price` is the purpose-built route and needs neither.
+**It renders in `flows config preview` and NOT in the Adapty app — measured, and this reverses the
+claim above.** On a real device, a card carrying this element showed only the current price; the
+strikethrough was simply absent. The same config in the CLI preview draws it (a struck `$0.00`
+before the live `$0.00`). Everything structural above still holds — the element exists, the
+strikethrough is inherent, it takes no content — but **`multiplier` alone does not put a "was" price
+on screen where users are.**
+
+Do not author `old-price` expecting a visible strikethrough, and never lay out a price row around
+one you have only seen in the CLI preview.
+
+The likely reason, **untested**: the multiplier scales a prior price that has to exist independently,
+and with no intro or offer price on the product there is nothing to scale. That would partially
+reinstate an earlier conclusion recorded during this project — that a strikethrough needs either
+`offer_price` or an annual-versus-monthly pair — but note the distinction that made that conclusion
+wrong the first time: it was a claim about faking a strikethrough with a *`text` element and a price
+variable*, not about this element. Binding a product that really has an offer price and re-checking
+on device is what would settle it.
+
+**The methodological lesson is the durable part.** This section said "measured" and "confirmed in a
+render", and the render was `flows config preview` — the *weakest* of the four preview surfaces. A
+single device check reversed it. A CLI render proves an element draws in the CLI renderer and
+nothing more; for anything about whether users see it, that surface does not qualify as measurement.
 
 ### What the schema settles
 
@@ -679,24 +700,60 @@ Schema-legal on text props (`enum: ["top","middle","bottom"]`) and emitted by th
 reported `unsupported_text_typography_setting` by the transform service, and removing it from 93
 elements rendered byte-identically. Legal, inert, one warning per element. Do not author it.
 
-## Making a field mandatory: disable the button, not the field
+## Making a field mandatory: show the button conditionally
 
-No input has a `required` prop and none has an error-message prop, so "this field is mandatory"
-is not something an input can say. The mechanism is a **disabled state on the button**, driven by
-a condition — which is what the source app in the reference screenshots does too (Continue starts
-greyed and activates once the field has content).
+**You cannot disable a button.** There is no disable mechanism to drive: no input has a `required`
+prop or an error-message prop, and an element's `disabled` *state* takes no condition — the builder
+emits `states: [{"id": "disabled", "type": "system"}]` with no `condition` key, and the runtime
+drives it. An earlier version of this section taught a conditional `disabled` state with a greyed
+`propsByState`. **It does not work**: four such conditions produced a 422 from the transform
+service, and no builder-emitted config contains one.
 
-The state is a *system* state with an id of exactly `disabled`, and unlike the other system states
-it takes a `condition`:
+What actually exists is **conditional visibility on the button** — show it once the field has
+content. Verified from a Flow Builder export of a working screen:
 
 ```json
-"states": [{"id": "disabled", "type": "system", "condition": { …expression… }}],
-"propsByState": {"disabled": {"fill": [{"type": "color", "color": {…grey…}}]}}
+"props": {
+  "visibility": {
+    "type": "conditional",
+    "condition": {
+      "type": "&&",
+      "predicates": [
+        {"type": "notEmpty", "left": {"type": "var", "variableId": "email_input.value"}}
+      ]
+    }
+  }
+}
 ```
 
-`ExpressionType` is a closed set: `const`, `var`, `switch`, `&&`, `||`, `==`, `!=`, `has`,
-`notHas`, **`empty`**, **`notEmpty`**, `in`, `notIn`, `>`, `<`, `size`, `assign`, `concat`. The
-binary and structural shapes are known from a rendering export:
+The other builder-supported route is an **action**: keep the button hidden and attach a show-button
+action to the input's `change` or `submit` interaction. Prefer conditional visibility — it is
+declarative, needs no interaction wiring, and re-hides itself if the field is cleared.
+
+**Mind the layout consequence.** A hidden element contributes nothing to layout rather than leaving
+a gap (trap 14 above), so a conditionally-shown Continue button makes everything below it jump the
+moment the field is filled. If the screen has anything under the button — a legal line, a "Skip"
+link — put the button in a wrapper with a **fixed** height and condition the *button*, not the
+wrapper.
+
+### The expression facts, and how each was established
+
+| Fact | Evidence |
+|---|---|
+| A unary predicate uses **`left`**, exactly like a binary one — there is no `value` or `operand` form | builder export; plus four `left`-shaped conditions passing shape validation into codegen |
+| An input's value is **`<customId>.value`** | builder export (`email_input.value`, where `email_input` is the input's `customId`), then **confirmed on device across three input types** — `email-input`, `password-input` and `text-input` all gated their button correctly from `<customId>.value`. So the form is not specific to one input type, and nothing needs declaring in `config.variables` for an input to be in scope |
+| The **`&&` wrapper around a single predicate is optional** | render: an unwrapped `empty` behaved identically to the wrapped control, and a garbage operator in the same slot failed closed, so the unwrapped form really was evaluated |
+| `ExpressionType` is a closed set: `const`, `var`, `switch`, `&&`, `||`, `==`, `!=`, `has`, `notHas`, **`empty`**, **`notEmpty`**, `in`, `notIn`, `>`, `<`, `size`, `assign`, `concat` | schema |
+
+**Emit the `&&` wrapper anyway.** It is optional but it is what the builder writes, and matching the
+builder keeps a round trip clean.
+
+**Multiple predicates work, and that is how you gate on a whole form.** Confirmed on device: a
+Continue button with two predicates — `email.value` and `password.value`, both `notEmpty` — appeared
+only once both fields had content. So one `&&` with one predicate per required field is the pattern
+for a multi-field form; there is no need for nesting.
+
+Structural shapes, from a rendering export:
 
 ```json
 {"type": "var",    "variableId": "quiz.selectedOptionId"}
@@ -706,12 +763,36 @@ binary and structural shapes are known from a rendering export:
 {"type": "switch", "cases": [[<predicate>, <result>]], "default": <result>}
 ```
 
-**Two things are NOT established, so do not write them from memory:** the operand key a *unary*
-predicate like `empty` uses (`==` uses `left`/`right`; a unary op might use `left`, or `value`, or
-`predicates`), and how an input's value is addressed as a variable — its `customId`, or something
-like `<customId>.value`. A probe covering four candidates was built for exactly this; fill in the
-answer here once it is known rather than guessing, because the schema cannot check it (see below)
-and there is no working `validate`.
+### Two failure modes, and they point opposite ways
+
+Measured with deliberate controls in one render:
+
+- **An unknown operator fails closed.** `{"type": "bogusop", …}` hid the element. So a typo in an
+  operator name costs you the element, silently — no error, just an absence.
+- **An unresolvable variable is silently treated as empty.** A condition over
+  `no_such_input.value` — an id present nowhere in the config — rendered as though the value were
+  an empty string: `empty` was *true*, `notEmpty` false. Nothing warns.
+
+That second one has a sharp consequence for verification. **`empty` over a name that does not
+resolve is indistinguishable from `empty` over a real, empty field**, so a screenshot of an
+empty-state screen cannot confirm that your variable reference is correct. It is also why a bare
+`customId` with no `.value` must not be used: it renders exactly like the working form while the
+field is empty, and this project has no evidence it ever resolves. Use `<customId>.value`, the form
+the builder emits.
+
+The way to actually confirm a reference resolves is to observe the **flip** — the element appearing
+or disappearing as the field is filled — which needs the Adapty app or the builder's own preview,
+because `flows config preview` renders one static state.
+
+### What `flows config preview` can and cannot check here
+
+**A `visibility` condition *is* evaluated by the preview renderer** — this is the one kind of
+condition it honours, and the empty-field state of a conditional button is genuinely checkable
+locally. A `states[].condition` is **not** evaluated; see
+[SKILL.md phase 4](../SKILL.md).
+
+Two things still cannot be checked locally, per the failure modes above: whether a variable
+reference resolves, and anything about the filled state.
 
 **The schema cannot check a condition at all.** `IDynamicProductValue` is a `oneOf` over two
 branches that both accept any `{"type": <string>}` and carry the comment *"shape intentionally
@@ -720,6 +801,43 @@ fails. `tests/schema-check.py` suppresses this class — and had to be widened t
 opaque `oneOf` anywhere in the error tree, because a condition nested inside a state's own union
 pushes the real cause off the deepest path and reported four errors for one schema limitation.
 Never reshape a condition to satisfy the schema; it has no opinion worth having here.
+
+And `flows config validate` still returns **404** as of `adapty/0.8.0-beta.0`. So the gates on a
+condition are: the preview render (visibility only, empty state only), device preview, and a human.
+
+### The transform service compiles conditions to TypeScript
+
+Worth knowing because it shapes the error you get. A malformed reference comes back not as a schema
+complaint but as a compiler diagnostic:
+
+```
+{"error": "Generated scripts failed validation",
+ "issues": [{"severity": "error", "code": "script_type_violation", "path": "scripts",
+             "message": "TS2304: Cannot find name 'email'. (line 22, col 21)"}, …]}
+```
+
+`code` is `script_type_violation`, `path` is the useless constant `"scripts"`, and the real
+information is a **TS error code plus a line/col into a generated file you cannot see**. Read the
+identifier out of the message and find it in your config; do not try to map the line number.
+
+**Count nothing from the number of issues.** Codegen emits *more than one* diagnostic per authored
+reference — measured, **one** state condition referencing `email` produced **two** TS2304 errors, at
+different line/col pairs. So the issue count tells you nothing about how many places you have to fix.
+
+**Codegen validates the whole flow, not the screen you are previewing.** Measured: previewing
+`?screen=scr_probe` failed on an identifier that existed only on a *different, unlinked* screen in
+the same flow. Combined with `path: "scripts"` carrying no screen id, the only reliable move is to
+search the entire config for the identifier in the message — not the screen you were looking at.
+A single broken screen anywhere blocks preview and publish for every screen.
+
+**The builder's duplicate-screen action copies a broken condition faithfully.** That is how the
+screen above came to exist: an earlier draft of this project's own probe was duplicated in the
+editor, and the copy carried a conditional `disabled` state — the mechanism that does not work —
+into a flow whose visible screens were all correct. Deleting the copy fixed the flow. When a 422
+names an identifier you thought you had removed, look for a duplicate screen before you doubt the
+error, and do **not** write it off as a stale cache: nothing here is cached, and the diagnostic was
+accurate about a screen that really was still in the config.
+
 
 ## Conditions cannot compare numbers — enumerate equality instead
 
