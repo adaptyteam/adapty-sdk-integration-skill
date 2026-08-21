@@ -450,6 +450,57 @@ The shape that avoids it uses each mechanism for the one thing it is for:
 Provisional declaration via `flowkit.predeclare()` covers device preview meanwhile, so check the
 live `_meta.screens` after the flow has been saved in the builder once before relying on it.
 
+### Plans in a `bottom-sheet`
+
+The sell lives on the screen, the picker lives in a sheet the CTA opens. `bottom-sheet` is a real
+element type with no catalog template, no fixture and no export in this corpus — the shape below is
+schema-derived (`IBottomSheetElement`) and **confirmed by render**, which is the weakest tier this
+file admits, so treat it as a starting point and look at your own screenshot.
+
+The sheet is a docked, initially hidden container with its own scrim:
+
+```json
+{ "id": "el_planSheet", "type": "bottom-sheet", "caption": "Plan sheet",
+  "props": {"position": {"type": "fixed", "bottom": 0, "left": 0, "right": 0},
+            "width": {"type": "auto"}, "height": {"type": "hug"},
+            "borderRadius": {"tl": 26, "tr": 26, "bl": 0, "br": 0},
+            "visibility": {"type": "hidden"},
+            "overlayColor": {"type": "hex", "hex": "#000000", "opacity": 60},
+            "fill": [ … ], "layout": { … }, "padding": { … }},
+  "states": [] }
+```
+
+`overlayColor` is the giveaway that this is a modal rather than a panel — it dims the page behind,
+and it is a `bottom-sheet` prop that a `stack` does not have. Opacity is a **percentage** (trap 11).
+
+Open and close with `showElement` / `hideElement`, whose payload is a **list of element ids**:
+
+```json
+{"id": "act_open", "type": "showElement", "payload": {"elements": ["el_planSheet"]}}
+```
+
+**The trap: a docked element of the screen paints OVER the sheet.** The page's own bottom-docked
+CTA and legal row kept rendering on top of an open sheet, burying the sheet's purchase button under
+the button that had just opened it — measured on the first render of this pattern. A sheet is not a
+layer above everything; it is a sibling. So the opening interaction carries **two** actions, and the
+dismiss carries their inverse:
+
+```json
+"actions": [{"id": "act_open",      "type": "showElement", "payload": {"elements": ["el_planSheet"]}},
+            {"id": "act_hide_page", "type": "hideElement", "payload": {"elements": ["el_openCta", "el_legalRow"]}}]
+```
+
+Two more things that follow from the sheet being an ordinary part of the document:
+
+- **The product group spans both.** The `product` elements live inside the sheet while
+  `selectableGroups` is declared on the screen, and the sheet's CTA buys
+  `<groupId>.selectedProduct` exactly as a flat paywall would. Nothing about the group is
+  sheet-aware.
+- **The render draws whatever `visibility` says and never runs the interaction.** So screenshot it
+  twice — once as authored (sheet hidden) and once from a throwaway copy with the sheet visible and
+  the page furniture hidden, which is the state the actions produce. That verifies both layouts and
+  proves nothing about the tap: whether `showElement` actually fires is an Adapty-app check.
+
 ### A side-by-side docked footer
 
 Two buttons on one row at the bottom, each with its own action. The trap is treating it as one
