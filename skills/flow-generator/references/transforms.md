@@ -14,14 +14,14 @@ authority on both. Do not re-derive any of it here.
 
 | Transform | What it endangers | Publish blocker it trips | What to check |
 | :--- | :--- | :--- | :--- |
-| **Add a locale** | Invariant 11, across **three** localizable families — `text.props.content`, `image.props.image`, `text-input.props.placeholder` — not text alone. A bare-string `content` has no locale slot and cannot hold the translation at all. | None. A locale missing from a `values` map falls back or renders empty: invisible at publish, visible to users. | Every bare-string `content` you met appears in your report under decision 1. |
+| **Add a locale** | Invariant 11, across **three** localizable families — `text.props.content`, `image.props.image`, `text-input.props.placeholder` — not text alone. A bare-string `content` has no locale slot and cannot hold the translation at all. | None. A locale missing from a `values` map falls back or renders empty: invisible at publish, visible to users. | Every bare-string `content` you met appears in your report under decision 1. **`defaultLocale` is unchanged** — adding a locale is additive, and flipping the default changes what every existing user sees with nothing failing. And every *declared* locale carries every localizable field: `tests/verify-fixture.py` checks parity and errors when a translated block's `variableId`s differ from the default locale's, which is the failure that silently costs a locale its prices. |
 | **Rewrite copy** | Invariants 5 and 11, plus trap 2 — inline `variable` and `token` nodes survive a rewrite only if you edit around them, never through them. Field shape is per field and must survive the edit. | None — and that is the danger. A paragraph rebuilt from its rendered text publishes cleanly and passes every referential check; trap 2 in [`flow-schema.md`](flow-schema.md) states what it costs. | Every locale in `locales[]` got the same edit, or your report says which did not. No field changed shape (decision 1). |
 | **Add / remove / reorder screens** | Invariants 3 and 12, which break in **opposite directions**. Invariant 3: the target dies and the reference survives. Invariant 12: **the consumer survives and the producer dies** — deleting a screen can strand a variable consumer on a screen you never opened. Verified in `quiz`: the `text-input` with `customId: "name"` lives on **Quiz**, and `name.value` is read on **Rock**, **Hip hop** and **Paywall After**. Delete Quiz and all three references stay intact with nothing to resolve against, so nothing on the edited screen looks wrong and three untouched screens render an empty name. Also: `screens[0]` is the entry screen, so a reorder silently moves where the flow starts; and `_meta.screens` is keyed by screen id, so a deleted screen's product declarations leave with it (invariant 4). | Three, all on the [Common issues](https://adapty.io/docs/flow-common-issues.md) list: a dangling `navigate` (invariant 3), a screen with no elements, and — on any screen you add that carries a `product` element — a product element with no product attached, which no edit of yours can clear (see [`products.md`](products.md)). A stranded variable consumer is **not** a blocker; it publishes and renders empty. | Every `<inputCustomId>.value`, `<groupId>.selectedOptionId` and `<productUUID>.prod_*` reference still has a producer. Search `screens` **and** `components`: no component in the corpus holds a reference, but a component is a screen-shaped `{map, hierarchy}` that can, so it is inside the search space. A new screen matches `flow-schema.md`'s `root`-wrapper and `scr_`-id rules. `screens[0]` is still the screen you mean. Orphans and widenings are in your report (decisions 2 and 3). |
 | **Branching and conditions** | Also: **conditions cannot compare numbers.** `<` and `>` are in the schema's `ExpressionType` and are not honoured at runtime, so a threshold must be enumerated as `==` cases against **strings** — see [flow-schema.md](flow-schema.md). Invariants 6 and 7. Renaming a selectable option changes its `customId`; every `const` compared against `<groupId>.selectedOptionId` must change with it, or the case stops matching and **every user takes the `default` branch** — routing changes with nothing failing. | A `conditional` with no operator or value. A `const` that matches nothing is not a blocker; it silently reroutes everyone. | For each predicate `const`, a member of that group carries that `customId`. Each `selectableGroups[]` entry has at least one member, and each `groupId` in use is declared. You know where `default` sends users, because a mismatch sends everyone there. Read `default` as a live route, not a fallback: in `quiz` the switch has one case (`rock`) and `hiphop` is routed **only** by `default`. And a group member may legitimately carry no `customId` at all — `quiz`'s continue button is a `quiz` member and holds the conditional itself — so an absent `customId` is not a gap to fill. |
 
 ## Decisions you must disclose
 
-Five of the six items below are points where two answers are both defensible and Adapty has
+Six of the seven items below are points where two answers are both defensible and Adapty has
 not settled which is correct; item 4 has no choice in it, only a fact the user must hear before
 they publish. The deliverable is not the JSON alone — it is the JSON **plus a report
 that names what happened.** Four baseline locale runs reached decision 1, split 2–2 on it, and
@@ -162,3 +162,28 @@ safety reason, failing open is a real consequence and the user is the one who ge
 example of an input that slips through. If a picker would have avoided the problem entirely, say
 that too.
 
+
+### 7. Which script a digraphic language gets
+
+"Add Serbian" does not name a script. Serbian is digraphic — `sr` conventionally means Cyrillic,
+`sr-Latn` is Latin, and a consumer app in the region may want either or both. The same question
+arrives with Uzbek, Kazakh, and Simplified versus Traditional Chinese. Picking one silently
+decides what a whole market reads.
+
+**Trigger:** the requested language is written in more than one script and the user named only the
+language.
+
+**Options:** one script, or both as separate locales. Say which code you used (`sr` versus
+`sr-Latn`) rather than just "Serbian", because the code is what the SDK matches against.
+
+**And when you ship both, derive the second by transliteration, not by translating twice.** The
+scripts are a strict 1:1 mapping, so a transliteration cannot say something different from its
+source, whereas two independent translations drift apart on the next copy edit. Three mechanics
+make it correct: replace **digraphs before single letters** (`љ њ џ` → `lj nj dž`, or `л`/`н` eat
+them first); map **only the source script's codepoints**, so Latin already in the copy survives
+untouched — a brand name, `·` separators, an em dash; then **assert nothing from the source script
+remains**, which is the one check that catches a letter missing from the table.
+
+**Report:** the language, the locale codes you added, which is the source and which is derived,
+and — if derived — that it is a transliteration, so the user knows a copy edit must be re-derived
+rather than re-translated.

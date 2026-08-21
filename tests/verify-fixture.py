@@ -101,6 +101,53 @@ def check(path):
     # flow, keeping the binding as written. An agent cannot author it (the id is a UUIDv5 over
     # an input the config does not contain), so a config an agent produced is EXPECTED to look
     # like this and calling it an error just teaches you to ignore findings.
+
+    # A locale transform is the one change with NO render check — `config preview` ignores locale
+    # entirely — so structural parity is the only gate there is. Checks every DECLARED locale,
+    # not merely the ones that happen to be present on a field.
+    declared = [l.get('code') for l in d.get('locales', []) if l.get('code')]
+    if len(declared) > 1:
+        loc_vals = []
+
+        def _collect(o):
+            if isinstance(o, dict):
+                if o.get('_localizable') and isinstance(o.get('values'), dict):
+                    loc_vals.append(o['values'])
+                for v in o.values():
+                    _collect(v)
+            elif isinstance(o, list):
+                for v in o:
+                    _collect(v)
+
+        _collect(d)
+        base = d.get('defaultLocale') or declared[0]
+
+        def _kinds(v):
+            return ([s.get('type') for b in v for s in (b.get('content') or [])]
+                    if isinstance(v, list) else ['<plain-string>'])
+
+        def _varids(v):
+            return ([s.get('attrs', {}).get('variableId')
+                     for b in v for s in (b.get('content') or [])
+                     if s.get('type') == 'variable'] if isinstance(v, list) else [])
+
+        for vals in loc_vals:
+            src = vals.get(base)
+            if src is None:
+                continue
+            label = (src if isinstance(src, str) else ''.join(
+                s.get('text', '') for b in src for s in (b.get('content') or [])))[:40]
+            for code in declared:
+                if code == base:
+                    continue
+                if code not in vals:
+                    bad.append(f'locale {code}: no value for {label!r}')
+                elif _varids(vals[code]) != _varids(src):
+                    bad.append(f'locale {code}: variable nodes differ from {base} on {label!r} — '
+                               f'a translated block must be a structural copy, or the locale '
+                               f'loses its price')
+                elif _kinds(vals[code]) != _kinds(src):
+                    warn.append(f'locale {code}: span kinds differ from {base} on {label!r}')
     ms = d.get('_meta', {}).get('screens', {})
     for s, e in els():
         if e['type'] == 'product':
