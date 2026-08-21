@@ -108,8 +108,9 @@ def check(path):
             decl = {p['id'] for p in ms.get(s['id'], {}).get('products', [])}
             if pid not in decl:
                 warn.append(f'product {pid} bound on screen {s["id"]} but not yet declared in '
-                            f'_meta.screens — the builder writes that on first open; publishing '
-                            f'before opening the flow gives "Unknown Product Id"')
+                            f'_meta.screens — the builder writes that when it SAVES (an edit, '
+                            f'or publishing). Device preview before that returns HTTP 422 '
+                            f'missing_flow_product_id, and publishing fixes it')
 
     # A price variable comes in TWO forms, and only one is product-relative:
     #   <productUUID>.prod_price_per_year      — bound to one specific product
@@ -138,8 +139,9 @@ def check(path):
             # Same split as above: if the product is bound to an element on some screen, the
             # declaration is pending rather than missing, and the builder supplies it on open.
             if head in bound_products:
-                warn.append(f'price variable {v} awaits a declaration the builder writes on '
-                            f'first open; it renders as its literal token until then')
+                warn.append(f'price variable {v} awaits the declaration the builder writes on '
+                            f'save; until then it renders as its literal token and device '
+                            f'preview returns 422 unknown_product_id')
             else:
                 bad.append(f'price variable references a product bound nowhere: {v}')
 

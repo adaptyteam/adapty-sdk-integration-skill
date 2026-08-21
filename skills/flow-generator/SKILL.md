@@ -15,9 +15,11 @@ cannot be synthesized:
 - **`flowProductId`**, the per-screen product declaration in `_meta.screens[].products[]`. Only the
   Flow Builder writes it, and it is not a UUIDv5 over anything the config contains (2,944
   combinations tested against 5 real triples). This is a **handoff step, not a dead end**: binding
-  `product.id` on a `product` element is all an agent needs to do, and the builder declares the
-  products the first time someone opens the flow. Tell the user to open it once before publishing —
-  a publish before that first open is what produces *Unknown Product Id*. See
+  `product.id` on a `product` element is all an agent needs to do, and the builder writes the
+  declaration when it **saves** — an edit, or publishing. Warn the user that **device preview fails
+  until the flow is published**, with a 422 naming `missing_flow_product_id` and
+  `unknown_product_id`; that is expected on a newly authored flow and publishing fixes it. Price
+  variables authored beforehand do then resolve, verified. See
   [products.md](references/products.md).
 - **Uploaded assets.** An image you do not have is an empty values map, never a made-up URL
   (trap 5).
@@ -270,6 +272,7 @@ this size", never as "the flow works".
 | Surface | What it tells you |
 | :--- | :--- |
 | `config preview` + a screenshot | fast, scriptable, and a *different renderer* — layout and spacing only |
+| the **Adapty mobile app** | also the strictest *validator* you can reach: it runs the transform service, which `config update` does not. On a newly authored flow it returns 422 for a missing `flowProductId` until the flow has been published once |
 | the Flow Builder editor | whether the authoring tool can open it; where the user reviews and publishes |
 | the **Adapty mobile app** | the real **SDK** renderer — the only preview that reflects what a user gets, and therefore the one that would surface an `unsupported_…_setting` the transform service warned about |
 | published and live | the truth, and the only state your users ever see |
