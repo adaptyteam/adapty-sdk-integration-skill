@@ -42,6 +42,9 @@ python3 tests/verify-fixture.py tests/fixtures/*.json                   # struct
 python3 tests/render-check.py                                           # does it draw?
 python3 tests/render-check.py --baseline                                # record references
 python3 tests/render-check.py --keep                                    # keep PNGs to look at
+python3 tests/render-measure.py shot.png --column 23:68                 # is a column continuous?
+python3 tests/render-measure.py shot.png --row 343                       # how wide is it, really?
+python3 tests/test-flowkit.py                                            # the authoring helpers
 ```
 
 Exit codes match the repo's lint convention: `0` clean, `1` findings, `2` infrastructure
@@ -75,6 +78,61 @@ one taken in Linux CI. `render-baseline/` is gitignored deliberately: it is a lo
 **And a preview is not the builder.** The preview page and the Flow Builder's editor are
 different renderers. Both configs that broke the builder render fine here, so a clean render
 means "this looked right at this size", never "the flow opens".
+
+
+## `render-measure.py` — measure a render instead of eyeballing it
+
+`render-check.py` answers *did it draw*. This answers *where and how big*, which is the question
+you actually have when matching a screenshot.
+
+It earns its place from a concrete failure: a timeline connector "looked too narrow", and several
+rounds of edits went at its width. Measured, the width was already correct — 38 against a 46 chip,
+matching the reference to the pixel — and the real defect was a **14px break** before the next chip,
+caused by a gradient fading out onto the page colour. `--column` reports that as a gap; the eye
+reported it as "too narrow" and sent the work in the wrong direction.
+
+- `--column X0:X1` — painted vertical runs down a strip, **and the gaps between them**. Zero gaps
+  is what "connected" means. Gaps ≤ 2px are called out as probable antialiasing.
+- `--row Y` — painted horizontal runs on one scanline, i.e. widths.
+- `--scale IMGW:PTS` — also print device points. A reference screenshot is almost never at 1×:
+  divide by (image width ÷ device points), e.g. `--scale 602:390` for a 602px-wide shot of a 390pt
+  phone. This is how a reference's pixel sizes become numbers you can put in a config.
+- `--bg X,Y` — where to sample the background (default: top-centre). Sample the *page*, not a card.
+- `--threshold N` — channel-sum distance from the background that counts as painted (default 10).
+  Raise it when a fill is nearly background-coloured; lower it to catch a faint fade.
+
+One thing to expect: it decides "painted" by distance from the background, so **content the same
+colour as the background reads as a gap**. White label text on a blue button splits that button
+into several runs; take the extent (first start to last end) rather than the longest run. The same
+property is what makes it useful — it is how a connector fading out onto the page colour was caught.
+
+Stdlib only, 8-bit non-interlaced PNG — what headless Chrome writes. It reads any PNG, so point it
+at the user's reference screenshot as readily as at your own render, and compare the two.
+
+
+## `test-flowkit.py` — the guardrail on the authoring helpers
+
+`skills/flow-generator/references/flowkit.py` is shipped skill content: the mechanical half of
+authoring a config. A shape helper that has drifted from the format is worse than no helper,
+because it is confidently wrong at scale — so it does not ship without this.
+
+Nineteen checks, in three groups:
+
+- **The invariant it exists for.** `hierarchy` and `map` hold the same id set, no id twice, no
+  leftover `_children`, and `flatten` *raises* on a duplicate id rather than silently dropping an
+  element.
+- **The traps, as assertions.** Fills are arrays (v10), `_meta.screens` stays empty because it is
+  builder-owned, a purchase buys `<group>.selectedProduct` rather than a const, a product carries
+  the system `selected` state, and `opacity` is a percentage.
+- **The bug it was built to kill.** Three build scripts once had three `runs()` helpers that agreed
+  on the name and disagreed on what a tuple meant — one read `('var', id)` as a variable node, one
+  read `(text, colorId)` as a coloured span, one crashed. Copying a call between them produced the
+  wrong node type silently and still published. So the test asserts `Var` becomes a variable node,
+  `Span` becomes a text node, and a **bare tuple raises**.
+
+Then it puts the whole document through `schema-check.py`, and skips rather than fails if that
+gate is unavailable. Beyond this test, flowkit's output has been rendered through
+`flows config preview` and looked at — a schema pass is not proof that anything draws.
 
 ## `schema-check.py` — validating against the published schema
 
