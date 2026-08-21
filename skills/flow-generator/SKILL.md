@@ -248,6 +248,13 @@ Three things it is blind to. Knowing them is what keeps a screenshot from becomi
   screen reading `{{name.value}}` looks *pixel-identical* whether its producer still exists or was
   deleted three screens ago — measured, two renders with the same MD5. Whether a consumer still
   has a producer is a Verify question (invariant 12) and preview will never answer it.
+- **Selection in any group that is not a product group.** The render simulates a
+  `product`-type group's `default` — the chosen plan card shows its selected styling — but
+  **ignores a `toggle` group entirely**: measured, flipping `default` between `true` and `false`
+  on a toggle row produced byte-identical screenshots, while the product card on the same flow
+  rendered as selected. So a switch, a checkbox or a pre-ticked consent row always draws in its
+  off state here, and neither its `propsByState` nor its default can be checked visually. Send the
+  user to the Adapty app for those.
 - **Any locale but the one it draws.** The render ignores `defaultLocale` and the order of
   `locales[]` — measured: forcing `defaultLocale: "de"`, and putting `de` first, both produced
   byte-identical screenshots to the untouched file. **A locale transform therefore cannot be

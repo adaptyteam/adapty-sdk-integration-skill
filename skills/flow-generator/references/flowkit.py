@@ -281,7 +281,13 @@ def purchase(group_id, action_id='act_buy'):
 
 
 def navigate(screen_id, action_id='act_nav'):
-    return {'id': action_id, 'type': 'navigate', 'payload': {'screenId': screen_id}}
+    """Payload shape verified against two real exports: `{"type": "screen", "screen": "<id>"}`.
+
+    NOT `{"screenId": …}`, which is the obvious guess and what this helper shipped with for one
+    commit. The config API accepts either without complaint, so the wrong one is silent.
+    """
+    return {'id': action_id, 'type': 'navigate',
+            'payload': {'type': 'screen', 'screen': screen_id}}
 
 
 def close(action_id='act_close'):

@@ -95,6 +95,20 @@ There is no `toggle` element. The group type is what makes it one.
 Swap `type` to `single_choice` for pick-one, `multi_choice` for pick-several. The element does
 not change — only the group type and how many members carry `default`.
 
+**Style both states, and remember you cannot check this in a preview.** An iOS-style switch needs
+its track fill *and* its knob position to change, and `layout` is a prop like any other, so both go
+in `propsByState`:
+
+```json
+"props":          {"layout": {"direction": "horizontal", "alignH": "start",  …}, "fill": [grey]},
+"propsByState":   {"selected": {"layout": {"direction": "horizontal", "alignH": "end", …},
+                                "fill": [accent]}}
+```
+
+Style only the track and you get a switch that never visibly flips. And `config preview` **ignores
+toggle-group selection** — measured byte-identical renders with `default` true and false — so the
+off state is all you will ever see there. Verify a toggle in the Adapty mobile app.
+
 ### Tabs
 
 A five-element composite. Each `tab-item` is a group member.

@@ -150,6 +150,11 @@ def main():
     check('a gradient does not end on a bare colour object',
           isinstance(rail['props']['fill'], list)
           and rail['props']['fill'][0]['type'] == 'gradient')
+    # pinned against tests/fixtures/*.json, where two real exports use this exact shape
+    check('navigate payload is {type: screen, screen: id}',
+          fk.navigate('scr_x')['payload'] == {'type': 'screen', 'screen': 'scr_x'},
+          json.dumps(fk.navigate('scr_x')['payload']))
+
     check('_meta.screens is left empty (builder-owned)', cfg['_meta']['screens'] == {})
 
     # predeclare(): the provisional declaration that lets a NEW draft preview on a device
