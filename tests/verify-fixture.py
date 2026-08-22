@@ -106,48 +106,130 @@ def check(path):
     # entirely — so structural parity is the only gate there is. Checks every DECLARED locale,
     # not merely the ones that happen to be present on a field.
     declared = [l.get('code') for l in d.get('locales', []) if l.get('code')]
+    loc_vals = []
+
+    def _collect(o):
+        if isinstance(o, dict):
+            if o.get('_localizable') and isinstance(o.get('values'), dict):
+                loc_vals.append(o['values'])
+            for v in o.values():
+                _collect(v)
+        elif isinstance(o, list):
+            for v in o:
+                _collect(v)
+
+    _collect(d)
+
+    # A value under a code that `locales[]` does not declare renders nowhere. It is usually half a
+    # locale run — the values written, the declaration forgotten — and the parity check above
+    # cannot see it, because that walks DECLARED locales only. Runs even for a single-locale flow,
+    # which is exactly where a stray hides.
+    seen_codes = {code for vals in loc_vals for code in vals}
+    stray = sorted(seen_codes - set(declared))
+    if stray:
+        n = sum(1 for vals in loc_vals if seen_codes.intersection(vals) & set(stray))
+        warn.append(f"locale value(s) for {', '.join(stray)} on {n} field(s), but "
+                    f"{'none of them are' if len(stray) > 1 else 'it is not'} in locales[] — "
+                    f"nothing renders them. If this run wrote them, declaring the locale is the "
+                    f"fix, not this warning; if they were already in the fetched config, report "
+                    f"and ask")
+
     if len(declared) > 1:
-        loc_vals = []
-
-        def _collect(o):
-            if isinstance(o, dict):
-                if o.get('_localizable') and isinstance(o.get('values'), dict):
-                    loc_vals.append(o['values'])
-                for v in o.values():
-                    _collect(v)
-            elif isinstance(o, list):
-                for v in o:
-                    _collect(v)
-
-        _collect(d)
         base = d.get('defaultLocale') or declared[0]
 
+        def _blocks(v):
+            """Block arrays out of a localizable value.
+
+            A value is normally a list of blocks, but it may also be a `switch` expression whose
+            cases and default each yield their own block array (a real builder export does this
+            for copy that changes with the selected product). Flatten in a stable order so two
+            locales are compared branch for branch.
+            """
+            if isinstance(v, list):
+                return [v]
+            if isinstance(v, dict) and v.get('type') == 'switch':
+                out = []
+                for case in v.get('cases') or []:
+                    result = case[1] if isinstance(case, list) and len(case) > 1 else None
+                    if isinstance(result, dict) and isinstance(result.get('value'), list):
+                        out.append(result['value'])
+                dflt = v.get('default')
+                if isinstance(dflt, dict) and isinstance(dflt.get('value'), list):
+                    out.append(dflt['value'])
+                return out
+            return []
+
+        def _spans(v):
+            return [s for blocks in _blocks(v) for b in blocks for s in (b.get('content') or [])]
+
         def _kinds(v):
-            return ([s.get('type') for b in v for s in (b.get('content') or [])]
-                    if isinstance(v, list) else ['<plain-string>'])
+            return ([s.get('type') for s in _spans(v)]
+                    if not isinstance(v, str) else ['<plain-string>'])
 
         def _varids(v):
-            return ([s.get('attrs', {}).get('variableId')
-                     for b in v for s in (b.get('content') or [])
-                     if s.get('type') == 'variable'] if isinstance(v, list) else [])
+            return [s.get('attrs', {}).get('variableId') for s in _spans(v)
+                    if s.get('type') == 'variable'] if not isinstance(v, str) else []
+
+        def _branches(v):
+            return len(_blocks(v))
 
         for vals in loc_vals:
             src = vals.get(base)
             if src is None:
                 continue
             label = (src if isinstance(src, str) else ''.join(
-                s.get('text', '') for b in src for s in (b.get('content') or [])))[:40]
+                s.get('text', '') for s in _spans(src)))[:40]
             for code in declared:
                 if code == base:
                     continue
                 if code not in vals:
                     bad.append(f'locale {code}: no value for {label!r}')
+                elif _branches(vals[code]) != _branches(src):
+                    bad.append(f'locale {code}: {_branches(vals[code])} conditional branch(es) '
+                               f'against {_branches(src)} in {base} on {label!r} — a conditional '
+                               f'text is translated per branch, and a missing branch falls back '
+                               f'to the wrong language')
                 elif _varids(vals[code]) != _varids(src):
                     bad.append(f'locale {code}: variable nodes differ from {base} on {label!r} — '
                                f'a translated block must be a structural copy, or the locale '
                                f'loses its price')
                 elif _kinds(vals[code]) != _kinds(src):
                     warn.append(f'locale {code}: span kinds differ from {base} on {label!r}')
+    # Stale sizing values persist through the editor and the transformer BELIEVES them:
+    # hug carrying value -> min:<value> on device (ADP-7308, team-diagnosed; content vanished at
+    # 8008). Real exports carry small ones routinely (16 in one rendering fixture), so warning,
+    # not error. fixed:0 kills the element on device.
+    for s, e in els():
+        for dim in ('width', 'height'):
+            v = (e.get('props') or {}).get(dim)
+            if isinstance(v, dict):
+                if v.get('type') in ('hug', 'fill') and 'value' in v:
+                    lvl = bad if v['value'] > 1000 else warn
+                    lvl.append(f"{s['id']}/{e['id']}: {dim} is {v['type']} but carries a stale "
+                               f"value {v['value']} — the transformer turns it into "
+                               f"min:{v['value']} on device"
+                               + (' (bigger than any screen: content will vanish)'
+                                  if v['value'] > 1000 else ''))
+                if v.get('type') == 'fixed' and not v.get('value'):
+                    bad.append(f"{s['id']}/{e['id']}: {dim} fixed at {v.get('value')!r} — "
+                               f"saves fine, kills the element on device")
+
+    # groupId naming rules, both team-stated from publish failures: digit-led ids generate
+    # invalid JavaScript (publish blocker), and a groupId reused on another screen broke
+    # selection rendering.
+    seen_groups = {}
+    for s in d.get('screens', []):
+        for g in s.get('selectableGroups') or []:
+            gid = g.get('id', '')
+            if gid[:1].isdigit():
+                bad.append(f"{s['id']}: groupId {gid!r} starts with a digit — generates invalid "
+                           f"JavaScript and blocks publish")
+            if gid in seen_groups and seen_groups[gid] != s['id']:
+                warn.append(f"groupId {gid!r} is used on both {seen_groups[gid]} and {s['id']} — "
+                            f"a shared id across screens broke selection rendering; rename to "
+                            f"unique")
+            seen_groups.setdefault(gid, s['id'])
+
     ms = d.get('_meta', {}).get('screens', {})
     for s, e in els():
         if e['type'] == 'product':

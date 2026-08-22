@@ -121,6 +121,13 @@ Style only the track and you get a switch that never visibly flips. And `config 
 toggle-group selection** — measured byte-identical renders with `default` true and false — so the
 off state is all you will ever see there. Verify a toggle in the Adapty mobile app.
 
+**A toggle cannot drive product selection by itself, and repeated toggling loses the selected
+state.** Both from the support channel: the head-on binding "can't be done", and the standing
+workaround is a **Conditional Action on the toggle's tap that re-asserts the selection** — if
+toggle=true and selected=yearly → `Select product = yearly`, one case per plan. Wire it whenever a
+toggle is supposed to switch plans, and note conditions of the form "if off → turn on" are
+meaningless — just set the toggle on tap.
+
 ### Tabs
 
 A five-element composite. Each `tab-item` is a group member.
@@ -154,6 +161,11 @@ builder could not open. See [flow-schema.md trap 10](flow-schema.md) for why the
 answers looked well-sourced — and use `flows config preview` to check a skeleton you adapt from
 here before you trust it, since that is how this one was confirmed.
 
+**Two tab facts from the support channel:** if **no `tab-item` carries `default: true`, no tab
+renders at all** — always mark one. And conditioning on the selected tab is possible despite the
+UI exposing no tab-item id field (ADP-7611): use the tab element's **id from the builder URL** in
+the condition — team-verified in preview, unconfirmed on device.
+
 ### A progress bar
 
 Lives in `components`, not on a screen, and is switched on per screen.
@@ -182,6 +194,12 @@ Then, per screen: reference it in `hierarchy` as `{"id": "pb_…", "type": "glob
 
 ### A countdown
 
+**The invisible Countdown is the flow's only delay primitive.** A Spinner has no completion
+trigger, and `On Screen Appear → Navigate Next` fires instantly — so a timed screen is a Countdown
+with `Opacity 0`, `Position Absolute`, top/left 0, and `On Timer End → Navigate Next`
+(team-recipe). And when a loader must be pinned, the `fixed` position goes on a **container**, not
+on the Loader element itself. Details of the visible countdown below.
+
 ```json
 {"id": "el_…", "type": "timer",
  "props": {"customId": "offer", "behavior": "start_at_every_appear",
@@ -197,6 +215,39 @@ with a child `text` whose rich text carries `token` nodes:
                                           "underline": false, "strikethrough": false}},
   {"type": "token", "attrs": {"token": "timer_seconds"}}]}
 ```
+
+### A carousel — fixed geometry or nothing
+
+Support-channel distilled (2026-08, team-stated and device-verified). The carousel supports exactly
+**two layouts**: adjacent-slide peek (the standard Apple layout), or one full slide with neighbours
+invisible. Anything else is an SDK limitation, not a config error, and a true infinite loop is
+impossible — the approximation is duplicating slides (ADP-7615).
+
+**`hug` does not survive the trip to the device here.** `Slide Width = Hug` is dropped by the
+transformer (Android stretches the slide full-width, the peek disappears, ADP-6653), and a hugged
+footer under a carousel collapses to zero when Android measures a flat+scrollable layout. The
+working recipe is all-fixed geometry — the team's own verified numbers for a centered 3-card
+layout: card width **245**, carousel **402**, symmetric padding **66.5**, gap **12**, footer
+heights fixed; the CTA may stay `Fill`. Swipe and autoplay survive. Two more from the same
+threads: the slide's configured size and its hugged content are independent (a 200 slide over 148
+content is a 52px gap you did not author), and slides have no auto-height — fix the carousel height
+to the tallest slide or cut the copy.
+
+### Layout discipline the support channel keeps re-learning
+
+- **Mixed sizing modes across siblings is the root cause of "randomly exploding" screens** — the
+  team's own fix for one was "images to fixed, everything else to fill-hug", nothing more.
+- **Containers only grow downward in relative layout.** For expanding content, pre-size the
+  container for the expanded state and toggle `visibility` — "less pretty, but no jumping".
+- **Fixed widths overflow the right edge on narrow iOS screens (≤375pt, ADP-7117)** — any fixed
+  number needs an SE / 13-mini sanity check, and the builder previews only 402×874 (no Pro Max
+  preset either, so `Fill` heights absorb 82 extra points on a 440×956 device).
+- **After restructuring a screen, hunt for orphaned fixed buttons**: two stacked CTAs render as
+  one, and the SDK taps the topmost — a footer added late left an old Continue underneath it,
+  team-diagnosed.
+- **Prefer a pinned container over the native `footer` element**: with `Scrollable = off` a Footer
+  never reaches the device at all, and Android computes its height separately, leaving a void.
+  A bottom-docked stack (this file, below) has neither behaviour.
 
 ### A tappable button
 
@@ -229,6 +280,13 @@ to match one. Carry the input's own value through untouched.
            "width": {"type": "auto"}, "height": {"type": "fixed", "value": 56}, …},
  "interactions": [{"id": "int_…", "trigger": "tap", "actions": [ … ]}]}
 ```
+
+**One historical device defect to know before blaming your config:** `fixed` + `left`/`right` +
+`width: auto` once collapsed to content width on device while the preview showed full width
+(ADP-6828); the era workaround was a sandwich — outer Stack `fixed`/`auto` with no states, inner
+CTA `relative`/`fill` carrying the states and actions. A 2026-08-22 device screenshot from this
+project shows the plain form rendering full-width, so treat it as fixed — but if a docked CTA comes
+back narrow on a device, this is what it is, and the sandwich is the fallback.
 
 **The `fixed` element must be the button itself and carry the interaction.** Wrapping buttons in
 a fixed *container* and putting the interactions on relative children leaves the pinned element

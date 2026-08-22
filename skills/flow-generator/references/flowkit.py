@@ -413,6 +413,29 @@ def config(*, screens, colors=(), typography=(), icons=(), locales=(('en', 'Engl
     For a NEW flow, pass `meta_screens=predeclare(screen_id, [product_ids])` so it previews on a
     device without being published first.
     """
+    declared = [c for c, _ in locales]
+    written = set()
+
+    def _codes(o):
+        if isinstance(o, dict):
+            if o.get('_localizable') and isinstance(o.get('values'), dict):
+                written.update(o['values'])
+            for v in o.values():
+                _codes(v)
+        elif isinstance(o, list):
+            for v in o:
+                _codes(v)
+
+    _codes(list(screens))
+    _codes(components if components is not None else {})
+    stray = sorted(written - set(declared))
+    if stray:
+        raise ValueError(
+            f'locale value(s) written for {", ".join(stray)} but only {declared} declared. '
+            'A value under an undeclared code renders nowhere. You wrote it, so declare it: '
+            'pass locales=(("en", "English"), ("ru", "Russian"), …) — do not ship it as a '
+            'warning for someone else to clear up.')
+
     return {
         'schemaVersion': SCHEMA_VERSION,
         'locales': [{'id': c, 'code': c, 'name': n} for c, n in locales],

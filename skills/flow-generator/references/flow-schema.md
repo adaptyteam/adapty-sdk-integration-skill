@@ -100,7 +100,7 @@ the one invariant on this list that a real multi-locale export has never exercis
 | 3 | Every `navigate` action's `payload.screen` names an existing screen | **screen deletion** | **Publish blocker.** A Navigate action with a destination that no longer exists is an incomplete interaction, and [Common issues](https://adapty.io/docs/flow-common-issues.md) names it explicitly: it "also occurs when the destination screen is deleted after the action is set up." The flow will neither preview nor publish. |
 | 4 | Every `product` element's `props.product.id` is declared in `_meta.screens.<thatScreenId>.products[]` | moving a product element to another screen | **Publish blocker** — a product element with no product attached. Declaration is per screen, so a moved element arrives **unattached on its new screen**, and no edit you can make to the JSON clears that. There is no re-keying fix: see [`transforms.md`](transforms.md#decisions-you-must-disclose) decision 2 for the exits, and [`products.md`](products.md) for why binding is not yours to write. |
 | 5 | A price variable resolves by **one of two forms**, and which one decides what it must name. Product-relative — `<productUUID>.prod_price_per_*`, head is a product id declared in `_meta.screens` (in the corpus, always on the same screen that reads it). Group-relative — `<groupId>.selectedProduct.<field>`, head is a `product`-typed `selectableGroups` id, **not** a product id | copy rewrite, moving a screen or element | The price renders empty. Nothing fails loudly. **Validate the head against the form, or you generate a false positive:** checking the first segment of a group-relative variable against the product list rejects a valid file and invites an agent to "repair" correct work. Provenance, precisely: the product-relative form is the only one in the corpus. The **field names are documented** — [Element variables](https://adapty.io/docs/onboarding-variables.md) lists `prod_price` alongside `prod_price_per_{day,week,month,year}`. What is unverified is the group-relative **reference syntax** `<groupId>.selectedProduct.<field>`: it appears in no export and on no docs page, only in a live Flow Builder screen. **That syntax is now device-verified and safe to author:** on a real device a root-level line reading `<groupId>.selectedProduct.prod_price` resolved to a real price and **changed as each card was tapped**, so it tracks the live selection rather than resolving once. `prod_price_per_month` on an **annual** product likewise resolved to a real derived figure, so a per-month field does not require a monthly product. Preserve it verbatim where you find it, and authoring it is fine. [`products.md`](products.md) owns the handling rules. |
-| 6 | Every `selectableGroups[].id` has at least one member element carrying that `groupId`, and every `groupId` in use has a declared group | branching edits | A group with no members and a member with no group are both broken selection state. Groups are per screen and typed (`single_choice`, `product`). |
+| 6 | Every `selectableGroups[].id` has at least one member element carrying that `groupId`, and every `groupId` in use has a declared group | branching edits | A group with no members and a member with no group are both broken selection state. Groups are per screen and typed (`single_choice`, `product`). Two team-stated naming rules: a `groupId` must **not start with a digit** (`1a` generated invalid JavaScript and blocked publish), and should be **unique across the flow**, not merely its screen — two screens sharing `"products"` broke selection rendering. |
 | 7 | Every `const` compared against `<groupId>.selectedOptionId` matches some member's `customId` | branching edits, renaming an option | The case never matches, so every user takes the `default` branch. Silent — the flow still routes somewhere. |
 | 8 | Every `colorId` and every `font.preset` resolves in **that file's own** `theme` | pasting a screen from another flow | **A hard 422, confirmed.** A screen pasted in from another flow kept `font.preset: "button-label"`, a preset the destination theme does not define; device preview returned `unknown_font_preset` as **severity `error`**, once per text element, blocking the whole flow. `config update` had saved it without complaint. So this is a publish blocker, not a cosmetic drift — and `tests/verify-fixture.py` catches it, which is the check earning its place. Fix by repointing to a preset the destination theme has, not by adding the source's name to the theme. Never validate these against a remembered list of built-in names — see [Shape traps](#shape-traps). |
 | 9 | Every `family.id` resolves in `_meta.fonts` — via **both** reference paths: an element's `props.font.family.id`, and `theme.typography[].settings.family.id` | pasting a screen from another flow, editing or deleting a typography preset | Unresolvable font reference. **Check both paths or you check nothing**: element-level refs number 7 in `timer` and 0 in both `quiz` and `comparison`, so in `comparison` all three declared fonts are reached only through theme presets, and in `timer` the two paths together are what reach all four. A check that reads only element props would find `comparison`'s `_meta.fonts` entirely unreferenced and could license deleting them. Resolving here also does not mean the font ships — trap 7. |
@@ -210,6 +210,12 @@ array of **inline** nodes, of which exactly three types exist:
 {"type": "variable", "attrs": {"variableId": "<productUUID>.prod_price_per_year"}}
 {"type": "token",    "attrs": {"token": "timer_minutes"}}
 ```
+
+**A `variable` span takes no formatting of its own** — you cannot strike or bold the price
+without styling the whole line (team-stated). The device-verified strikethrough recipe is a
+*separate* `text` element holding the other product's price variable, with strikethrough and colour
+applied at the **element** level, not in rich text — its known costs: the hidden donor product adds
+invisible scroll, and deleting it takes the visible price down with it.
 
 `variable` carries prices and user input; `token` carries countdown digits. Neither has a
 `text` key, and per
@@ -503,6 +509,42 @@ Three things to take from that, all observed on a real 422:
   config happily; the transform service refused it. So "it saved" never means "it will publish",
   which is the same lesson trap 10 teaches about rendering, one layer further out.
 
+### 15. Stale and degenerate sizing values persist, and the transformer believes them
+
+The editor does not clear a numeric size when its mode changes, so a fetched config can carry
+`{"type": "hug", "value": 8008}` — and the transformer turns that into `min: 8008` on device,
+producing an 8008pt-minimum screen with the content invisibly far down (team-diagnosed, ADP-7308;
+the recovery on an already-poisoned screen was *recreating* it, not re-saving). `width.fixed: 0`
+also saves, and kills the element on device. Rules:
+
+- **Authoring:** never emit a `value` under `hug`/`fill` (flowkit does not), never a fixed `0`.
+- **Transforming:** real exports carry small stale values routinely — 16 of them in one tracked
+  fixture that renders — so a stale value is a **warning, scaled by magnitude**: strip it from any
+  element you are editing anyway, report the rest, and treat a large one (bigger than a screen)
+  as the likely cause of a "content vanished on device" complaint.
+
+`tests/verify-fixture.py` warns on both forms.
+
+### 16. `purchase` hard-terminates the flow — nothing can be shown after it
+
+Stated flatly by the builder team (2026-08-20): the `purchase` action compiles only into the SDK
+purchase call, and flow continuation after it "simply was never built" — no success screen, no
+post-purchase discount screen, unconditionally, whether the purchase succeeded or not. So **never
+author a screen that is reachable only after a purchase**: it is dead content that every check here
+accepts. A second (discount) paywall is reachable only via an explicit `navigate` on something the
+user taps *instead* of buying — the close button is the standing pattern.
+
+### 17. State overrides deep-merge manual values and replace referenced styles wholesale
+
+A `propsByState` override written as **manual values** is deep-merged with the base state, and the
+merge leaks: a selected border colour inherited the *default's* opacity and rendered invisible on
+device while the preview showed it (ADP-6967); a manually-set selected font weight rendered wrong
+the same way. A **reference** — a typography `preset` or a colour *style* — propagates wholesale
+and overrides cleanly ("the Selected override contains its own preset and overwrites the Default",
+team-verified, reporter-confirmed). Rule: **in `propsByState`, prefer preset and style references
+over inline values**, and when an inline colour must be used, make sure the base state's colour is
+opaque, because its opacity is what leaks.
+
 ### `props.verticalAlign` on text is emitted by the builder and ignored by the SDK
 
 Real exports carry `"verticalAlign": "top"` on text elements, so copying it looks correct — and it
@@ -627,6 +669,43 @@ on a drop-shadow of `y: 6, blur: 18, #000000 at 8% opacity`, so this one is not 
 artifact the way `old-price` turned out to be. So it is usable; it just has no precedent to copy
 from, which means keeping a border underneath it is still the conservative choice.
 
+### A localizable value can be a `switch`, not just blocks — and the switch is INSIDE each locale
+
+From a real builder export. A `content` value is normally an array of paragraph blocks per locale.
+It may instead be a **`switch` expression** whose every branch yields its own block array:
+
+```json
+"content": {"_localizable": true, "values": {
+  "en": {"type": "switch",
+         "cases": [[{"type": "&&", "predicates": [
+                      {"type": "==",
+                       "left":  {"type": "var",   "variableId": "plans.selectedProduct"},
+                       "right": {"type": "const", "value": "<product-uuid>"}}]},
+                    {"type": "const", "value": [ …blocks… ]}]],
+         "default": {"type": "const", "value": [ …blocks… ]}},
+  "ru": {"type": "switch", "cases": [[ …the same predicate… ]], "default": { … }}}}
+```
+
+Four consequences, and the nesting order is the reason for all of them:
+
+- **The conditional sits inside the locale, not outside it.** Every locale carries its own complete
+  copy of the switch — the same predicates, duplicated. Adding a locale to a conditional text is
+  not translating a string, it is **replicating the whole expression** and translating each branch.
+  Editing a predicate means editing it in every locale, and a config where `en` and `ru` disagree
+  about a product id is silently two different screens.
+- **Locale parity is per branch, not per field.** A field that "has a `ru` value" can still be
+  half-translated: the case in Russian, the default in English. Whoever sees it is the user who
+  picked the *other* plan. `tests/verify-fixture.py` compares branch counts across locales for
+  exactly this, and crashed on this shape until it was taught about it.
+- **`<groupId>.selectedProduct` compares against a product UUID**, the product-group analogue of
+  `<groupId>.selectedOptionId == "<customId>"`. Invariant 5's rule applies from the other
+  direction: check the `const` against the form of the head. A product id here must be one **bound
+  on that screen**, or the case never fires and the default quietly wins.
+- **The schema accepts it and the render draws it.** Measured: a baselined schema check reports no
+  new problems, and `config preview` draws one branch of one locale with no way to tell which from
+  the PNG. A conditional localized string sits at the intersection of two blindnesses, which makes
+  it the least verifiable thing in the format — read it, do not look at it.
+
 ### `old-price`: a real element that does not draw on device
 
 A dedicated element type for a struck-through original price. Built and rendered:
@@ -735,6 +814,21 @@ a gap (trap 14 above), so a conditionally-shown Continue button makes everything
 moment the field is filled. If the screen has anything under the button — a legal line, a "Skip"
 link — put the button in a wrapper with a **fixed** height and condition the *button*, not the
 wrapper.
+
+### Small device facts from the support channel, each one sentence
+
+- **Font sizes below 14 render at 14 on device** (preview shows the smaller size) — reported
+  2026-08-17, acknowledged as a bug, unresolved; do not design a caption that depends on 11pt.
+- **A `mailto:` `openUrl` crashes iOS unless "open in external browser" is set** — SDK-side fix
+  landed, but the flag remains the safe pattern.
+- **Dark theme works only through colour styles that define dark values** — a direct hex is one
+  colour in both themes; theme-dependent *images or videos* are not buildable at all (the fallback
+  is separate screens per theme, switched app-side).
+- **Screen ids are analytics keys**: the dashboard's per-screen paywall rows key on `screen_id`,
+  every republish mints a new row, and a rename only affects future versions — so mint stable,
+  meaningful screen ids and set `caption`s, because both outlive the publish.
+- **`type: number` inputs are coerced to text and numeric comparison operators do not exist** —
+  which is the team-side confirmation of the "compare against strings" rule below.
 
 ### The expression facts, and how each was established
 

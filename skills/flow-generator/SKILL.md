@@ -31,6 +31,21 @@ Everything else is reachable: product UUIDs from `adapty products list` (or `pro
 When you do author, [`references/flowkit.py`](references/flowkit.py) owns the mechanical parts —
 the `hierarchy`/`map` split above all — and [patterns.md](references/patterns.md) owns the shapes.
 
+## What you print
+
+The user reads your messages, not this file. Keep them short.
+
+**Two fixed blocks, and nothing else is fixed:** the approval ask before a write, and the closing
+callout after one. Both are in phase 5; fill their slots and do not pad them.
+
+**Everything else is one line or omitted** — what changed, what still needs them (products to
+attach, assets to upload), any decision where two answers were defensible, and what your checks
+did and did not cover. **Say each thing once**: if the approval ask already named it, the closing
+note does not repeat it.
+
+Do not narrate phases, restate the config back, list warnings you did not act on, or explain the
+CLI to someone who asked for a paywall.
+
 ## The CLI surface
 
 ```
@@ -47,70 +62,30 @@ $ADAPTY flows config preview  <CONFIG_FILE> [--screen <id>] [--device <id>] [--o
 $ADAPTY flows config update   <FLOW_ID> --app <APP_UUID> \
     (--config-file <file|-> | --config <json-string>) \
     [--expected-updated-at <int>] [--remote-configs <json>]
-$ADAPTY flows media upload    <IMAGE_FILE> --app <APP_UUID>   # exists, but see below: 404s
+$ADAPTY flows media upload    <IMAGE_FILE> --app <APP_UUID>   # DO NOT CALL — endpoint not live
 ```
 
-**Version floor, per command.** Read off the published tarballs, not from `--help` and not from
-whatever is installed:
-
-| Command | Present from | In `latest` (0.7.0)? |
-| :--- | :--- | :--- |
-| `flows list` / `create` / `get`, `config get` / `update` | **0.6.0** | yes |
-| `flows config preview` | 0.6.1-beta.0, and **stable since 0.7.0** | **yes** |
-| `flows config validate` | 0.6.1-beta.0, **absent from 0.7.0**, back in 0.8.0-beta.0 | **no** |
-| `flows media upload` | **0.8.0-beta.0** | no |
-
-**So `@beta` is not required for the normal loop.** Stable `latest` carries everything phases 1-5
-depend on, `preview` included. The two commands that need `@beta` are exactly the two whose
-endpoints **404** (below), so reaching for the beta channel buys nothing today — prefer `latest`,
-which is what you want writing to a live dashboard.
-
-**A command can leave stable again.** `config validate` was in 0.6.1-beta.0, is **not** in 0.7.0,
-and returns in 0.8.0-beta.0. So "a later version has it" is not a safe inference from an earlier
-beta, and `latest` is not a superset of the newest beta you tested. Enumerate the version you are
-about to run:
-
-```bash
-npm view adapty dist-tags
-curl -sS "$(npm view adapty@<version> dist.tarball)" | tar -tzf - | grep 'commands/flows'
-```
-
-**Two of these commands exist in the CLI but 404 against the API — `config validate` and
-`flows media upload`.** Measured on `0.8.0-beta.0`: both parse their flags, authenticate, call
-their endpoint, and get `http_404` back. So *a command being present is not evidence its endpoint
-is deployed*, which is the mirror image of the older trap where `--help` hid commands that did
-work. Consequences, both load-bearing:
-
-- For `validate`, phase 3 owns what to do about it — read the verdict, never the exit code.
-- **`flows media upload` does not yet make uploaded assets reachable.** An image you do not have is
-  still an empty values map, never a made-up URL. Re-test the command before promising a user
-  otherwise — when the endpoint lands, it returns a CDN `url` to reference from a config, and this
-  limit disappears.
-
-**`flows config validate` has no `--source` flag** — an earlier draft of this list carried one and
-it never existed. The command takes `--app`, `--config`/`--config-file` and `--json`, nothing more.
-The general rule this is the second instance of: read the command's own `static flags` in
-`dist/commands/`, and treat any flag in this table you have not seen in that source as suspect.
-
-**Resolve the invocation once, in phase 1, and use that for every command.** A globally installed
-`adapty` is frequently old — measured on a real machine at `0.3.0`, which has no `flows` topic at
-all — and three agents in a row read that as "validate and preview do not exist here" and skipped
-phases 3 and 4 entirely. The commands existed; the invocation was wrong. Every `$ADAPTY` in this
-skill is that resolved invocation:
+**Resolve `$ADAPTY` once, here, and use it for every command.** A global `adapty` is frequently old
+— measured at `0.3.0` on a real machine, which has no `flows` topic — and three agents read that as
+"validate and preview do not exist" and skipped phases 3 and 4:
 
 ```bash
 adapty --version                      # >= 0.7.0 ?  ADAPTY="adapty"
 ADAPTY="npx --yes adapty@latest"      # otherwise, and always pass --yes
 ```
 
-**`--yes` is not optional.** Without it `npx` asks permission to install an uncached package, and
-a headless run has nobody to answer; every invocation in this project passed it. Only after
-`npx --yes adapty@latest` *and* `npx --yes adapty@beta` both fail to offer a command may you tell
-the user it is unavailable. Never compute a command's absence from a version number you read
-somewhere.
+`--yes` is not optional: without it `npx` stops to ask permission to install. Declare a command
+unavailable only after `npx --yes adapty@latest` *and* `npx --yes adapty@beta` both lack it — never
+from a version number you read somewhere.
 
-**There is no `flows publish` and no `flows delete`.** Publishing and deleting are dashboard
-actions. Never write a command name the CLI does not have.
+**Two commands are not usable, whatever the CLI offers.** `flows config validate` and
+`flows media upload` reach their endpoints and get `http_404` in production. Phase 3 owns the
+fallback for `validate`; for media, **do not call it and do not offer it** — an image you do not
+have stays an empty values map (trap 5) and the user uploads it in the Flow Builder.
+
+**There is no `flows publish` and no `flows delete`.** Both are dashboard actions. Never write a
+command name the CLI does not have, and never invent a flag — `config validate` takes only `--app`,
+`--config`/`--config-file` and `--json`.
 
 Four facts about the config commands that are not guessable:
 
@@ -126,7 +101,6 @@ Four facts about the config commands that are not guessable:
   always take the integer from `config get`.
 - **`config update` has no dry run.** `validate` and `preview` are the pre-flight checks, and
   both run *before* a write — see phase 5 on why that ordering matters.
-
 ## The five phases
 
 ### 1. Resolve the invocation, then authenticate
@@ -205,174 +179,60 @@ discarded, so never park anything there.
 
 Write the result to a local file. Phases 3 and 4 both work on that file, with nothing saved yet.
 
-### 3. Check the shape, then validate
-
-**Two checks, and they do not overlap.** `flows config validate` answers *is this publishable* and
-does **not** check the shape of most props — it accepts `fill: "banana"` and `schemaVersion: 999`.
-A schema check answers *are these props well-formed* and knows nothing about publishability. A clean
-run of either is not evidence about the other.
+### 3. Check the shape
 
 ```bash
 npx --yes --package=ajv@8 node references/validate-with-schema.mjs \
   --config flow.working.json --baseline flow.backup.json
 ```
 
-**Always pass `--baseline`** — the pristine copy from step 2. The published schema tracks the newest
-`schemaVersion` while most live flows are older, so an unbaselined run on a v9 flow reports hundreds
-of pre-existing mismatches, none of them yours; the baseline leaves only what your edit caused.
-Details and the fetch-and-cache line in
+**Always pass `--baseline`** — the pristine copy from step 2. The schema tracks the newest
+`schemaVersion` while most live flows are older, so an unbaselined run on a v9 flow reports
+hundreds of pre-existing mismatches, none of them yours. Details in
 [flow-schema.md → the two different validators](references/flow-schema.md).
 
-Then the server-side check:
+**Skip `flows config validate` unless `$ADAPTY` is a beta build.** It is not in `latest`, and where
+it exists its endpoint 404s, so the usual run has **one** check here, not two. If you do run it: it
+takes the bare `config`, it saves nothing, and you **read the verdict, not the exit code** — exit 1
+means "not publishable" *or* "the call failed", and only `--json` separates them (`valid` field
+versus an `error` object). An agent gating on the exit code reports a good config as broken.
 
-```
-jq '.config' flow.working.json | $ADAPTY flows config validate --app $APP $FLOW \
-    --config-file - --json
-```
-
-Advisory and **does not save**. It answers one question — *is this publishable* — and prints
-`Config is publishable.` or `Config is NOT publishable.` It takes the **bare `config`**, not the
-envelope. Its only flags are `--app`, `--config`/`--config-file` and `--json`.
-
-**Read the shape of a failure.** An element-level error carries a `Code` and a `Path`
-(`screens["scr_…"].elements.map["el_…"]`) — act on it directly. A bare **`Invalid flow input`** with
-no path means the document is malformed *structurally*, not at an element: diff against the config
-you fetched, or bisect the edit. **Warnings are advisory and usually pre-existing** — fix the
-errors, and do not report warnings as though they blocked anything.
-
-**A clean validate is weaker than it sounds.** It skips whole prop subtrees, so it is a floor and
-not a proof — which is why the schema check above and the checklist below both still run.
-
-**Read the verdict, not the exit code.** Exit 1 means either "not publishable" *or* "the call
-failed", and the two are indistinguishable from the status alone. With `--json` they are not:
-a publishability verdict has a `valid` field, a failure has an `error` object. At the time of
-writing the endpoint itself returns `{"error": {"statusCode": 404, …}}` and exit 1 on a config
-known to render — so an agent gating on the exit code alone would report a good config as
-broken. Check the field.
-
-If `validate` is absent (0.6.0) or returns an error, say which happened and fall back to
-[Verify](#verify) below. Do not skip that checklist even when `validate` passes: it answers
-publishability, not well-formedness, and the two configs that broke the builder in trap 10 were
-both publishable-looking.
+**Neither check is a proof.** `validate` answers *is this publishable* and skips most prop shapes —
+it accepts `fill: "banana"`. The schema check answers *are these props well-formed* and knows
+nothing about publishability. With `validate` unavailable, the schema check plus [Verify](#verify)
+is the floor you have; say so rather than implying the config is cleared to publish.
 
 ### 4. Preview, and iterate until it looks right
 
-```
-$ADAPTY flows config preview draft.json [--screen <id>] [--device iphone-14] [--orientation portrait]
-```
-
-**Fully local**: no `--app`, no flow id, no auth, no network, no save. The whole config rides in
-the URL fragment, so this works on a file you have not written anywhere. It accepts either a
-`config get` envelope or a bare config; `screens` must be an array.
-
-**Never print or read the URL.** It is thousands of characters of gzipped base64 — 6,349 for a
-56KB config, ~113K for a 668KB flow — and it carries zero information you can act on. On a TTY the
-command opens a browser and prints nothing else. **Piped without `--json` it prints the bare URL**,
-which is the form you want.
-
-**Do not add `--json` here.** It prints `{"render_url": "…"}`, an object — not the URL. An agent
-that captured that into `$URL` and handed it to Chrome silently screenshotted the browser's new-tab
-page and nearly reported it as the paywall. Use the bare form:
-
 ```bash
-URL="$($ADAPTY flows config preview draft.json)"
+# no --json (it prints an object, not the URL); never print the URL itself — it is ~6K chars
+URL="$($ADAPTY flows config preview draft.json)"          # local: no --app, no auth, no save
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu \
   --hide-scrollbars --window-size=430,932 --virtual-time-budget=12000 \
   --screenshot=shot.png "$URL"
 ```
 
-Then **open `shot.png` and look at it.** Compare it against what the user asked for — layout,
-spacing, copy, whether the right tab is selected, whether anything is clipped or detached. Use
-`--screen` to step through the rest; the default is the flow's first screen.
+**Open `shot.png` and look at it**, against what the user asked for and — if they gave one — against
+the reference image file, re-opened, not remembered. `--screen <id>` steps through the rest.
+Measure rather than eyeball with `tests/render-measure.py`. Always try the preview: never decide
+from the config's size.
 
-**What this catches, precisely.** It catches the class no structural check can see: wrong
-spacing, a magic-number indent, a detached element, a state that is silently wrong. It does
-**not** subsume [Verify](#verify) — both defects in trap 10 were injected into a known-good
-config and measured, and both still rendered. They lost a selected-tab highlight and nothing
-else, which is visible to someone who knows what the screen should look like and invisible to
-any "did anything draw" test. The structural rows catch them for free; keep walking them.
+**Six things it cannot tell you**, each measured: a stranded variable, a `states[].condition`
+(unlike a `visibility` one, which *is* evaluated), selection in any non-product group, any locale
+but the one it draws, anything resolving at runtime, and an element it draws that a device will
+not. Full statements in
+[preview.md → What a render cannot show you](references/preview.md#what-a-render-cannot-show-you)
+— read them before you report what a screenshot proves.
 
-**If the user gave you a reference image, compare against the image — not your memory of it.**
-Save the attachment to a file the moment you receive it, and re-open it beside every render you
-take. A description you wrote after one look is not the reference: building from one produced a
-timeline whose rail *width* was right to the pixel and whose *continuity, colour order and last-row
-rail* were all wrong, none of which was visible without the two images side by side. If the image
-has already dropped out of context, it is recoverable — user attachments are stored base64 in the
-session transcript (`~/.claude/projects/<project>/<session>.jsonl`, blocks with
-`"type":"image"`) — so extract it rather than guessing again.
+**Confirm you screenshotted the flow at all.** A bad `--device`, a broken fragment and a wrong host
+all render as *pages* that pass a "did anything draw" check. If the render is blank, slow or wrong,
+switch to [`preview-with-playwright.mjs`](references/preview-with-playwright.mjs), which uses the
+page's file input instead of the URL — do not shrink the config. If you cannot render at all, say
+so and ask the user to look; never report the work finished on a clean validate.
 
-Comparing means *measuring*, not glancing. `tests/render-measure.py` does it for either image —
-`--row Y` for widths, `--column X0:X1` for painted runs and the gaps between them, and
-`--scale <image-width>:<device-points>` to convert a reference's pixels into the numbers you put in
-a config.
-That is how the rail was confirmed correct at 46/38 while the eye kept insisting it was too narrow,
-and how the real defect — a 14px break between connector and chip — was found.
-
-Six things to know before a screenshot becomes an overclaim — five it cannot show you, and
-one it shows that is not there:
-
-- **A stranded variable.** The render prints an unresolved reference as its literal token, so a
-  screen reading `{{name.value}}` looks *pixel-identical* whether its producer still exists or was
-  deleted three screens ago — measured, two renders with the same MD5. Whether a consumer still
-  has a producer is a Verify question (invariant 12) and preview will never answer it.
-- **A `states[].condition` — but *not* a `visibility` one.** The two behave oppositely and the
-  difference is easy to get backwards. A **`visibility: {"type": "conditional", …}`** condition
-  **is** evaluated: a conditionally-shown button correctly appears or hides in the render, which
-  makes the empty-field state of a form gate genuinely checkable here. A **`states[].condition`**
-  is **not**: every element draws in its base props, measured on the disable-until-filled probe
-  where four buttons carrying `disabled`-state conditions all drew in base teal. That asymmetry is
-  survivable only because a conditional `disabled` state is not a real mechanism anyway — see
-  [flow-schema.md](references/flow-schema.md#making-a-field-mandatory-show-the-button-conditionally).
-  What the render still cannot tell you about a `visibility` condition: **an unresolvable variable
-  is silently treated as empty**, so `empty` over a typo'd id renders exactly like `empty` over a
-  real empty field. Only the *flip* — filling the field and watching the element appear — proves a
-  reference resolves, and that needs the Adapty app. A wrong *operator* name, by contrast, fails
-  closed and the element just vanishes.
-- **It can draw something the device will not — the blindnesses are not all one-directional.**
-  `old-price` renders a struck-through price in this preview and renders **nothing** in the Adapty
-  app (measured, same config). Every other item in this list is preview showing you *less* than
-  reality; this one shows you *more*, which is worse, because a layout built around a phantom
-  element looks correct here and ships broken. Treat an element you have only ever seen in this
-  renderer as unproven no matter how right it looks — see
-  [flow-schema.md](references/flow-schema.md#old-price-a-real-element-that-does-not-draw-on-device).
-- **Selection in any group that is not a product group.** The render simulates a
-  `product`-type group's `default` — the chosen plan card shows its selected styling — but
-  **ignores a `toggle` group entirely**: measured, flipping `default` between `true` and `false`
-  on a toggle row produced byte-identical screenshots, while the product card on the same flow
-  rendered as selected. So a switch, a checkbox or a pre-ticked consent row always draws in its
-  off state here, and neither its `propsByState` nor its default can be checked visually. Send the
-  user to the Adapty app for those.
-- **Any locale but the one it draws.** The render ignores `defaultLocale` and the order of
-  `locales[]` — measured: forcing `defaultLocale: "de"`, and putting `de` first, both produced
-  byte-identical screenshots to the untouched file. **A locale transform therefore cannot be
-  verified visually at all.** Say so, and tell the user to switch locale in the builder and look
-  for overflow, because translated text is routinely longer than its source.
-- **Anything resolving at runtime.** Real prices, store currency, user input. Placeholder `$0.00`
-  prices and broken asset URLs are usually the preview lacking data, not a defect you introduced —
-  and a price variable in particular renders as the full literal `{{<uuid>.prod_price}}`, which is
-  *far longer than any price*. It wraps to extra lines and can push text under a docked CTA, so the
-  screenshot shows an overlap that will not exist once the price resolves. **Never restyle a layout
-  to fix crowding you only see around a token.** Substitute a plausible price into a throwaway copy
-  of the config, render that, and judge the layout at production text length.
-  render the source too and compare before blaming your own edit.
-
-**A clean preview does not prove the builder will open the flow.** The preview page and the
-Flow Builder's editor are different renderers, and the two configs that broke the builder in
-this project's history both render here. So report a good screenshot as "this looked right at
-this size", never as "the flow works".
-
-**There are four surfaces and they do not agree.** Know which one you are quoting:
-
-| Surface | What it tells you |
-| :--- | :--- |
-| `config preview` + a screenshot | fast, scriptable, and a *different renderer* — layout and spacing only |
-| the **Adapty mobile app** | also the strictest *validator* you can reach: it runs the transform service, which `config update` does not. On a newly authored flow it returns 422 for a missing `flowProductId` until the flow has been published once |
-| the Flow Builder editor | whether the authoring tool can open it; where the user reviews and publishes |
-| the **Adapty mobile app** | the real **SDK** renderer — the only preview that reflects what a user gets, and therefore the one that would surface an `unsupported_…_setting` the transform service warned about |
-| published and live | the truth, and the only state your users ever see |
-
-You can reach the first. Everything below it belongs to the user, which is why the callout in phase 5
-asks for the mobile-app preview explicitly rather than treating a screenshot as sign-off.
+**A missing element may not be your bug, and a clean preview is not the builder opening the flow.**
+Both, with the four surfaces and what each one proves:
+[preview.md](references/preview.md).
 
 **A render that matches the request can still be a weak paywall.** Every check above asks whether
 you built what was asked for; none asks whether the screen sells. **If you chose the design — no
@@ -387,29 +247,94 @@ only on an edit the user specified literally: a typo fix, a locale add.
 **Iterate here.** Anything off, go back and fix it, then re-run phases 3 and 4. Nothing has
 been saved yet, so an iteration costs a screenshot rather than a write.
 
-**Do not decide whether to preview from the file size.** The command's own help calls it a
-quick-look escape hatch and mentions ~32KB of pretty-printed JSON as the point where the render page
-gets slow. That is a symptom to watch for, **not a budget to check a config against** — and two
-agents used it as grounds to skip previewing entirely, on configs that render fine. Measured:
-a 171KB config renders, and so does a 143KB one; gzip in the fragment is very effective, so 56KB of
-config yields a 6,349-character URL. Always try the preview. If the render comes back slow,
-truncated or blank, *then* fall back to the dashboard.
+### 5. Get approval, write, then hand off the publish
 
-**`--device` is not validated — a wrong value renders a page, not an error.** The flag accepts any
-string, exits 0, and the render page answers an unrecognized id with the words
-`Unknown device "…"` on a blank background. That screenshot carries a few hundred distinct colours
-from text antialiasing, so it survives a naive "did anything draw" check and looks like a successful
-preview. `iphone-14` (the default) and `iphone-13-mini` are confirmed to work; `iphone-se`,
-`iphone-12-mini`, `iphone-8` and `pixel-7` are not recognized, and there is no published list. So
-stay on the default unless you have a reason to change it, and if you do pass `--device`, confirm
-the image shows the frame you asked for rather than that message.
+**Whether you need a yes before writing is decided by one observable fact: does the target flow
+already have a config?**
 
-If `preview` is unavailable even through `npx`, or you have no way to render a page, say so plainly
-and ask the user to look — never report the work finished on the strength of a clean validate.
+**It does not** — a flow you just created with `flows create`, whose `config get` 404s. Write it.
+There is nothing to lose and nothing to overwrite, and stopping to ask would be friction over an
+empty document. Report what you wrote afterwards.
 
-### 5. Write, then hand off the publish
+**It does** — anything you fetched in phase 2. **Stop and get an explicit yes before the write.**
+`config update` replaces the entire config, there is no partial write, no undo and no version
+history in this surface, so the document you are about to replace exists in exactly one other
+place: the backup you took in phase 2. Put all of this in front of the user in one message and
+wait:
 
-Only now:
+**Show them the change first — an approval on a description is not an approval on the screen.**
+Split it in two, because the two halves need different things from the reader.
+
+**Screens that changed — one row each, so "there are four of these" is visible at a glance.**
+Render every touched screen from the draft, and its `before` from the backup (`preview` takes the
+backup envelope as-is, no `jq`). A new screen has no before; say so rather than dropping the row.
+
+> | Screen | What changed | Look at |
+> | :-- | :-- | :-- |
+> | Paywall *(new)* | outcome rows, two plans, trial badge | `after-scr_paywall.png` — **open in your browser** |
+> | Daily goal | nothing visual | `after-scr_commit.png` |
+
+**Changes with nothing to see — list them separately and say why.** A reader who has just looked at
+four screenshots will otherwise assume the pictures were the whole change:
+
+> - `scr_commit` CTA: `closeFlow` → `navigate scr_paywall` — an action, not a pixel
+> - `_meta.screens`: product declaration added for the two new plan cards
+> - 42 localizable fields gained `de` — the render only ever draws one locale
+
+**Open exactly one of them live, and mark which row it is.** You are on their machine, so open it
+rather than handing over a command to paste:
+
+```bash
+URL="$($ADAPTY flows config preview draft.json --screen <id>)"
+open "$URL"          # macOS; xdg-open on Linux, start on Windows
+```
+
+The explicit opener is needed because your shell captures stdout, so the CLI prints the URL instead
+of launching a browser as it would on a terminal. `preview` is fully local — no auth, no app id, no
+write. **Print the command instead only when there is no display** (remote or headless) and say
+that is why.
+
+One tab, whatever the size of the change: the page renders a single screen and **does not walk the
+flow** — measured, a button carrying `navigate` leaves the page where it was — so N tabs is N times
+the noise and still not the flow. Open the screen whose *state* matters most (a picker, a toggle, a
+selected plan), because state is the one thing a static PNG cannot show.
+
+**Identical screenshots do not mean an identical config.** Measured: deleting an entire
+`bottom-sheet` element produced a **byte-identical** render, because the sheet was hidden in the
+state that draws. That is what the second list is for.
+
+> About to overwrite the config of **<flow name>** (`<flow-id>`), currently **<status>**.
+>
+> <the two lists above>
+>
+> - Element count: <before> → <after>
+> - Restore: `flow.backup.json`, taken before this edit.
+>
+> Write it?
+
+Do not paraphrase this into "shall I save?" — the flow name, the id, the status and the restore
+path are the content, and an approval given without them is not informed. Wait for a yes; a
+screenshot the user liked is not one.
+
+**If the flow is `published` or `dirty`, offer the safer route first.** Building into a fresh
+`flows create` costs the user nothing but a name, and it leaves the working flow untouched — so
+recommend it, and only edit in place when they choose that. A `published` flow you save becomes
+`dirty`, which is visible to their whole team and cannot be undone from the CLI.
+
+**Restoring from the backup — verified end to end.** Re-read `updated_at` first, because your own
+write has just invalidated the one you were holding:
+
+```bash
+UA="$($ADAPTY flows config get --app $APP $FLOW --json | jq -r .updated_at)"
+jq '.config' flow.backup.json > restore.json
+$ADAPTY flows config update $FLOW --app $APP --config-file restore.json --expected-updated-at "$UA"
+```
+
+Measured on a real flow: an element deleted and written, then restored this way, came back
+**byte-identical** to the backup. So the recovery is real — but it only exists if phase 2 actually
+took the backup, which is the reason that step is not optional.
+
+Only then:
 
 ```
 $ADAPTY flows config update <FLOW_ID> --app <APP_UUID> --config-file draft.json \
@@ -421,48 +346,34 @@ the thing is right, instead of one per iteration. If you have already written an
 problem, that is fine — re-read `updated_at` from `config get` before the next write, because
 yours is now stale.
 
-**When the user wants a file instead** — "write the result to a new file", "give it back so I can
-upload it" — there is no `config update` and no envelope, so the `status`/`id` rule above does not
-decide it for you. Two things are certain: **never emit `"status": "published"`**, and the flow
-`id` in a document names the flow it came *from*, not the one the user will import into. Beyond
-that, pick a shape and **say what you picked** — whether you dropped `status` and `id` or kept
-them, and that the user must direct the import at the flow they actually mean. Measured: three
-agents on one round split on this silently-ish, which is exactly the kind of divergence a sentence
-in the report resolves.
+**Read it back — and `update --json` already gave it to you.** The write returns the **same
+envelope as `get`**: verified equal key for key, `config` for `config`, same `updated_at` and
+`status`. So redirect it over your working file and you are in sync for the next round with no
+extra call, and diff *that* against what you sent. A faithful round trip is normal — 108 of 108
+elements on a real screen — so a difference is a real finding, and it catches the drop-silently
+class: a top-level key that vanished, a `status` you should not have emitted.
 
-**A 409 means someone else edited the flow, and it is the lock working — never force past it.**
-The write is rejected with `statusCode: 409` and a message naming the person: *"This flow
-configuration was already updated by <name>. Reload before saving to avoid overwriting their
-changes."* Nothing was written. The recovery is **re-`get`, re-apply your change to the config you
-just fetched, write again** — never retry the same body against a newer `updated_at`, and never
-reach for the version you built locally, because that is precisely the content that would erase
-their work.
+```bash
+$ADAPTY flows config update $FLOW --app $APP --config-file config.only.json \
+    --expected-updated-at "$UA" --json > flow.working.json
+```
 
-Re-applying means editing *their* config, not diffing yours over it. Fetch, make your specific
-change to the fetched document, and write that — a config the user has opened in the builder may
-differ from your local copy in ways you did not author, including a **`schemaVersion` migration**
-(see [flow-schema.md → the schema is not the authority](references/flow-schema.md)). And check what
-actually changed before you re-apply: a 409 sometimes means the user deliberately removed something
-you added, in which case putting it back is not a merge but a reversal. Diff element captions and
-copy against your own version, and if the difference looks intentional, **ask rather than restore**.
+A write that changes nothing does not bump `updated_at` (measured once), so re-running the same
+content is not a fresh lock token. **On a 409** someone edited the flow since you fetched it and
+nothing was written: re-`get`, re-apply your change **to their config**, write again. Never force
+past it and never re-send your local copy — that is the content that would erase their work. If
+their version differs in ways you did not author, ask rather than restore.
 
-**Read it back.** `flows config get` again and diff against what you sent. A faithful round trip
-is normal — 108 of 108 elements on a real screen — so a difference here is a real finding, and
-it catches the drop-silently class: a top-level key that vanished, a `status` you should not
-have emitted.
+**If you rebuilt the config from a script rather than patching the fetched one**, merge the live
+`_meta.screens` back in first — `config update` replaces everything, and an empty one wipes product
+attachments the builder made ([products.md](references/products.md)).
 
-**Before writing a regenerated config, carry builder-owned state forward.** If your edit came
-from a script that rebuilds the document rather than patching the one you fetched, re-read the live
-config and merge `_meta.screens` into it — `config update` replaces everything, so an empty
-`_meta.screens` wipes the product attachments someone made in the builder, and `flowProductId`
-cannot be recomputed. See
-[products.md → builder-owned means do not omit it](references/products.md).
+**When the user wants a file instead of a write**, never emit `"status": "published"`, remember the
+`id` names the flow it came *from*, and **say which shape you chose** — dropping `status`/`id` or
+keeping them — and that they must direct the import at the flow they mean.
 
-**Always finish by writing.** Never end a task with the work sitting in a local file — a config
-that was validated and previewed but not saved is not delivered. `config update` is the only "save"
-this surface has; there is **no publish command** (`flows` is `create`/`get`/`list` plus
-`config get/update/validate/preview`, verified on 0.6.1-beta.0), so saving is as far as you can take
-it and the final publish is genuinely the user's.
+**Never end with the work in a local file.** `config update` is the only save this surface has, and
+there is no publish command, so saving is as far as you can take it.
 
 **Then end with this callout, every time.** A save is not a release, and the user is the only one
 who can finish it. Fill the slots and keep all four lines — the last one is the point:
@@ -471,27 +382,18 @@ who can finish it. Fill the slots and keep all four lines — the last one is th
 >
 > 1. **Review it:** `https://app.adapty.io/flows/<FLOW_ID>/builder` — refresh the page if you
 >    already have it open, the builder does not notice a CLI write.
-> 2. **Preview on a real device:** open the flow in the **Adapty mobile app**. That is the actual
->    SDK renderer, so it is the only preview that reflects what users will really get.
+> 2. **Preview on a real device:** open the flow in the **Adapty mobile app** — the actual SDK
+>    renderer. **Check `<the specific things this build could not verify>`.**
 > 3. **Publish:** the button at the **top right of the editor**.
 >
 > Until you publish, everyone continues to see the previous version.
 
-Say it even when the change was small, and even when the user already knows — a config that is saved
-but unpublished looks identical to a config that shipped, and that is precisely the confusion this
-prevents. If the flow already had a published version, add that saving moved it to `dirty`: the
-draft has now diverged from what users see.
-
-Then say what changed, and what still needs them:
-
-- which decisions had more than one defensible answer
-  ([transforms.md → Decisions you must disclose](references/transforms.md))
-- products to attach, assets to upload
-
-Say plainly what your checks covered. A clean verify means "this will save"; a clean validate
-means "this should publish"; a screenshot you looked at means "this looked right on one screen
-at one size". Only the last is evidence about the render, and it is not evidence about the ones
-you did not open.
+**Fill that slot with the actual list, never with "check it works".** You know which of your choices
+the render could not reach — a branch that fires on tap, a toggle, a non-default locale, a progress
+bar that advances, glyph metrics that differ on iOS. A generic instruction gets skipped; three named
+things get tapped. The one defect that reached a user from this skill was an emoji clipped on iOS in
+a build whose every preview was clean, so this slot is where that gap gets handed over deliberately
+instead of by luck.
 
 ## Safety
 
@@ -503,8 +405,13 @@ someone else made in between.
 **Never write to a flow the user did not name.** `flows list` is for finding the right one and
 confirming it back to them, not for picking one yourself.
 
-**`config update` replaces the whole config.** There is no partial write and no undo. Prefer a
-fresh `flows create` for new work.
+**`config update` replaces the whole config.** There is no partial write, no undo and no version
+history. Prefer a fresh `flows create` for new work.
+
+**Overwriting an existing config needs an explicit yes.** Phase 5 owns the form. The gate is keyed
+to whether the flow already has a config, not to how confident you feel about the edit — a clean
+validate, a good screenshot and a user who liked the design are all upstream of the question and
+none of them is an approval.
 
 **Deleting a flow is a dashboard action.** There is no `flows delete`, so never claim to have
 removed one — including a throwaway you created yourself. Name the flow and tell the user where
@@ -514,7 +421,8 @@ to delete it.
 
 ## Verify
 
-Walked in phase 3, alongside `validate` rather than instead of it.
+Walked in phase 3, alongside the schema check — and it is what stands in for `validate`, which
+is unavailable in production.
 
 Neither this list nor `validate` is the binding gate. **Publishing runs a transform service that
 refuses configs `config update` accepted** — with an HTTP 422, a fatal `error`, and an `issues`
@@ -534,11 +442,15 @@ Referential — full statements in [flow-schema.md → Invariants](references/fl
 - price variables resolve by their own form — a product-relative head is a declared product, a
   group-relative head is a `product`-typed group; **never validate one against the other**
 - `selectableGroups` and `groupId` agree in both directions
-- every `const` compared against `<groupId>.selectedOptionId` matches a member's `customId`
+- every `const` compared against `<groupId>.selectedOptionId` matches a member's `customId`,
+  and every `const` compared against `<groupId>.selectedProduct` is a product bound on that
+  screen
 - every variable consumer still has its producer, including across screens
 - `colorId` and `font.preset` resolve in *this config's* `theme`; `font.family.id` in `_meta.fonts`
 - every icon used appears in `_meta.icons` **with real `raw` SVG** — never fabricate the markup
-- every locale in `locales[]` has a value in each `_localizable` field you touched
+- every locale in `locales[]` has a value in each `_localizable` field you touched — and where
+  that value is a `switch`, the **same number of branches** as the default locale, since a
+  half-translated conditional looks finished
 
 Well-formedness — cheap, and it is what a crash looks like:
 
@@ -561,12 +473,23 @@ Warnings — **report, never "fix"**: a component defined but unreferenced; a de
 unreferenced entry in `variables[]` or `theme`; an inert `conditional` whose branches all
 resolve to `nothing`. Real configs contain all of these.
 
+**One warning splits by authorship: a locale value under a code `locales[]` does not declare.**
+It renders nowhere. If **you** wrote that value in this run, it is your defect and the fix is
+yours — add the code to `locales[]` (`flowkit.config` refuses to emit the stray at all), and make
+the parity pass over the *whole* config that adding a locale implies. Only where the stray was
+**already in the config you fetched** is it a report-never-fix warning like the others: it is
+usually half a locale run someone started, and silently completing or deleting their work is not
+your call. Name the two exits — declare it or drop the values — and ask.
+
 ## References
 
 - [flow-schema.md](references/flow-schema.md) — what the format **is**: `## The envelope`,
   `## Browser export versus CLI config`, `## Invariants`, `## Shape traps`, `## Vocabulary`,
   including the map from what a user asks for to what the JSON calls it. Read the traps before
   any edit; trap 10 is why phase 4 exists.
+- [preview.md](references/preview.md) — `## What a render cannot show you`,
+  `## Four surfaces, and they do not agree`, `## When the render fails: the file input, not a
+  smaller config`. The evidence behind phase 4; read it when a render surprises you.
 - [transforms.md](references/transforms.md) — `## Risk table` and
   `## Decisions you must disclose`: the six points where two answers are both defensible and
   silence is the only wrong one.

@@ -57,6 +57,25 @@ only the font preset and `verticalAlign` — nothing about content shape. So a b
 publish blocker and there is no pressure to convert one for validity's sake; convert only when the
 field genuinely needs to translate.
 
+**The localization panel and import/export do not cover variables or conditional text**
+(team-confirmed, ADP-7487): an exported translation file will not round-trip a variable tag — "you
+have to fix the variable by hand in those fields" — and conditional text is edited per locale only,
+by switching the locale in the builder's preview zone. Two working consequences: when a flow will
+be translated through export, **keep each variable in its own text element** rather than inline in
+a sentence, so the tag never enters the translated string; and a house pattern that avoids
+conditional text entirely is **two plain-text elements swapped by visibility condition** (a "Try
+for Free" and a "Continue" button, one shown when the trial is available) — plain text localizes
+through the normal tooling.
+
+**A conditional text costs more than a field, and the field count hides it.** Where a value is a
+`switch` rather than blocks ([flow-schema.md](flow-schema.md)), the locale you are adding needs the
+**whole expression** replicated and **every branch** translated, predicates included. So the field
+count is not the work count — say how many fields were conditional and how many branches that
+added — and note that a field carrying the switch with one branch untranslated is **worse than an
+untranslated field**: it looks finished, and it only surfaces for whichever plan the user did not
+pick. Rewriting copy has the same shape: rewrite every branch in every locale, or the screen
+contradicts itself depending on the selection.
+
 **Your report states** which option you took and how many fields it covered — and if you left
 them bare, it lists the literal strings that stay in the source language.
 

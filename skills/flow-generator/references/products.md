@@ -234,6 +234,31 @@ Two consequences worth stating, because getting them wrong is what happened firs
   hardcoded price copy and `const` purchases is complete as written, and calling it a publish
   blocker would be wrong.
 
+## The hidden-base-product pattern, and the Android ordering trap
+
+The standing recipe for a fallback price (an offer the store may not return — eligibility, timing,
+geography are the store's call and the config cannot force it) is a **duplicate of the product
+without the offer, hidden on the screen**. It works, and it carries a measured trap:
+
+**Android matches a price variable to a product by `vendorProductId` + `basePlanId` only —
+`offerId` is ignored** (team-read from SDK source, `FlowStateFactory.kt`). Two Product elements for
+the same store product therefore both resolve to whichever comes **first in the config's product
+list**, and if the base product is first, `offer_price` silently renders empty or undiscounted.
+Three facts that follow, all team-stated (2026-08-17, ADP-7541 tracks the real fix):
+
+- **Order is the creation order of the Product elements.** Dragging elements in the Layers panel
+  does not change it.
+- **The offer-bearing product must come first.** To repair an inverted order: leave the offer
+  Product untouched, delete the hidden base, recreate it (duplicate the offer Product, set
+  "No offer", hide it) so it lands last.
+- **A republish can reorder the list** — including across a schemaVersion migration — which is why
+  this defect flip-flops between "works" and "broken" with no edit anyone made. If offer prices
+  appear and vanish across publishes, check the order first.
+
+Two more product-element facts from the same channel: **two visible cards bound to the same product
+get the same `flowProductId` and selection breaks** — bind distinct products, one `default` — and a
+product with **no store mapping for a platform renders no price at all** on that platform.
+
 ## Creating a product
 
 Offer this only when no product in `products list` fits. Two commands:
