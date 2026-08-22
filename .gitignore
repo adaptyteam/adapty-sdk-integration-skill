@@ -26,3 +26,6 @@ skills-lock.json
 # `.claude/worktrees/` holds nested checkouts complete with their own .git files — committing it
 # would add thousands of files that are copies of this repo.
 .claude/
+
+# skill-validator LLM-score result caches — local tooling state, never skill content
+.score_cache/

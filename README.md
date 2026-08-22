@@ -131,7 +131,7 @@ It covers ten workflows: orienting on your account, reporting performance, launc
 
 The `flow-generator` skill edits an [Adapty Flow Builder](https://adapty.io/docs/adapty-flow-builder) flow as JSON. It comes with every install above too.
 
-**It transforms a flow that exists — it does not author one from nothing.** Product UUIDs, icon SVG markup, uploaded images and videos, and your project's theme can't be invented; transforming your own flow inherits all of them, so everything the skill writes is real. Point it at a flow you already have, or ask it to start a new one from a copy of one.
+**It transforms a flow that exists, and it can author a new one.** Transforming your own flow is the default and the safer path — theme, fonts, locales and products are inherited, so everything the skill writes is real. Authoring works too: product ids come from your catalog (it asks which to use before designing anything), and the only things it will never invent are uploaded images and videos, real store prices, and proof numbers like ratings — those it asks you for, or leaves visibly out.
 
 The skill reads and writes the config with the Adapty CLI, so you don't export or upload anything by hand. **Requires `adapty` 0.6.0 or newer** (`npm install -g adapty`) for `flows` and `flows config get` / `update`, and **0.7.0** for `flows config preview` — which is the version `npm install -g adapty` gives you today. `flows config validate` is the one exception: it ships in the beta channel only and its endpoint is not live yet, so the skill falls back to its own checklist. If your global `adapty` is older, the skill runs everything through `npx --yes adapty@latest` instead of telling you a command doesn't exist.
 
