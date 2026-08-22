@@ -25,6 +25,15 @@ $ADAPTY products get <PRODUCT_UUID> --app <UUID> --json
 `--app` is required on everything except `apps list`. Never invent a product UUID and never
 carry one over from another user's export — read it from `products list`, or ask.
 
+**The selection is a dialogue, not a lookup.** SKILL.md phase 2 owns the order — list, ask which,
+ask for store ids only if none fit, create last — and this page owns how to present the choice:
+one line per product with **title, period, and which stores it binds** (`products get` for the
+detail), because period and bindings are what the user needs to recognise their own product, and
+period is what the price variables will be checked against. If they name a product that is not in
+the list, that is the store-ids conversation, not a guess. **A silent pick from the catalog is the
+same defect as an invented UUID with better odds** — measured on live runs: the agent choosing
+"plausible" products worked only because the sandbox had one obvious set.
+
 **Provenance — required reading before you trust a flag on this page.** The flags were verified
 via `--help` on `adapty/0.3.0` and **re-verified unchanged on 0.6.0**. The two *runtime*
 requirements below — at least one store binding, and `--android-base-plan-id` with

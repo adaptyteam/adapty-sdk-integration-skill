@@ -17,6 +17,8 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+# a skills dir installs by plain copy, so a __pycache__ under references/ would SHIP with it
+sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(ROOT, 'skills', 'flow-generator', 'references'))
 
 import flowkit as fk  # noqa: E402

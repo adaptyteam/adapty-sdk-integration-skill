@@ -167,6 +167,24 @@ two unrelated verticals, from a build script copied forward rather than a decisi
 evaluates and corrects the result — see phase 4, where the correction is still free. And reach for it when the user wants to know how good a flow is rather than to change
 it: that answer is a teardown, not a transform.
 
+**Products are the user's to pick — catalog first, store ids second, create last.** For any
+screen that sells, resolve the products **before the design**, in this order, and never skip a
+step silently:
+
+1. `$ADAPTY products list` and show what exists — title, period, store bindings — and ask which
+   of these belong on the screen. Most accounts already have the right products.
+2. Only if nothing fits: ask for their **store product ids** (App Store product id; Google
+   product id **plus base plan id** for subscriptions) — those are the bindings `products create`
+   cannot run without, so asking later just stalls the create.
+3. Only then `products create`, behind its own confirmation gate
+   ([products.md → Creating a product](references/products.md)).
+
+Before the design because the catalog *gates* the design: a trial-timeline archetype needs a
+verified offer, a period switcher needs plans differing only by period, and a price variable needs
+a product whose period matches its field. Picking a product yourself from the list is not a
+shortcut — it decides what the user sells, and it is the one choice on the screen they cannot see
+in a screenshot.
+
 **Resolve the request into schema terms.** The user's noun is rarely the element `type` — there
 is no `button` and no `toggle` element, and tabs are a five-element composite. Use the request
 map in [flow-schema.md → Vocabulary](references/flow-schema.md), and source any shape the config
