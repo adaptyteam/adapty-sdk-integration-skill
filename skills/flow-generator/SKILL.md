@@ -195,7 +195,12 @@ does not already contain via
 **Nested** unknown keys survive a round trip; unknown keys at the **top level of `config`** are
 discarded, so never park anything there.
 
-Write the result to a local file. Phases 3 and 4 both work on that file, with nothing saved yet.
+Write the result to a local file. Phases 3 and 4 both work on that file, with nothing saved yet —
+**and they apply whether the deliverable is a flow write or the file itself.** If the user asked
+for a *file* ("write it to a new file", "give it back so I can upload it"), the task is not done at
+phase 4: it ends at [phase 5's file deliverable](#5-get-approval-then-deliver--a-write-or-a-file),
+which carries the one hard rule for files. "No CLI write happened" exempts you from the approval
+gate, never from the phases.
 
 ### 3. Check the shape
 
@@ -224,7 +229,7 @@ is the floor you have; say so rather than implying the config is cleared to publ
 
 ```bash
 # no --json (it prints an object, not the URL); never print the URL itself — it is ~6K chars
-URL="$($ADAPTY flows config preview draft.json)"          # local: no --app, no auth, no save
+URL="$($ADAPTY flows config preview draft.json)"  # local: no --app, no auth, no save — file-only tasks included
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu \
   --hide-scrollbars --window-size=430,932 --virtual-time-budget=12000 \
   --screenshot=shot.png "$URL"
@@ -265,7 +270,7 @@ only on an edit the user specified literally: a typo fix, a locale add.
 **Iterate here.** Anything off, go back and fix it, then re-run phases 3 and 4. Nothing has
 been saved yet, so an iteration costs a screenshot rather than a write.
 
-### 5. Get approval, write, then hand off the publish
+### 5. Get approval, then deliver — a write or a file
 
 **Whether you need a yes before writing is decided by one observable fact: does the target flow
 already have a config?**
@@ -386,9 +391,15 @@ their version differs in ways you did not author, ask rather than restore.
 `_meta.screens` back in first — `config update` replaces everything, and an empty one wipes product
 attachments the builder made ([products.md](references/products.md)).
 
-**When the user wants a file instead of a write**, never emit `"status": "published"`, remember the
-`id` names the flow it came *from*, and **say which shape you chose** — dropping `status`/`id` or
-keeping them — and that they must direct the import at the flow they mean.
+#### The file deliverable
+
+When the user asked for a file rather than a write, this subsection **is** phase 5 — there is no
+approval gate (nothing is overwritten) but the contract still binds. One hard rule: **never emit
+`"status": "published"`** — a source export often carries it, and a file that keeps it imports as
+live-looking content. Beyond that: the `id` names the flow the export came *from*, so **say which
+shape you chose** — dropped `status`/`id` or kept them — and that the import must be pointed at the
+flow the user actually means. A file handed over without this paragraph of your report is
+undelivered.
 
 **Never end with the work in a local file.** `config update` is the only save this surface has, and
 there is no publish command, so saving is as far as you can take it.
