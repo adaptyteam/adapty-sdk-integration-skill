@@ -120,6 +120,20 @@ def check(path):
 
     _collect(d)
 
+    # A browser export carries top-level `status` and `id`; a stored fixture keeping them is
+    # fine, but a FILE DELIVERABLE that ships status:"published" imports as live-looking content,
+    # and two GREEN-round agents shipped exactly that after reading every prose placement of the
+    # rule (finding 10, rounds 6-7). Both agents ran THIS check and quoted its output faithfully,
+    # so the warning is the mechanical slot the prose could not be.
+    if d.get('status') == 'published':
+        warn.append("top-level status is 'published' — fine for a stored export; NEVER ship it in "
+                    "a file deliverable. Drop status/id or set draft, and say which you chose")
+    elif 'status' in d or 'id' in d:
+        warn.append(f"top-level {'status' if 'status' in d else ''}"
+                    f"{'+' if 'status' in d and 'id' in d else ''}{'id' if 'id' in d else ''} "
+                    f"present — for a file deliverable, say whether you kept or dropped them; "
+                    f"the id names the flow the export came FROM")
+
     # A value under a code that `locales[]` does not declare renders nowhere. It is usually half a
     # locale run — the values written, the declaration forgotten — and the parity check above
     # cannot see it, because that walks DECLARED locales only. Runs even for a single-locale flow,

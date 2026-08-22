@@ -196,11 +196,15 @@ does not already contain via
 discarded, so never park anything there.
 
 Write the result to a local file. Phases 3 and 4 both work on that file, with nothing saved yet —
-**and they apply whether the deliverable is a flow write or the file itself.** If the user asked
-for a *file* ("write it to a new file", "give it back so I can upload it"), the task is not done at
-phase 4: it ends at [phase 5's file deliverable](#5-get-approval-then-deliver--a-write-or-a-file),
-which carries the one hard rule for files. "No CLI write happened" exempts you from the approval
-gate, never from the phases.
+**and they apply whether the deliverable is a flow write or the file itself.** "No CLI write
+happened" exempts you from the approval gate, never from the phases.
+
+**If the file IS the deliverable, its contract applies the moment you write it, here.** A source
+export carries top-level `status` and `id`; **never emit `"status": "published"`** — it imports as
+live-looking content — and the `id` names the flow the export came *from*. Drop them or downgrade
+`status`, **say which you chose**, and say the import must be pointed at the flow the user means.
+`tests/verify-fixture.py` warns on both fields; that warning in your own check output is this rule
+firing — act on it, never paste it through.
 
 ### 3. Check the shape
 
@@ -393,13 +397,9 @@ attachments the builder made ([products.md](references/products.md)).
 
 #### The file deliverable
 
-When the user asked for a file rather than a write, this subsection **is** phase 5 — there is no
-approval gate (nothing is overwritten) but the contract still binds. One hard rule: **never emit
-`"status": "published"`** — a source export often carries it, and a file that keeps it imports as
-live-looking content. Beyond that: the `id` names the flow the export came *from*, so **say which
-shape you chose** — dropped `status`/`id` or kept them — and that the import must be pointed at the
-flow the user actually means. A file handed over without this paragraph of your report is
-undelivered.
+When the user asked for a file rather than a write, there is no approval gate — the contract lives
+in phase 2, **at the moment the file is written**, and your closing report repeats which
+`status`/`id` shape you chose. A file handed over without that sentence is undelivered.
 
 **Never end with the work in a local file.** `config update` is the only save this surface has, and
 there is no publish command, so saving is as far as you can take it.
