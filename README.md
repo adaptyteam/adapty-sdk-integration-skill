@@ -6,13 +6,13 @@ A skill for agentic coding tools (Claude Code, GitHub Copilot CLI, OpenAI Codex,
 
 **Supported platforms:** iOS · Android · Flutter · React Native · Unity · Kotlin Multiplatform · Capacitor
 
-> **Also in this repo: `ads-manager`.** Every install below ships a second skill that runs your Apple Search Ads through the Adapty CLI — reading campaign, ad group and keyword performance, changing bids and budgets, harvesting search terms, launching and pausing campaigns. Needs `adapty` **0.4.0 or newer** for the `adapty asa` commands. See [Managing Apple Search Ads](#managing-apple-search-ads) below.
+> **Also in this repo: `ads-manager`, `flow-generator` and `paywall-teardown`.** Every install below ships three more skills. `ads-manager` runs your Apple Search Ads through the Adapty CLI — reading campaign, ad group and keyword performance, changing bids and budgets, harvesting search terms, launching and pausing campaigns; needs `adapty` **0.4.0 or newer** for the `adapty asa` commands. `flow-generator` edits a Flow Builder config through the CLI's `flows` commands — adding a locale, rewriting copy, adding or removing screens, wiring branching — validating and previewing before it saves; needs `adapty` **0.6.0 or newer**, or **0.7.0** for the preview command (`flows config validate` is beta-only and its endpoint is not live yet). `paywall-teardown` reads a paywall screenshot and hands back ranked, testable conversion hypotheses — no CLI, no account, no install. See [Managing Apple Search Ads](#managing-apple-search-ads), [Transforming a Flow Builder config](#transforming-a-flow-builder-config) and [Tearing down a paywall](#tearing-down-a-paywall) below.
 
 ## Quickstart
 
 ### Install
 
-This repo holds **two skills** — `adapty-integration` and `ads-manager`. Every command below installs both.
+This repo holds **four skills** — `adapty-integration`, `ads-manager`, `flow-generator` and `paywall-teardown`. Every command below installs all four.
 
 #### Claude Code
 
@@ -23,7 +23,7 @@ claude plugin marketplace add adaptyteam/adapty-skills
 claude plugin install adapty-skills@adapty
 ```
 
-Then run `/reload-plugins` inside Claude Code to activate them. One plugin, `adapty-skills`, carries every skill in the repo — installing it gives you all of them.
+Then run `/reload-plugins` inside Claude Code to activate them. One plugin, `adapty-skills`, carries every skill in the repo — installing it gives you all four.
 
 > **Already installed as `adapty-sdk-integration`?** That handle still works and still updates, so nothing breaks if you do nothing. To move over, install the new one and remove the old one — leaving both installed loads the same skills twice:
 >
@@ -42,7 +42,7 @@ The [skills CLI](https://skills.sh) installs into any supported agent — Cursor
 npx skills add adaptyteam/adapty-skills --all
 ```
 
-`--all` is `--skill '*' --agent '*' -y`: both skills, every agent it detects, no prompts. Drop it and the CLI asks which of the two you want, which is fine at a keyboard but hangs in a script.
+`--all` is `--skill '*' --agent '*' -y`: every skill, every agent it detects, no prompts. Drop it and the CLI asks which of the four you want, which is fine at a keyboard but hangs in a script.
 
 For one skill only, name it:
 
@@ -58,7 +58,7 @@ npx skills update
 
 #### Tool-specific installs
 
-Both skills are portable directories — `skills/adapty-integration/` and `skills/ads-manager/`. Every CLI below reads the same Claude-style `SKILL.md` format, so copying the directories in place works. The `skills/*` glob takes both.
+All four skills are portable directories — `skills/adapty-integration/`, `skills/ads-manager/`, `skills/flow-generator/` and `skills/paywall-teardown/`. Every CLI below reads the same Claude-style `SKILL.md` format, so copying the directories in place works. The `skills/*` glob takes all of them.
 
 **GitHub Copilot CLI**:
 
@@ -126,6 +126,51 @@ Open your terminal in any directory and ask for it:
 It covers ten workflows: orienting on your account, reporting performance, launching a campaign, harvesting keywords from search terms, a bid-and-budget optimization pass, pausing or resuming, running ads against a custom product page, diagnosing an ad that isn't serving, rule-based automations, and a competitor check.
 
 **It treats your ad account as live money.** There is no delete and no undo in this surface, so the skill confirms before every write, never invents an ID or a budget, prefers small keyword batches, and pins idempotency keys so a re-run can't double-apply. Reads and automation dry runs are free and it uses them freely.
+
+## Transforming a Flow Builder config
+
+The `flow-generator` skill edits an [Adapty Flow Builder](https://adapty.io/docs/adapty-flow-builder) flow as JSON. It comes with every install above too.
+
+**It transforms a flow that exists, and it can author a new one.** Transforming your own flow is the default and the safer path — theme, fonts, locales and products are inherited, so everything the skill writes is real. Authoring works too: product ids come from your catalog (it asks which to use before designing anything), and the only things it will never invent are uploaded images and videos, real store prices, and proof numbers like ratings — those it asks you for, or leaves visibly out.
+
+The skill reads and writes the config with the Adapty CLI, so you don't export or upload anything by hand. **Requires `adapty` 0.6.0 or newer** (`npm install -g adapty`) for `flows` and `flows config get` / `update`, and **0.7.0** for `flows config preview` — which is the version `npm install -g adapty` gives you today. `flows config validate` is the one exception: it ships in the beta channel only and its endpoint is not live yet, so the skill falls back to its own checklist. If your global `adapty` is older, the skill runs everything through `npx --yes adapty@latest` instead of telling you a command doesn't exist.
+
+It runs five phases: authenticate, work out whether to create a flow or edit an existing one, validate the config, preview it and iterate until it looks right, then save and hand the publish back to you. Validate and preview both run on a local file, so the agent gets it right before anything reaches your dashboard.
+
+Ask for it:
+
+```
+/flow-generator
+```
+
+(Or "Use the flow-generator skill" in CLIs that don't map slash commands.)
+
+Four transforms:
+
+- **Add a locale** — extend the flow's locales and fill in every localizable field
+- **Rewrite copy** — change wording without touching structure
+- **Screens** — add, remove, or reorder, repairing the navigation that a deletion breaks
+- **Branching and conditions** — selectable groups, option ids, and the conditional actions that route on them
+
+**It saves to a draft; it never publishes.** There is no publish command in the CLI and no delete either, so both stay yours. Every write after the first carries the flow's `updated_at` as an optimistic lock, so a save can't quietly overwrite an edit someone else made in the meantime — it fails instead. It asks before creating a product. And because a config can save cleanly and still not render, the agent screenshots the preview and looks at it before telling you it's done.
+
+## Tearing down a paywall
+
+The `paywall-teardown` skill reads a paywall and hands back a ranked set of testable growth hypotheses. It ships with every install above, and unlike the other three it needs **no CLI, no account and no credentials** — it reads what you give it and writes nothing anywhere.
+
+Paste a paywall screenshot and say roughly nothing:
+
+```
+/paywall-teardown
+```
+
+(Or just drop the image in — "here's my paywall" is enough.)
+
+You get back a read of the vertical and its trust axis, a line on what's already working, and 5–8 prioritized rows: the named pattern, the specific change applied to *your* screen, where that pattern shows up across categories, and an expected-impact range. It handles competitor screenshots and half-finished designs too.
+
+**It also works forwards.** Ask for a paywall instead of a critique of one — or hand an agent "add a paywall screen" with no design attached — and the library becomes the reference the agent designs against: a build list of the patterns that belong on the screen for your category, in priority order, plus the short list of real values it refuses to invent for you (your actual rating, your actual review count, your actual outcome data, your hero asset). Then it grades the result and fixes what it finds, rather than handing you a report on a screen it just built. `flow-generator` calls it at both ends for exactly this — before it writes the config, and again over the render — so a generated screen is held to the same library a live one would be. If you *do* give a design reference, that reference wins; the library only fills what it leaves unsaid.
+
+Impact ranges are expected effect calibrated from Adapty's teardowns of top subscription apps across many verticals — not measured lift for your app. Ship the tests and get your own numbers.
 
 ## Paywall approaches
 
