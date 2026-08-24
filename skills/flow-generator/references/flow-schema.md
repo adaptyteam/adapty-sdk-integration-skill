@@ -427,8 +427,8 @@ to open the flow. Both causes are invisible to every referential check:
 | Six elements had no `states` key | A screen assembled the way `components` elements are written, where `states` legitimately never appears (see the seven-key element note above) | **Every element under a screen's `elements.map` carries `states`; `[]` is correct.** The absence is only legal inside `components`. |
 | A tab group was declared `{"type": "tabs"}` | `tabs` is a real string in the builder transformer's source — a *source-level* constant, not a group type | Group `type` is one of the four in the vocabulary table. A tab group is `single_choice`. |
 
-Neither is caught by `flows config validate` — that endpoint answers *publishable*, which both
-of these configs were. And neither is caught by `flows config preview`: both defects were
+Neither is caught by `flows config validate` — re-measured against `adapty/0.8.0` in production:
+that endpoint answers *publishable*, which both of these configs were. And neither is caught by `flows config preview`: both defects were
 re-injected into a config known to render, and both still rendered, losing only a selected-tab
 highlight. **The two well-formedness rows in `SKILL.md`'s Verify list are what catch these**, and
 `tests/verify-fixture.py` in this repo checks both mechanically. Preview earns its place on the
@@ -631,14 +631,16 @@ nothing today and silently goes stale tomorrow.
 
 They do not overlap, and neither one subsumes the other:
 
-- **`flows config validate` answers *is this publishable*.** It does **not** check the shape of most
-  props — it accepts `fill: "banana"` and `schemaVersion: 999` without complaint.
+- **`flows config validate` answers *is this publishable*** — it runs the real publish-time
+  transform service, so it sees stranded references the schema cannot. It does **not** check the
+  shape of most props: it accepts `fill: "banana"` and `schemaVersion: 999` without complaint.
 - **The schema check answers *are these props well-formed*.** It knows nothing about
   publishability.
 
 So a clean `validate` is not evidence your shapes are right, and a clean schema check is not
 evidence the flow will publish. Run the schema check first (it needs no network round trip against
-your flow), then `validate`, then look at a render.
+your flow), then `validate`, then look at a render. Full coverage both ways —
+and why `validate` needs a loop rather than a single call — in [validate.md](validate.md).
 
 ```bash
 npx --yes --package=ajv@8 node references/validate-with-schema.mjs \
@@ -956,8 +958,12 @@ opaque `oneOf` anywhere in the error tree, because a condition nested inside a s
 pushes the real cause off the deepest path and reported four errors for one schema limitation.
 Never reshape a condition to satisfy the schema; it has no opinion worth having here.
 
-And `flows config validate` still returns **404** as of `adapty/0.8.0-beta.0`. So the gates on a
-condition are: the preview render (visibility only, empty state only), device preview, and a human.
+`flows config validate` reaches the transform service from `adapty/0.8.0` and does check the
+*references* inside a condition — a `const` compared against an undeclared product, or a `groupId`
+naming no group, comes back as an `Unsupported flow input` error ([validate.md](validate.md)). It
+still says nothing about whether the condition expresses what you meant. So the gates on a
+condition's *logic* are: the preview render (visibility only, empty state only), device preview,
+and a human.
 
 ### The transform service compiles conditions to TypeScript
 

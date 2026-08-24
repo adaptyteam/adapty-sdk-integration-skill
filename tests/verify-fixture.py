@@ -8,7 +8,8 @@ fixture, and when a new `schemaVersion` appears, to confirm the fixture is still
 a valid document rather than a subtly broken one.
 
 Checks, in order: map keys match element ids; hierarchy references resolve;
-navigate targets resolve; product elements are declared in _meta.screens;
+navigate targets resolve; product elements AND `const` purchase targets are
+declared in _meta.screens;
 price variables reference declared products; selectableGroups and groupId agree
 both ways; font.preset and colorId resolve in the file's own theme;
 font.family resolves in _meta.fonts; every icon used appears in _meta.icons.
@@ -254,6 +255,34 @@ def check(path):
                             f'_meta.screens, so device preview returns HTTP 422 '
                             f'missing_flow_product_id until the builder saves. For an authored '
                             f'flow, declare it yourself: flowkit.predeclare()')
+
+    # A `const` purchase action names a product with no element behind it, so the
+    # declaration harvester — which walks `product` elements only — never sees it.
+    # Measured 2026-08-24 against adapty/0.8.0 in production: `flows config validate`
+    # refuses such a config with the same `missing flowProductId` error, path ending
+    # `.purchase.product`. The render says nothing, because the preview page does not
+    # run the transform service. Warning, not error, for the same reason as above: an
+    # agent-authored config is expected to look this way until predeclare() runs.
+    for s in d.get('screens', []):
+        decl = {p['id'] for p in ms.get(s['id'], {}).get('products', [])}
+        const_purchased = set()
+
+        def collect(o, _s=s, _acc=const_purchased):
+            if o.get('type') != 'purchase':
+                return
+            prod = (o.get('payload') or {}).get('product') or {}
+            if prod.get('type') == 'const':
+                pid = (prod.get('value') or {}).get('id')
+                if pid:
+                    _acc.add(pid)
+
+        walk(s, collect)
+        for pid in sorted(const_purchased - decl):
+            warn.append(f'product {pid} is bought by a `const` purchase on screen {s["id"]} '
+                        f'but not declared in _meta.screens, so the flow is not publishable '
+                        f'("missing flowProductId", path ...purchase.product). Rendering is '
+                        f'unaffected, which is why this is invisible in a preview. For an '
+                        f'authored flow, declare it yourself: flowkit.predeclare()')
 
     # A price variable comes in TWO forms, and only one is product-relative:
     #   <productUUID>.prod_price_per_year      — bound to one specific product

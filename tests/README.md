@@ -153,9 +153,11 @@ pre-existing mismatch. Measured on `onboarding-quiz-paywall.json`: **28 errors u
 baselined against itself**, and a single deliberately broken `width.type` surfaces as exactly one
 finding. Without the baseline that finding would have been one line in twenty-nine.
 
-**Two checks, not one.** `flows config validate` answers *is this publishable* and skips most prop
-shapes — it accepts `fill: "banana"`. This answers *are the props well-formed* and knows nothing
-about publishability. Neither is evidence about the other.
+**Two checks, not one.** `flows config validate` (stable from `adapty` 0.8.0, endpoint live in
+production) answers *is this publishable* — it runs the real transform service, so it sees stranded
+references — and skips most prop shapes: it accepts `fill: "banana"`. This answers *are the props
+well-formed* and knows nothing about publishability. Neither is evidence about the other. Coverage
+both ways: [validate.md](../skills/flow-generator/references/validate.md).
 
 It suppresses one class of error the schema creates by construction: expression nodes
 (`JSONVariable` / `JSONConstant`) are a `oneOf` over two **identical** permissive branches, commented
