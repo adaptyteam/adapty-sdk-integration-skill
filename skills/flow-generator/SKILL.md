@@ -380,10 +380,13 @@ Do not paraphrase this into "shall I save?" — the flow name, the id, the statu
 path are the content, and an approval given without them is not informed. Wait for a yes; a
 screenshot the user liked is not one.
 
-**If the flow is `published` or `dirty`, offer the safer route first.** Building into a fresh
-`flows create` costs the user nothing but a name, and it leaves the working flow untouched — so
-recommend it, and only edit in place when they choose that. A `published` flow you save becomes
-`dirty`, which is visible to their whole team and cannot be undone from the CLI.
+**If the flow is `published`, disclose what the save changes — then edit in place on their yes.**
+A `published` flow you save becomes `dirty`: the status is visible to their whole team and cannot
+be reverted from the CLI, while end users keep seeing the published version until the next
+publish. Put that sentence in the approval ask and proceed — editing a live flow is the normal
+case, and the preview pair, the backup and the lock exist precisely so it is safe. Suggest a
+fresh `flows create` only when the work is exploratory — a redesign the user wants next to the
+original — never as the default answer to an edit.
 
 **Restoring from the backup — verified end to end.** Re-read `updated_at` first, because your own
 write has just invalidated the one you were holding:
