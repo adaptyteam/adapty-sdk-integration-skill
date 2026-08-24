@@ -57,7 +57,7 @@ $ADAPTY flows list   --app <APP_UUID> [--page N] [--page-size N]    # page-size 
 $ADAPTY flows create --app <APP_UUID> --name <name>            # row only; always `draft`
 $ADAPTY flows get    <FLOW_ID> --app <APP_UUID>
 $ADAPTY flows config get      <FLOW_ID> --app <APP_UUID> --json     # 404 until first write
-$ADAPTY flows config validate <FLOW_ID> --app <APP_UUID> (--config-file <f|-> | --config <json>)
+$ADAPTY flows config validate <FLOW_ID> --app <APP_UUID> (--config-file <f|-> | --config <json>) --json
 $ADAPTY flows config preview  <CONFIG_FILE> [--screen <id>] [--device <id>] [--orientation …]
 $ADAPTY flows config update   <FLOW_ID> --app <APP_UUID> \
     (--config-file <file|-> | --config <json-string>) \
@@ -70,7 +70,7 @@ $ADAPTY flows media upload    <IMAGE_FILE> --app <APP_UUID>   # DO NOT CALL — 
 "validate and preview do not exist" and skipped phases 3 and 4:
 
 ```bash
-adapty --version                      # >= 0.7.0 ?  ADAPTY="adapty"
+adapty --version                      # >= 0.8.0 ?  ADAPTY="adapty"
 ADAPTY="npx --yes adapty@latest"      # otherwise, and always pass --yes
 ```
 
@@ -78,9 +78,13 @@ ADAPTY="npx --yes adapty@latest"      # otherwise, and always pass --yes
 unavailable only after `npx --yes adapty@latest` *and* `npx --yes adapty@beta` both lack it — never
 from a version number you read somewhere.
 
-**Two commands are not usable, whatever the CLI offers.** `flows config validate` and
-`flows media upload` reach their endpoints and get `http_404` in production. Phase 3 owns the
-fallback for `validate`; for media, **do not call it and do not offer it** — an image you do not
+**In `zsh` — the macOS default — a multi-word `$ADAPTY` is not split into words**, so every command
+below fails with `command not found: npx --yes adapty@latest`. Run `setopt shwordsplit` once in the
+same shell (verified), or call `npx --yes adapty@latest` in full. That error is a shell problem,
+never evidence the command or the CLI is missing.
+
+**One command is not usable, whatever the CLI offers.** `flows media upload` reaches its endpoint
+and gets `http_404` in production: **do not call it and do not offer it** — an image you do not
 have stays an empty values map (trap 5) and the user uploads it in the Flow Builder.
 
 **There is no `flows publish` and no `flows delete`.** Both are dashboard actions. Never write a
@@ -90,8 +94,10 @@ command name the CLI does not have, and never invent a flag — `config validate
 Four facts about the config commands that are not guessable:
 
 - **`config get` returns an envelope, not the config**: `{config, remote_configs, status,
-  updated_at}`. The document you transform is the `config` field, and `--config-file` on
-  `update` takes that field alone.
+  updated_at}`. The document you transform is the `config` field, and both `update` and
+  `validate` take that field alone. Handing `validate` the envelope returns
+  `Invalid flow input` — which reads exactly like a broken config and is not one. (`preview`
+  is the odd one out: it accepts either.)
 - **`status` is not yours to write.** It belongs to the envelope and is **discarded** if you put
   it inside `config`. Do not emit it in a config you send to `update`, and do not treat its
   absence as a defect. (A *browser export* does carry `status` and `id` at the top level — that
@@ -211,11 +217,17 @@ live-looking content — and the `id` names the flow the export came *from*. Dro
 `tests/verify-fixture.py` warns on both fields; that warning in your own check output is this rule
 firing — act on it, never paste it through.
 
-### 3. Check the shape
+### 3. Check the shape, then clear the publish gate
+
+Walk [Verify](#verify) first — it is local and free and it finds every defect at once, which the
+commands below do not. Then two checks, in this order:
 
 ```bash
 npx --yes --package=ajv@8 node references/validate-with-schema.mjs \
-  --config flow.working.json --baseline flow.backup.json
+  --config flow.working.json --baseline flow.backup.json          # are the props well-formed?
+
+$ADAPTY flows config validate <FLOW_ID> --app <APP_UUID> \
+  --config-file flow.working.json --json                          # is it publishable?
 ```
 
 **Always pass `--baseline`** — the pristine copy from step 2. The schema tracks the newest
@@ -223,16 +235,24 @@ npx --yes --package=ajv@8 node references/validate-with-schema.mjs \
 hundreds of pre-existing mismatches, none of them yours. Details in
 [flow-schema.md → the two different validators](references/flow-schema.md).
 
-**Skip `flows config validate` unless `$ADAPTY` is a beta build.** It is not in `latest`, and where
-it exists its endpoint 404s, so the usual run has **one** check here, not two. If you do run it: it
-takes the bare `config`, it saves nothing, and you **read the verdict, not the exit code** — exit 1
-means "not publishable" *or* "the call failed", and only `--json` separates them (`valid` field
-versus an `error` object). An agent gating on the exit code reports a good config as broken.
+`validate` runs the **same transform service that gates publishing**, so it is the only pre-write
+check here that speaks for the publish gate. It saves nothing, needs no confirmation and needs no
+baseline — a v9 config validates clean. It takes the **bare `config`**, not the envelope, and the
+flow must already exist, so on new work it runs after `flows create`.
 
-**Neither check is a proof.** `validate` answers *is this publishable* and skips most prop shapes —
-it accepts `fill: "banana"`. The schema check answers *are these props well-formed* and knows
-nothing about publishability. With `validate` unavailable, the schema check plus [Verify](#verify)
-is the floor you have; say so rather than implying the config is cleared to publish.
+**Read the verdict, not the exit code.** Exit 1 means "not publishable" *or* "the call failed", and
+only `--json` separates them: a `valid` field versus an `error` object. An agent gating on the exit
+code reports a good config as broken and a dead call as a defect.
+
+> **Done here is a run that printed `valid: true` over the exact bytes you are about to write.**
+> It reports one fatal per run, so fix, re-run, repeat — a shorter list is not progress.
+
+**Neither check is a proof, and they do not overlap.** `validate` catches the stranded references
+the schema cannot see — an undeclared product, a `groupId` or a `navigate` pointing at something
+that is gone. It also passes `fill: "banana"`, `schemaVersion: 999`, an element with no `states`,
+and every property the service will silently drop on the device. The schema check answers the
+opposite question and knows nothing about publishability. Coverage both ways, and how to read each
+message family: [validate.md](references/validate.md).
 
 ### 4. Preview, and iterate until it looks right
 
@@ -490,12 +510,14 @@ to delete it.
 
 ## Verify
 
-Walked in phase 3, alongside the schema check — and it is what stands in for `validate`, which
-is unavailable in production.
+Walked in phase 3, **before** the two commands. `validate` calls the same transform service that
+gates publishing, so it can confirm several of the rows below — but only one per run, and only
+after a round trip. This list finds them all at once, locally, and it covers rows `validate` never
+reports. Marked **[V]** below: a row `validate` will catch if you miss it.
 
-Neither this list nor `validate` is the binding gate. **Publishing runs a transform service that
-refuses configs `config update` accepted** — with an HTTP 422, a fatal `error`, and an `issues`
-array whose `severity` separates fatal from advisory. See
+**Publishing runs a transform service that refuses configs `config update` accepted** — with an
+HTTP 422, a fatal `error`, and an `issues` array whose `severity` separates fatal from advisory.
+See
 [flow-schema.md → The transform service is the authoritative validator](references/flow-schema.md).
 If the user shows you its output, read the `path` fields: they name the offending element, not just
 the screen.
@@ -503,34 +525,37 @@ the screen.
 Referential — full statements in [flow-schema.md → Invariants](references/flow-schema.md):
 
 - `elements.map` keys equal each element's own `id`
-- `hierarchy` resolves into `map`; `root` and `{"type": "global"}` component nodes are the only
+- **[V]** `hierarchy` resolves into `map`; `root` and `{"type": "global"}` component nodes are the only
   hierarchy ids with no `map` entry
-- every `navigate` `payload.screen` names a screen that still exists, including targets nested
+- **[V]** every `navigate` `payload.screen` names a screen that still exists, including targets nested
   inside a `conditional`'s `cases` and `default`
-- every `product` element's `props.product.id` is declared in `_meta.screens.<thatScreenId>.products[]`
+- **[V]** every `product` element's `props.product.id` is declared in
+  `_meta.screens.<thatScreenId>.products[]` — and so is every product named only by a `const`
+  **purchase** action, which has no element of its own ([validate.md](references/validate.md))
 - price variables resolve by their own form — a product-relative head is a declared product, a
   group-relative head is a `product`-typed group; **never validate one against the other**
-- `selectableGroups` and `groupId` agree in both directions
+- **[V]** `selectableGroups` and `groupId` agree in both directions
 - every `const` compared against `<groupId>.selectedOptionId` matches a member's `customId`,
   and every `const` compared against `<groupId>.selectedProduct` is a product bound on that
   screen
 - every variable consumer still has its producer, including across screens
 - `colorId` and `font.preset` resolve in *this config's* `theme`; `font.family.id` in `_meta.fonts`
 - every icon used appears in `_meta.icons` **with real `raw` SVG** — never fabricate the markup
-- every locale in `locales[]` has a value in each `_localizable` field you touched — and where
+- **[V]** every locale in `locales[]` has a value in each `_localizable` field you touched — and where
   that value is a `switch`, the **same number of branches** as the default locale, since a
   half-translated conditional looks finished
 
 Well-formedness — cheap, and it is what a crash looks like:
 
 - **every element under a screen's `elements.map` carries `states`** (`[]` is fine). Missing it
-  produced a config the API accepted and the builder could not open.
+  produced a config the API accepted and the builder could not open — and `validate` accepts it
+  too, so this row is yours alone.
 - `id`, `type`, `props` present on every element
 - `fill` keeps the form the input used — object or array, never converted
 
 Publish blockers, from [Common issues](https://adapty.io/docs/flow-common-issues.md): no screen
 with zero elements; no product element with no product attached; no incomplete interaction.
-These are what `validate` is for; check them yourself when it is unavailable. **Never treat a
+These are what `validate` is for, one per run. **Never treat a
 publish blocker as protection for a defect you left in** — the user clears blockers, and clearing
 one often activates whatever it was masking
 ([products.md → a mismatch you cannot resolve](references/products.md)).

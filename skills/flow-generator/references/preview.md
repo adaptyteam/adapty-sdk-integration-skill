@@ -61,7 +61,7 @@ one it shows that is not there:
   is **not**: every element draws in its base props, measured on the disable-until-filled probe
   where four buttons carrying `disabled`-state conditions all drew in base teal. That asymmetry is
   survivable only because a conditional `disabled` state is not a real mechanism anyway — see
-  [flow-schema.md](references/flow-schema.md#making-a-field-mandatory-show-the-button-conditionally).
+  [flow-schema.md](flow-schema.md#making-a-field-mandatory-show-the-button-conditionally).
   What the render still cannot tell you about a `visibility` condition: **an unresolvable variable
   is silently treated as empty**, so `empty` over a typo'd id renders exactly like `empty` over a
   real empty field. Only the *flip* — filling the field and watching the element appear — proves a
@@ -73,7 +73,7 @@ one it shows that is not there:
   reality; this one shows you *more*, which is worse, because a layout built around a phantom
   element looks correct here and ships broken. Treat an element you have only ever seen in this
   renderer as unproven no matter how right it looks — see
-  [flow-schema.md](references/flow-schema.md#old-price-a-real-element-that-does-not-draw-on-device).
+  [flow-schema.md](flow-schema.md#old-price-a-real-element-that-does-not-draw-on-device).
 - **Selection in any group that is not a product group.** The render simulates a
   `product`-type group's `default` — the chosen plan card shows its selected styling — but
   **ignores a `toggle` group entirely**: measured, flipping `default` between `true` and `false`
@@ -204,7 +204,7 @@ hash becomes a 113K beacon request, the beacon host answers **414**, and the app
 as collateral on the torn-down connection — the bundle never boots and you screenshot an error
 page. Reported for a 668KB flow; loads at a 32K fragment, hangs at 64K.
 
-The escape hatch is [`preview-with-playwright.mjs`](references/preview-with-playwright.mjs), which
+The escape hatch is [`preview-with-playwright.mjs`](preview-with-playwright.mjs), which
 opens the render page on a **short** URL and hands the config to its file input
 (`[data-testid="preview-config-input"]`) instead. Same page, same renderer, no fragment. The same
 668KB flow that fails through the URL renders that way in 6-8 seconds.

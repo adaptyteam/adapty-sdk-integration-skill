@@ -229,19 +229,30 @@ element, and two price variables that the builder rejected as unknown-product on
 ```
 
 rendered and worked with **no `product` element on the screen and no
-`_meta.screens[].products[]` entry**. So the `const` form is self-sufficient: the action names
-the product directly.
+`_meta.screens[].products[]` entry**. So the `const` form is self-sufficient *for binding*: the
+action names the product directly, and no element has to stand behind it.
 
-Two consequences worth stating, because getting them wrong is what happened first:
+**But it is not self-sufficient for publishing, and an earlier version of this page said it was.**
+Measured 2026-08-24 against `adapty/0.8.0` in production: `flows config validate` refuses that
+exact fixture with `flow._meta.screens["scr_RvSel001"].products is missing flowProductId for
+product "<uuid>" (…elements.map[…].purchase.product)`. The transform service harvests declarations
+from `product` elements only, so a product reached *just* through a `const` purchase is invisible
+to it — and the render says nothing, because the preview page does not run that service
+([validate.md](validate.md)).
+
+Three consequences, the third of which is a correction:
 
 - **Do not manufacture a `product` element** to satisfy a purchase action. The `var` form
   (`{"type": "var", "variableId": "<groupId>.selectedProduct"}`) needs a `product`-typed
   selectable group behind it; the `const` form needs nothing. Choose by which one the screen
   already uses — never by which one you know how to build.
-- **Prices are the reason to declare a product, not purchases.** A `prod_price_*` variable
-  needs its product declared and attached; a `const` purchase does not. A screen with
-  hardcoded price copy and `const` purchases is complete as written, and calling it a publish
-  blocker would be wrong.
+- **Prices are the reason to *attach* a product, not purchases.** A `prod_price_*` variable needs
+  its product attached and resolvable; a `const` purchase does not.
+- **Every product a screen names needs a `_meta.screens[<sid>].products[]` entry, however it is
+  named** — element, `const` purchase, condition or price variable. On a flow you authored,
+  `flowkit.predeclare()` writes it and a provisional `flowProductId` is accepted. A screen with
+  hardcoded price copy and `const` purchases is complete for rendering and **still blocked for
+  publishing** until those products are declared.
 
 ## The hidden-base-product pattern, and the Android ordering trap
 
