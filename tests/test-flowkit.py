@@ -179,6 +179,30 @@ def main():
     check('opacity, when given, is a percentage not a fraction',
           fk.hex_color('#101828', opacity=6)['opacity'] == 6)
 
+    # distribution has four modes, and only the gap form used to be reachable
+    check('default distribution is the gap form',
+          fk.layout(gap=12)['distribution'] == {'gap': 12, 'type': 'gap'})
+    check('a spread mode carries no gap key',
+          fk.layout(distribution='space-between')['distribution']
+          == {'type': 'space-between'})
+    check('all three spread modes are accepted',
+          all(fk.layout(distribution=m)['distribution']['type'] == m
+              for m in fk.SPREAD_MODES))
+    try:
+        fk.layout(distribution='space-araound')
+        check('an unknown distribution raises rather than emitting junk',
+              False, 'typo was accepted')
+    except ValueError:
+        check('an unknown distribution raises rather than emitting junk', True)
+    spread_stack = fk.stack([], distribution='space-evenly')
+    check('stack passes distribution through',
+          spread_stack['props']['layout']['distribution']
+          == {'type': 'space-evenly'})
+    check('screen passes distribution through',
+          fk.screen('scr_d', [], distribution='space-between',
+                    scrollable=False)['props']['layout']['distribution']
+          == {'type': 'space-between'})
+
     # and finally: does the real schema gate accept it?
     checker = os.path.join(HERE, 'schema-check.py')
     if not os.path.exists(checker):

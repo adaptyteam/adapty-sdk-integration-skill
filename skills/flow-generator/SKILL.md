@@ -151,7 +151,12 @@ branching and conditions. A request outside those is named as out of scope, not 
 **Were you given a design to follow?** Answer it out loud, because it decides who is choosing the
 design. A reference image, an existing screen to copy, or a layout the user spelled out means
 *they* chose it: follow the reference, and compare against the file rather than your memory of it
-(phase 4). **No reference means you are choosing it** — "build me a paywall", "add a paywall
+(phase 4). **Follow the reference for visual style, colors, typography, icon style and element
+hierarchy, but always preserve Adapty's fluid layout discipline** (`width: fill`,
+`height: hug`, `position: relative`). Never hardcode fixed container dimensions or fixed
+positioning offsets just to match a screenshot's static pixel measurements — fixed geometry
+breaks across devices (ADP-7117). **No reference means you are choosing it** — "build me a
+paywall", "add a paywall
 screen", "make one that converts" — and the request map only turns their nouns into element types;
 it says nothing about what belongs on a screen that sells.
 
@@ -244,10 +249,42 @@ the reference image file, re-opened, not remembered. `--screen <id>` steps throu
 Measure rather than eyeball with `tests/render-measure.py`. Always try the preview: never decide
 from the config's size.
 
-**Six things it cannot tell you**, each measured: a stranded variable, a `states[].condition`
+**A reference image raises the bar from "matches the request" to "matches the reference" — run the
+fidelity pass before anything is written, every time one was given.** "Nothing jumped out" is not a
+result: a side-by-side look passes screens the user rejects on sight, because "close" is a claim
+about structure and fidelity lives in everything else. The pass produces a written difference list,
+element by element:
+
+1. **Inventory the reference:** per-element colors, typeface feel, icon style, photos and
+   backgrounds (gradient, glow), and the proportions between blocks. For each item, record what
+   your render has — match, gap, or unreachable.
+2. **Close every gap the format can reach:** sample colors from the image instead of naming them
+   from memory; match sizes and spacing to the reference's proportions using relative layout
+   discipline (`fill`/`hug`/`relative`) — never hardcode fixed container widths or heights to
+   match image pixels; author monochrome SVG
+   icons (render-verified — [patterns.md](references/patterns.md)) where the reference uses
+   designed glyphs, and where you cannot draw one faithfully ship a **styled empty placeholder**,
+   never an emoji — a placeholder asks to be filled, an emoji looks finished and ships a
+   different design ([trap 5](references/flow-schema.md)); rebuild gradients and glows rather
+   than flattening them. **Reach for the layout props before padding or docking** —
+   `distribution` has four modes, and `space-between` on the screen root is what puts a footer at
+   the bottom ([trap 10b](references/flow-schema.md)). A screen assembled from gaps plus reserved
+   padding is the shape that reads as "broken everywhere": a dead void under the content on a
+   tall device, or a footer sitting on top of it.
+3. **Turn what the format cannot reach into named user asks** — uploaded assets, account fonts
+   (both are manual Flow Builder uploads; no CLI path) — in the handoff, never silent
+   downgrades. **Ship every asset placeholder fully styled** — `borderRadius`, `objectFit`,
+   fixed size, on the `image` element itself — so the upload lands styled instead of handing
+   the user styling work ([flow-schema.md → trap 5](references/flow-schema.md)).
+4. **Re-render and walk the pair again.** Done means every remaining difference is on the ask
+   list — a user declining previews waives the deliverable, not this pass.
+
+**What it cannot tell you**, each measured: a stranded variable, a `states[].condition`
 (unlike a `visibility` one, which *is* evaluated), selection in any non-product group, any locale
-but the one it draws, anything resolving at runtime, and an element it draws that a device will
-not. Full statements in
+but the one it draws, anything resolving at runtime, an element it draws that a device will not,
+and **the device's own frame** — it draws no notch and no home indicator, and no `--device` id it
+knows is a short phone, so author `safeArea: true` and hand short-device clipping over as a device
+check. Full statements in
 [preview.md → What a render cannot show you](references/preview.md#what-a-render-cannot-show-you)
 — read them before you report what a screenshot proves.
 

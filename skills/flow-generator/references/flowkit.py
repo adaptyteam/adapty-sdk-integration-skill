@@ -97,9 +97,29 @@ def radius(value=None, *, tl=0, tr=0, bl=0, br=0):
     return {'tl': tl, 'tr': tr, 'bl': bl, 'br': br}
 
 
-def layout(direction='vertical', gap=0, align_h='start', align_v='start'):
+SPREAD_MODES = ('space-between', 'space-around', 'space-evenly')
+
+
+def layout(direction='vertical', gap=0, align_h='start', align_v='start',
+           distribution=None):
+    """`distribution` is FOUR modes, not one.
+
+    Default is the `gap` form. Pass `distribution='space-between'` (or
+    `space-around` / `space-evenly`) to let the container spread its children over
+    the free space instead — which is how a footer reaches the bottom of a screen
+    without docking or padding arithmetic.
+
+    A spread mode needs free space to distribute, so the container must have a
+    definite height — on a screen that means `scrollable: False`. On a scrollable
+    screen the root is content-height and a spread behaves like `gap: 0`.
+    """
+    if distribution is not None and distribution not in SPREAD_MODES:
+        raise ValueError(
+            f'distribution must be one of {SPREAD_MODES} or None for the gap form, '
+            f'not {distribution!r}')
+    dist = {'type': distribution} if distribution else {'gap': gap, 'type': 'gap'}
     return {'alignH': align_h, 'alignV': align_v, 'direction': direction,
-            'distribution': {'gap': gap, 'type': 'gap'}}
+            'distribution': dist}
 
 
 def size(kind='fill', value=None):
@@ -219,12 +239,13 @@ def _node(kind, props, *, children=None, caption=None, states=None,
 
 def stack(children=(), *, width='fill', height='hug', fixed_w=None, fixed_h=None,
           direction='vertical', gap=0, align_h='start', align_v='start',
-          fill_=None, padding=None, margin=None, corner=None, border=None,
-          border_width=1, effects=None, position=None, visibility=None, **kw):
+          distribution=None, fill_=None, padding=None, margin=None, corner=None,
+          border=None, border_width=1, effects=None, position=None,
+          visibility=None, **kw):
     props = {
         'width': size('fixed', fixed_w) if fixed_w is not None else size(width),
         'height': size('fixed', fixed_h) if fixed_h is not None else size(height),
-        'layout': layout(direction, gap, align_h, align_v),
+        'layout': layout(direction, gap, align_h, align_v, distribution),
         'position': position or relative(),
     }
     if fill_ is not None:     props['fill'] = fill_
@@ -350,11 +371,15 @@ def flatten(nodes):
 
 def screen(screen_id, nodes, *, caption=None, fill_=None, padding=None,
            direction='vertical', gap=0, align_h='start', align_v='start',
-           scrollable=True, status_bar=False, status_bar_theme='light',
-           safe_area=False, selectable_groups=(), progress_bar=False):
+           distribution=None, scrollable=True, status_bar=False,
+           status_bar_theme='light', safe_area=False, selectable_groups=(),
+           progress_bar=False):
+    """`distribution='space-between'` with `scrollable=False` is the bottom-pinned
+    footer: pass two children, content and footer. See `layout()` for why a spread
+    mode needs `scrollable=False` to have any effect."""
     node_map, hierarchy = flatten(list(nodes))
     props = {
-        'layout': layout(direction, gap, align_h, align_v),
+        'layout': layout(direction, gap, align_h, align_v, distribution),
         'safeArea': safe_area, 'statusBar': status_bar, 'scrollable': scrollable,
         'progressBar': {'enabled': progress_bar}, 'statusBarTheme': status_bar_theme,
     }

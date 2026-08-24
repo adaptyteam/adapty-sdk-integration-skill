@@ -112,6 +112,31 @@ one it shows that is not there:
   list with **no** preview-side symptom at all, so it cannot be found by iterating here: it is
   found on a device, or by a user.
 
+- **Any device but the frames the page knows, so a short-phone check is not available here.**
+  `--device` defaults to `iphone-14`; `ipad-pro` appears in the CLI's own example. **The valid set
+  is not enumerable** — it is not in the CLI package (`grep`ped) and not in the render page's
+  entry bundle, and an id the page does not know renders `Unknown device "iphone-se".` as a
+  **page**, with exit 0, which passes any "did something draw" check. So a layout whose safety
+  depends on viewport height — `scrollable: false`, fixed heights, a tall content column
+  ([flow-schema.md trap 10b](flow-schema.md)) — cannot be validated against a small phone from
+  here. Reason about it structurally instead, and name it in the handoff. Note `--window-size` is
+  **not** a substitute: the page draws its own device frame, so a smaller window crops the
+  screenshot rather than re-laying-out the screen (measured 2026-08-24 — a 375×667 window returned
+  the same 390pt-wide screen with its right edge cut off, which reads exactly like an overflow bug
+  that is not there).
+
+- **The device's own chrome — a notch, a Dynamic Island, a home indicator — because the render
+  draws none of it.** A screen authored with `safeArea: false` put its back chevron and title into
+  the island zone on a real phone (user-reported, 2026-08-24, from a device screenshot of a flow
+  whose preview was clean) — the preview canvas starts at a bare top edge, so the collision has no
+  preview-side tell. Author new screens with `safeArea: true` unless the design genuinely paints
+  under the status bar. The same missing viewport frame hides the bottom half of the problem: an
+  in-flow CTA that ends mid-canvas reads fine in a PNG and as a half-empty screen on a device —
+  when the reference pins its CTA to the bottom, that is a `fixed` dock
+  ([patterns.md → a bottom-docked button](patterns.md)), not a flow item, and docked-over-scrolling
+  content then needs a look at *both* ends: measured in the same session, a docked footnote
+  collided with the last content row at one viewport height and cleared it at another.
+
 - **Invisible text defects.** Copy-pasted text carries empty paragraph lines and trailing spaces
   the preview does not show and the device does — one stray Enter produced a device-only vertical
   gap that took the support team days to find. Deliberate gaps are separate Text and Spacing
