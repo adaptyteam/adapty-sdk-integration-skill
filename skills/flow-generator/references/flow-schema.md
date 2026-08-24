@@ -311,6 +311,25 @@ The same holds for the asset `id` — omit the whole entry rather than inventing
 Report every element left with an empty `values` map in your handover, so the user knows
 exactly what to upload.
 
+**A styled placeholder beats a lookalike substitute — never stand an emoji in for a designed
+glyph.** When the reference uses icons you cannot author faithfully, the ladder is: author a
+monochrome SVG and render-verify it ([patterns.md](patterns.md)); failing that, ship an **empty
+styled `image` element**; never an emoji or a text glyph. The reason is what each one tells the
+person who opens the flow: a placeholder is visibly unfinished and asks to be filled, while an
+emoji looks finished and quietly ships a different design — and nothing downstream flags it,
+because a substitute is structurally valid. This was the user's own call on a build where four
+emoji had passed every check (2026-08-24). Emoji carry a second cost too: they are the one defect
+class with no preview-side tell at all (see [preview.md](preview.md)).
+
+**Style the placeholder element completely, so the upload lands styled.** The empty values map
+is only the *content* half; `IImageElementProps` carries the presentation — `borderRadius`,
+`objectFit` (`"fit"` | `"cover"`), `_aspect`, `border`, fixed `width`/`height` — and those are
+yours to author now, on the `image` element itself, not on a wrapper. A circular avatar is a
+92×92 image with `borderRadius` 46 and `objectFit: "cover"`; leave those off and the user who
+uploads the photo gets an unstyled square they have to fix by hand, which quietly hands your
+layout work back to them (user-required rule, 2026-08-24). A parent stack's radius is not a
+substitute — style the element the asset will actually fill.
+
 ### 6. Optional keys are inconsistently present and must not be normalized
 
 Real exports disagree with each other on every one of these, so a "missing" key is not
@@ -348,6 +367,14 @@ custom variables `var_`.
 Per [Save & publish](https://adapty.io/docs/builder-save-publish.md), a custom font file must
 be in the app bundle or users see the system fallback. `_meta.fonts[].url` records the
 uploaded file; its presence in the export is not what makes the font available on device.
+
+**And a font cannot be added from here at all — uploading one is a manual Flow Builder action.**
+There is no CLI command for it (`flows media upload` is media-only and not live in production
+anyway), and hand-authoring a `_meta.fonts` entry fabricates an asset `id`/`url` pair, which is
+trap 5 with a typeface. So when a design needs a font the account does not have, the ask is
+two-step and both halves are the user's: upload the font in the builder, then tell the agent —
+who can then point `theme.typography` presets or element `font.family` at the real id the
+upload minted.
 
 Introducing a custom-font reference is therefore a **runtime** footgun, not a publish error:
 the flow publishes, and the text renders in the wrong typeface on devices whose bundle lacks
@@ -412,6 +439,39 @@ a **rendering flow** proves a shape works; a **real export** proves it is writte
 **minimized test fixture** proves only what that one test needed — stripping props down to match
 one broke the tabs render a second time; and a **string constant in source** proves nothing
 about the format at all. When two sources disagree, the one that rendered wins.
+
+### 10b. `layout.distribution` has FOUR modes, and only knowing one of them deforms every screen
+
+`ILayout` is `{alignH, alignV, direction, distribution}`, all four **required**. The trap is not
+the shape, it is the vocabulary:
+
+| Key | Values |
+| :--- | :--- |
+| `distribution` | `{"type": "gap", "gap": N}` **or** `{"type": "space-between"}` / `"space-around"` / `"space-evenly"` — the spread forms carry **no** `gap` key |
+| `alignH` / `alignV` | `start`, `center`, `end` |
+| `direction` | `vertical`, `horizontal`, **`free`** |
+| `clipContent`, `rtl` | booleans, optional |
+
+**`space-between` on a screen root is how a footer reaches the bottom of the screen.** Give the
+root two children — a content stack and a footer stack — and the free space lands between them.
+Knowing only the `gap` form is what makes an author reach for the two workarounds instead, and
+both have failure modes this project shipped: a **docked** (`fixed`) footer needs the screen's
+`padding.bottom` to reserve its exact height, and getting that arithmetic wrong put a footnote
+underneath a CTA; leaving the footer **in flow** on a tall device leaves a dead void below it,
+which is what a user sees as "the layout is broken everywhere". Measured 2026-08-24 across four
+screens: replacing dock-plus-padding with one `space-between` root removed both defects and
+deleted the padding arithmetic entirely.
+
+**A spread mode needs free space, so the container must have a definite height.** On a screen that
+means `props.scrollable: false`; a scrollable screen's root is content-height, and a spread there
+behaves like `gap: 0`. That is a real trade, not a detail — `scrollable: false` **clips** content
+taller than the viewport, and the CLI preview cannot show it to you, because `--device` ids are not
+enumerable (see [preview.md](preview.md)). So: **spread the short screens, scroll the tall ones**,
+and decide per screen by rendering rather than by preference.
+
+`flowkit.layout()`/`stack()`/`screen()` take `distribution='space-between'`. The helper emitted
+only the `gap` form for its first release, and that alone is why the other three modes went unused
+in real builds — the author reaches for what the helper exposes.
 
 ### 11. `opacity` on a colour is a 0-100 percentage, not a 0-1 fraction
 

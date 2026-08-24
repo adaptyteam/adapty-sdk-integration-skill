@@ -270,6 +270,34 @@ current export carries `9`. The element and group vocabulary matches, which is w
 here — but do not import a fixture's envelope, and do not change the input's `schemaVersion`
 to match one. Carry the input's own value through untouched.
 
+### Putting a footer at the bottom: prefer the screen's own distribution
+
+Before reaching for the docked pattern below, check whether the screen just wants
+`space-between`. Give the screen root exactly two children — a content stack and a footer stack
+(CTA, legal row, footnote) — and set:
+
+```json
+"props": {"scrollable": false,
+          "layout": {"direction": "vertical", "alignH": "center", "alignV": "start",
+                     "distribution": {"type": "space-between"}}}
+```
+
+The free space lands between the two, so the footer is at the bottom with **no** `fixed`
+positioning, no `padding.bottom` reservation, and no arithmetic to get wrong. Measured across
+four screens (2026-08-24) this removed both of the failure modes the alternatives carry: a
+footnote that had slid under a docked CTA, and the dead void an in-flow footer leaves on a tall
+device. `flowkit.screen(..., distribution='space-between', scrollable=False)`.
+
+**Choose per screen, because the cost is real:** a spread mode needs a definite-height container,
+so it wants `scrollable: false`, and that **clips** content taller than the viewport. Short
+screens spread; tall screens stay `scrollable: true` (where a spread is inert and the footer
+simply follows the content) or use the docked pattern below. See
+[flow-schema.md trap 10b](flow-schema.md) for the vocabulary and
+[preview.md](preview.md) for why you cannot check the clipping locally.
+
+Docking is still right when content must scroll **under** a CTA that stays put — a long paywall,
+a scrolling comparison table.
+
 ### A bottom-docked button
 
 `fixed` with `left`/`right`/`bottom` plus `width: auto` is the docked-CTA pattern (trap 9).
@@ -602,6 +630,14 @@ assets, unlike the `id`/`url` pairs in the do-not-lift list above. Authoring one
 and **only acceptable because you can render it**: the format is visible in any existing entry
 (`viewBox="0 0 256 256"`, `fill="currentColor"`, one filled path, `{name, raw, weight}` all
 required), so write it, render the screen, and *look at the glyph*. An ArrowLeft authored this way
-was confirmed correct by render before being kept. Never keep an authored icon you have not seen
+was confirmed correct by render before being kept. **Mirror a real entry's markup exactly, and use
+a phosphor-style name** — measured 2026-08-24: three authored icons with invented lowercase names
+(`mf-lock`) and no `width`/`height` attributes on the `<svg>` tag rendered as *blank* in
+`config preview` (empty chips, no error anywhere); the same paths drew once the entries copied a
+real export's shape — `width="20" height="20" fill="currentColor"` on the tag and phosphor-cased
+names (`LockSimple`, `Bell`). Which change fixed it is unisolated (both were made together), and
+whether the preview drew the `raw` or a bundled phosphor glyph of that name is ambiguous — the
+device SDK reads `raw`, so keep the authored path visually equivalent to the phosphor glyph the
+name says it is. Never keep an authored icon you have not seen
 drawn — that is the difference between this and inventing a product id, which no render can check.
 
