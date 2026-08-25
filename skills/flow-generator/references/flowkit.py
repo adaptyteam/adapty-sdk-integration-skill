@@ -451,6 +451,74 @@ def close(action_id='act_close'):
     return {'id': action_id, 'type': 'closeFlow'}
 
 
+# --- timer -------------------------------------------------------------------------------
+# A countdown's digits are `token` nodes, and the token ids carry a `timer_` PREFIX:
+# `timer_days`, `timer_hours`, `timer_minutes`, `timer_seconds`. Builder- and device-confirmed
+# 2026-08-25 (the builder shows a recognised chip and renders live `23:59:59`). The bare names
+# `days`/`hours`/`minutes`/`seconds` do NOT resolve: the Flow Builder paints them red `Unknown`
+# and the device/preview renders the literal `%hours%`. `config validate` accepts either, so the
+# wrong one is silent — which is exactly why this is a helper and not something you hand-author.
+# `component-catalog.json`'s timer templates carried the bare names until 2026-08-25; if you lift
+# a timer shape from anywhere, run it through here or fix the prefix by hand.
+
+TIMER_UNITS = ('days', 'hours', 'minutes', 'seconds')
+
+
+def timer_digits(units=('hours', 'minutes', 'seconds'), *, sep=':', preset='h2',
+                 color_id=None, align='center', width='hug', locale='en', node_id=None, **kw):
+    """The digit `text` that goes INSIDE a `timer` element, as `HH:MM:SS`.
+
+    `units` is any ordered subset of `TIMER_UNITS`; each becomes a `timer_<unit>` token, joined by
+    `sep`. Never write the bare token name — see the note above.
+    """
+    bad = [u for u in units if u not in TIMER_UNITS]
+    if bad:
+        raise ValueError(f'timer units must be a subset of {TIMER_UNITS}, not {bad}')
+    content = []
+    for i, u in enumerate(units):
+        if i:
+            content.append({'type': 'text', 'text': sep,
+                            'attrs': {'bold': False, 'italic': False,
+                                      'underline': False, 'strikethrough': False}})
+        content.append({'type': 'token', 'attrs': {'token': f'timer_{u}'}})
+    value = {'values': {locale: [{'type': 'paragraph', 'content': content}]},
+             '_localizable': True}
+    return text(value, preset=preset, color_id=color_id, align=align, width=width,
+                node_id=node_id, **kw)
+
+
+def timer(children=(), *, custom_id='offer', days=0, hours=0, minutes=0, seconds=0,
+          behavior='start_at_every_appear', width='hug', height='hug', fixed_w=None,
+          fixed_h=None, fill_=None, padding=None, corner=None, align_h='center',
+          align_v='center', visibility=None, position=None, actions=None, node_id=None,
+          **kw):
+    """A countdown `timer` element. Pass `timer_digits(...)` as one of its `children` to show the
+    running digits; a bare timer with no digit child draws nothing (which is the correct shape for
+    a purely invisible delay — pair it with `actions` carrying a `timer-end` navigate).
+
+    `duration` is `{days, hours, minutes, seconds}`. `behavior='start_at_every_appear'` restarts
+    the countdown each time the screen appears.
+    """
+    props = {
+        'customId': custom_id, 'behavior': behavior,
+        'duration': {'days': days, 'hours': hours, 'minutes': minutes, 'seconds': seconds},
+        'width': size('fixed', fixed_w) if fixed_w is not None else size(width),
+        'height': size('fixed', fixed_h) if fixed_h is not None else size(height),
+        'layout': layout('horizontal', 0, align_h, align_v),
+        'position': position or relative(),
+    }
+    if fill_ is not None:     props['fill'] = fill_
+    if padding is not None:   props['padding'] = padding
+    if corner is not None:    props['borderRadius'] = corner
+    if visibility is not None: props['visibility'] = visibility
+    node = _node('timer', props, children=list(children), node_id=node_id, **kw)
+    if actions:
+        # a timer's own interaction fires on `timer-end`, not `tap`
+        node['interactions'] = [{'id': 'int' + node['id'][2:], 'trigger': 'timer-end',
+                                 'actions': actions}]
+    return node
+
+
 # --- assembly ----------------------------------------------------------------------------
 
 def flatten(nodes):

@@ -69,8 +69,13 @@ def sample():
                    actions=[fk.purchase('plans')])
     rail = fk.stack([], fixed_w=38, fixed_h=78, corner=fk.radius(16),
                     fill_=fk.gradient(180, ('#E1D6EB', 0), ('#EDE9F0', 1)), caption='Rail')
+    countdown = fk.timer([fk.timer_digits(units=('minutes', 'seconds'), preset='body',
+                                          color_id='ink')],
+                         custom_id='offer', minutes=15, padding=fk.pad(12, 16, 16, 12),
+                         corner=fk.radius(20), fill_=fk.fill('card'),
+                         visibility=fk.visible(), caption='Countdown')
     return fk.config(
-        screens=[fk.screen('scr_main', [card, rail, cta], caption='Plans',
+        screens=[fk.screen('scr_main', [card, rail, cta, countdown], caption='Plans',
                            fill_=fk.fill('bg'), padding=fk.pad(0, 0, 0, 120),
                            selectable_groups=[{'id': 'plans', 'type': 'product'}])],
         colors=[('bg', 'Background', '#FFFFFF', '#101014'),
@@ -281,6 +286,39 @@ def main():
     check('the plain four-item preset is unchanged',
           typo[2]['settings'] == {'size': 13, 'weight': 'regular'})
 
+    # --- timer -------------------------------------------------------------------------
+    # The bug this guards: a countdown's digit tokens carry a `timer_` PREFIX. The bare names
+    # save and pass `flows config validate`, and the Flow Builder then paints them red
+    # "Unknown" while the device/preview renders the literal "%minutes%".
+    # `component-catalog.json` shipped the bare names until 2026-08-25, so the prefix is
+    # exactly the kind of shape a helper has to own rather than leave to an author.
+    digits = fk.timer_digits(units=('hours', 'minutes', 'seconds'))
+    nodes = digits['props']['content']['values']['en'][0]['content']
+    check('every timer digit token carries the timer_ prefix',
+          [n['attrs']['token'] for n in nodes if n.get('type') == 'token']
+          == ['timer_hours', 'timer_minutes', 'timer_seconds'], str(nodes))
+    check('units are emitted in the order given, not in TIMER_UNITS order',
+          [n['attrs']['token'] for n in
+           fk.timer_digits(units=('seconds', 'minutes'))['props']['content']['values']['en'][0]
+           ['content'] if n.get('type') == 'token'] == ['timer_seconds', 'timer_minutes'])
+    check('the separator is a rich-text node, not a bare string',
+          [n.get('text') for n in nodes if n.get('type') == 'text'] == [':', ':']
+          and all('attrs' in n for n in nodes if n.get('type') == 'text'))
+    check('an unknown timer unit raises rather than emitting a bare token',
+          raises(lambda: fk.timer_digits(units=('hours', 'mins'))))
+
+    delay = fk.timer(actions=[{'id': 'act_next', 'type': 'navigate',
+                               'payload': {'type': 'screen', 'screen': 'scr_next'}}],
+                     seconds=3)
+    check("a timer's own interaction fires on timer-end, not tap",
+          [i['trigger'] for i in delay.get('interactions', [])] == ['timer-end'], str(delay))
+    check('a delay timer with no digit child draws nothing, which is the invisible-delay shape',
+          not delay.get('_children'))
+    check('duration carries all four units',
+          fk.timer(days=1, hours=2, minutes=3, seconds=4)['props']['duration']
+          == {'days': 1, 'hours': 2, 'minutes': 3, 'seconds': 4})
+    check('a timer carries states, like every other element', fk.timer()['states'] == [])
+
     # and finally: does the real schema gate accept it?
     checker = os.path.join(HERE, 'schema-check.py')
     if not os.path.exists(checker):
@@ -302,6 +340,24 @@ def main():
             print(f'  SKIP  schema gate could not run: {exc}')
         finally:
             os.unlink(path)
+
+    # The token vocabulary is the schema's, not ours: `ETimerToken` is the ground truth, so if
+    # the builder ever adds a unit, TIMER_UNITS has to move with it. The gate above warms this
+    # cache. Note the schema does NOT constrain a token node's own `attrs.token` (it is typed a
+    # bare string and never $refs ETimerToken), which is why the bad name has to be caught here
+    # and in verify-config.py rather than by the schema check.
+    schema_cache = os.path.join(tempfile.gettempdir(), 'adapty-flow.schema.json')
+    enum = None
+    if os.path.exists(schema_cache):
+        try:
+            enum = json.load(open(schema_cache)).get('$defs', {}).get('ETimerToken', {}).get('enum')
+        except (ValueError, OSError):
+            enum = None
+    if not enum:
+        print('  SKIP  TIMER_UNITS vs schema enum (no cached schema, or no ETimerToken in it)')
+    else:
+        check('TIMER_UNITS matches the schema ETimerToken enum',
+              sorted(enum) == sorted(f'timer_{u}' for u in fk.TIMER_UNITS), str(enum))
 
     print()
     if FAILURES:

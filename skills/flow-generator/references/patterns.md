@@ -263,6 +263,18 @@ with a child `text` whose rich text carries `token` nodes:
   {"type": "token", "attrs": {"token": "timer_seconds"}}]}
 ```
 
+**The token id carries a `timer_` PREFIX — this is not optional and it is the one place two of
+this skill's references used to disagree.** The four ids are `timer_days`, `timer_hours`,
+`timer_minutes`, `timer_seconds`. The bare names (`hours`, `minutes`, `seconds`) **do not
+resolve**: `config validate` accepts them, but the Flow Builder paints them red `Unknown` and the
+device/preview renders the literal `%hours%:%minutes%:%seconds%`. Confirmed 2026-08-25 by pushing
+both forms to a real flow and reloading the builder — the prefixed ids render a live `23:59:59`
+chip, the bare ones stay `Unknown`. **`component-catalog.json`'s four timer templates
+(`timer-badge`, `timer-inline`, `timer-blocks`, `timer-inline-units`) shipped the bare names until
+2026-08-25** — filling one of their slots is exactly how a broken timer gets authored, so if you
+lift a timer from a template, prefix the tokens. `flowkit.timer()` + `flowkit.timer_digits()` emit
+the correct ids, and `verify-config.py` now warns on any un-prefixed `token`.
+
 ### A carousel — fixed geometry or nothing
 
 Support-channel distilled (2026-08, team-stated and device-verified). The carousel supports exactly

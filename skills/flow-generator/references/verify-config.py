@@ -660,6 +660,34 @@ def check(path):
     unref = sorted(set(d.get('components', {})) - refs)
     if unref:
         warn.append(f'components defined but never referenced as global: {unref}')
+
+    # A countdown's digits are rich-text `token` nodes, and the builder only resolves the
+    # timer_-prefixed ids. The bare names save and `validate` clean, but the Flow Builder paints
+    # them red "Unknown" and the device/preview renders the literal "%hours%". Measured
+    # 2026-08-25 (builder- and device-confirmed: the prefixed ids render live `23:59:59`).
+    # `component-catalog.json` shipped the bare names until 2026-08-25, so a timer lifted from a
+    # template is the usual source of this. Render-wrong-but-publishes, so a warning by the
+    # severity rule — but it is the author's to fix if this run wrote it.
+    valid_timer_tokens = {'timer_days', 'timer_hours', 'timer_minutes', 'timer_seconds'}
+    bad_tokens = []
+    def _timer_tokens(o):
+        if isinstance(o, dict):
+            if o.get('type') == 'token':
+                t = (o.get('attrs') or {}).get('token')
+                if isinstance(t, str) and t not in valid_timer_tokens:
+                    bad_tokens.append(t)
+            for v in o.values():
+                _timer_tokens(v)
+        elif isinstance(o, list):
+            for v in o:
+                _timer_tokens(v)
+    _timer_tokens(d)
+    if bad_tokens:
+        warn.append(f"timer token(s) {sorted(set(bad_tokens))} are not resolved by the Flow "
+                    f"Builder (it shows red 'Unknown', and the device/preview renders the literal "
+                    f"'%name%'). Timer tokens carry a timer_ prefix — one of "
+                    f"{sorted(valid_timer_tokens)}. If you lifted a timer from "
+                    f"component-catalog.json, add the prefix; flowkit.timer_digits() emits it")
     return bad, warn
 
 rc = 0
