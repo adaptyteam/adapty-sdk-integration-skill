@@ -194,6 +194,34 @@ def main():
               False, 'typo was accepted')
     except ValueError:
         check('an unknown distribution raises rather than emitting junk', True)
+    # image() — an uploaded asset was unreachable from this module before 0.8.0's media upload
+    HERO = 'https://public-media.adapty.io/public/1e/5b/1e5bbbb4/hero.png'
+    img = fk.image(HERO, media_id=516395, fixed_w=242, corner=fk.radius(20))
+    check('image binds the url inside the per-locale localizable map',
+          img['props']['image'] == {'_localizable': True,
+                                    'values': {'en': {'id': '516395', 'url': HERO}}},
+          json.dumps(img['props']['image']))
+    check('a numeric media id is written as a string',
+          isinstance(img['props']['image']['values']['en']['id'], str))
+    check('image defaults to a hug height, whose drawn size is the asset aspect',
+          img['props']['height'] == {'type': 'hug'} and img['props']['objectFit'] == 'cover')
+    ph = fk.image(fk.PLACEHOLDER, fixed_w=242, fixed_h=180)
+    check('PLACEHOLDER emits an empty values map, wrapper intact',
+          ph['props']['image'] == {'values': {}, '_localizable': True})
+    check('a fixed image box is honoured over the hug default',
+          ph['props']['height'] == {'type': 'fixed', 'value': 180})
+    try:
+        fk.image('')
+        check('an image with no url raises rather than emitting an empty map', False,
+              'empty url was accepted')
+    except TypeError:
+        check('an image with no url raises rather than emitting an empty map', True)
+    try:
+        fk.image(HERO, fit='contain')
+        check('an objectFit outside the two-value enum raises', False, 'contain was accepted')
+    except ValueError:
+        check('an objectFit outside the two-value enum raises', True)
+
     spread_stack = fk.stack([], distribution='space-evenly')
     check('stack passes distribution through',
           spread_stack['props']['layout']['distribution']

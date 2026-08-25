@@ -45,6 +45,14 @@ a config.
 That is how the rail was confirmed correct at 46/38 while the eye kept insisting it was too narrow,
 and how the real defect — a 14px break between connector and chip — was found.
 
+**A mockup that shows a device frame needs its screen bounds located before any of that**, and
+fractional coordinates read off the picture are worthless until you have them. Find them from
+**row means across the phone's width**, not from a single column: a column through the artwork
+hits dark glyphs and dark pixels in a hero image, which truncates the run and yields a band that
+is confidently wrong — it took three attempts on one mockup, each producing a different "screen
+height", before the row-mean scan gave the real 393×875. With true bounds, sampling the palette
+becomes exact: three independent samples of the same accent returned the identical hex.
+
 ## What a render cannot show you
 
 Six things to know before a screenshot becomes an overclaim — five it cannot show you, and
@@ -74,13 +82,26 @@ one it shows that is not there:
   element looks correct here and ships broken. Treat an element you have only ever seen in this
   renderer as unproven no matter how right it looks — see
   [flow-schema.md](flow-schema.md#old-price-a-real-element-that-does-not-draw-on-device).
-- **Selection in any group that is not a product group.** The render simulates a
-  `product`-type group's `default` — the chosen plan card shows its selected styling — but
-  **ignores a `toggle` group entirely**: measured, flipping `default` between `true` and `false`
-  on a toggle row produced byte-identical screenshots, while the product card on the same flow
-  rendered as selected. So a switch, a checkbox or a pre-ticked consent row always draws in its
-  off state here, and neither its `propsByState` nor its default can be checked visually. Send the
-  user to the Adapty app for those.
+- **Selection in a `toggle` or a `multi_choice` group — but `single_choice` and `product` DO
+  draw.** The boundary is per group type, and it is narrower than "not a product group". Measured:
+  a `product` group's `default` renders selected (the chosen plan card shows its selected
+  styling), and so does a **`single_choice`** row — `propsByState.selected` fires, accent border
+  and swapped tick included. A **`toggle`** is ignored entirely: flipping `default` between `true`
+  and `false` on a toggle row produced byte-identical screenshots. A **`multi_choice`** is ignored
+  too: measured 2026-08-24 on a 7-row market picker whose first row carried `default: true`, the
+  render drew every row unselected while a `single_choice` screen in the same config drew its
+  default row selected.
+  **You can borrow the renderer to see a toggle's on-state.** Since `single_choice` selection
+  *does* draw, temporarily retype the group `"type": "toggle"` → `"single_choice"` in a throwaway
+  copy, render that, look at the on-state, and revert. Used on a real build to confirm a trial
+  card's selected styling — the coral border, the swapped check indicator and a strip of copy that
+  only exists when selected — none of which the toggle form will ever show you. Keep it in a
+  separate file so the shipped config is never the retyped one.
+
+  **So a `multi_choice` row drawing unselected is not a defect to chase** — confirm `default` in
+  the config and move on; "fixing" a correct config here is the trap. A switch, a checkbox and a
+  pre-ticked consent row always draw in their off state, and neither their `propsByState` nor
+  their default can be checked visually. Send the user to the Adapty app for those.
 - **Any locale but the one it draws.** The render ignores `defaultLocale` and the order of
   `locales[]` — measured: forcing `defaultLocale: "de"`, and putting `de` first, both produced
   byte-identical screenshots to the untouched file. **A locale transform therefore cannot be
@@ -100,6 +121,20 @@ one it shows that is not there:
   page unchanged across two real clicks and a synthetic one. Every screen therefore needs its own
   render, and **branching cannot be checked here at all** — a `conditional` fires on a tap that
   never resolves. Route coverage is an Adapty-app check, or a reading of the config.
+
+  **A screen that advances itself is therefore 100% unverifiable here, and that changes how you
+  hand it over.** Measured 2026-08-25 on a timed loading screen: after 15 s of
+  `--virtual-time-budget` the dumped DOM was still the same screen. That result is *worthless as
+  evidence* — the page never navigates for any reason, so a broken `timer-end` and a working one
+  produce the identical observation. The consequence is a process one: when the only surface that
+  can exercise a mechanism is the user's device, **build the diagnostic in before the first ask,
+  not after the fourth.** A timed screen handed over bare yields one bit ("still spinning"); the
+  same screen handed over with its countdown temporarily made visible — a child `text` carrying
+  the `timer_minutes`/`timer_seconds` tokens — splits the failure in two at no extra cost to the
+  user: *digits never appear or freeze* is the element not mounting, *digits reach zero and
+  nothing happens* is the trigger not firing. Say it is temporary and remove it after. Paid for
+  the hard way: four blind config tweaks were shipped to a user's device one at a time before
+  anyone thought to make the timer visible, and the instrumentation cost exactly one cycle.
 
 - **Text metrics that are not the device's — and a colour emoji is where it shows.** An emoji in a
   **hug**-width text box renders correctly here and is **clipped on iOS**: reported from a device

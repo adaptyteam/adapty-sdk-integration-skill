@@ -1,21 +1,43 @@
 #!/usr/bin/env python3
-"""Verify the referential invariants of a flow-config fixture.
+"""Verify the referential invariants of an Adapty flow config.
 
-SCOPE: this guards the FIXTURES in this repo — it is not part of the
-flow-generator skill, which ships no scripts by owner decision (a `validate`
-command is planned for the Adapty CLI). Use it after editing or re-sanitizing a
-fixture, and when a new `schemaVersion` appears, to confirm the fixture is still
-a valid document rather than a subtly broken one.
+SCOPE: this SHIPS. It sits in `references/` alongside `validate-with-schema.mjs`, so it is
+available to a runtime agent on any machine, not just inside the skills repo. Run it on the
+config you are about to write, on a config you fetched, and on a fixture after re-sanitising
+it. Every check is local and read-only: it opens one or more JSON files and prints findings.
+
+    python3 references/verify-config.py draft.json          # from the skill directory
+    python3 skills/flow-generator/references/verify-config.py tests/fixtures/*.json
+
+It answers a third question the other two gates do not. `flows config validate` answers *is
+this publishable* and skips most prop shapes; a schema check answers *are these props
+well-formed* and knows nothing about publishability; this answers *do the document's internal
+references agree* — and it owns outright the rows neither of the others looks at, notably
+anything to do with an image, a top-level `status`/`id`, and a missing `states` key.
+
+History worth keeping: this was called `verify-fixture.py` and lived in `tests/` until 2026-08-25 and therefore did NOT ship,
+which quietly weakened several rules the repo had already escalated from prose to a mechanical
+check -- every GREEN round that scored against those guards ran in-repo, where the file
+existed, so the closures did not transfer to a customer install. Moving it here is what makes
+them real everywhere.
 
 Checks, in order: map keys match element ids; hierarchy references resolve;
 navigate targets resolve; product elements AND `const` purchase targets are
 declared in _meta.screens;
 price variables reference declared products; selectableGroups and groupId agree
 both ways; font.preset and colorId resolve in the file's own theme;
-font.family resolves in _meta.fonts; every icon used appears in _meta.icons.
+font.family resolves in _meta.fonts; every icon used appears in _meta.icons;
+image elements carry a bound asset with a string id, since neither publish-time
+gate looks at an image at all; no id is declared twice in any id-keyed
+collection, and theme colour and typography ids do not collide.
 Unreferenced components are reported as warnings, because real exports have them.
 
-Usage: verify-fixture.py <fixture.json> [more.json ...]
+Severity rule: an ERROR is a publish blocker or a corrupt document; a WARNING is something
+that publishes cleanly and renders wrong. A `const` matching no selection and a variable with
+no producer are both the latter -- and the first of those is present in a real raw export, so
+it is not a defect this repo introduced by sanitizing.
+
+Usage: verify-config.py <config.json> [more.json ...]
 Exit 0 if every file is clean (warnings allowed), 1 if any invariant is violated.
 """
 import json, sys, os
@@ -134,6 +156,106 @@ def check(path):
                     f"{'+' if 'status' in d and 'id' in d else ''}{'id' if 'id' in d else ''} "
                     f"present — for a file deliverable, say whether you kept or dropped them; "
                     f"the id names the flow the export came FROM")
+
+    # `theme.colors` and `theme.typography` share ONE id namespace on the device. A collision
+    # decodes as Swift `DecodingError.dataCorrupted ... "Duplicate Key"` and the flow fails to
+    # open — while `validate`, the schema check and the render all pass it. Evidence: 8/8 real
+    # exports (sanitized and raw) have zero overlap; the one collision seen in the wild was
+    # authored here (a `footer` colour plus a `footer` preset), reported from an iOS device.
+    theme = d.get('theme') or {}
+
+    def _dups(seq):
+        seq = [x for x in seq if x is not None]
+        return sorted({x for x in seq if seq.count(x) > 1}, key=str)
+
+    cids = [x.get('id') for x in (theme.get('colors') or []) if isinstance(x, dict)]
+    tids = [x.get('id') for x in (theme.get('typography') or []) if isinstance(x, dict)]
+    clash = sorted(set(cids) & set(tids))
+    if clash:
+        bad.append(f"theme id used by BOTH a colour and a typography preset: "
+                   f"{', '.join(clash)} — the device decoder builds one keyed container from "
+                   f"`theme` and throws DecodingError \"Duplicate Key\", so the flow will not "
+                   f"open. No other gate catches this; rename one side")
+
+    # A repeated id inside any id-keyed collection makes one entry unreachable however the
+    # consumer decodes it, and where the consumer builds a dictionary it is the "Duplicate Key"
+    # decode failure that took a flow down. Errors, because no real export contains one.
+    meta = d.get('_meta') or {}
+    icons = [i for i in (meta.get('icons') or []) if isinstance(i, dict)]
+    for label, seq in (
+            ('theme.colors id', cids),
+            ('theme.typography id', tids),
+            ('locales[].code', [l.get('code') for l in d.get('locales') or []]),
+            ('locales[].id', [l.get('id') for l in d.get('locales') or []]),
+            ('screens[].id', [x.get('id') for x in d.get('screens') or []]),
+            ('variables[].id', [x.get('id') for x in d.get('variables') or []]),
+            ('_meta.fonts[].id', [x.get('id') for x in (meta.get('fonts') or [])
+                                  if isinstance(x, dict)]),
+            ('_meta.icons name+weight', [(i.get('name'), i.get('weight')) for i in icons]),
+    ):
+        dupes = _dups(seq)
+        if dupes:
+            bad.append(f"{label} declared more than once: "
+                       f"{', '.join(str(x) for x in dupes)}")
+
+    # Same NAME at two weights is legal as far as anything here can prove -- but no real export
+    # does it (0 of 8), and if the consumer keys icons by name alone it is the theme bug again.
+    name_dupes = _dups([i.get('name') for i in icons])
+    if name_dupes and not _dups([(i.get('name'), i.get('weight')) for i in icons]):
+        warn.append(f"_meta.icons repeats the name(s) {', '.join(name_dupes)} at different "
+                    f"weights — legal-looking, but no real export does it and it collides if "
+                    f"icons are keyed by name")
+
+    for s_ in d.get('screens') or []:
+        gd = _dups([g.get('id') for g in s_.get('selectableGroups') or []])
+        if gd:
+            bad.append(f"screen {s_['id']}: selectableGroups declares {', '.join(gd)} twice")
+        for eid, e in (s_.get('elements') or {}).get('map', {}).items():
+            sd = _dups([x.get('id') for x in e.get('states') or []])
+            if sd:
+                bad.append(f"{eid}: states declares {', '.join(sd)} twice")
+            idd = _dups([x.get('id') for x in e.get('interactions') or []])
+            if idd:
+                bad.append(f"{eid}: interactions declares {', '.join(idd)} twice")
+            aid = [a.get('id') for i in e.get('interactions') or []
+                   for a in i.get('actions') or [] if a.get('id')]
+            ad = _dups(aid)
+            if ad:
+                bad.append(f"{eid}: action id {', '.join(ad)} used twice")
+
+    for sid, dec in (meta.get('screens') or {}).items():
+        pd = _dups([x.get('id') for x in (dec or {}).get('products') or []])
+        if pd:
+            bad.append(f"_meta.screens.{sid}.products declares {', '.join(pd)} twice")
+
+    # Images are invisible to BOTH publish-time gates: `flows config validate` returned
+    # valid:true on an empty values map, a numeric id and a missing id alike, and the schema
+    # check passes them too, because `ILocalizable.values` is typed as an unconstrained
+    # `additionalProperties`. So an empty hero publishes an "Upload Image" checkerboard to real
+    # users, and this warning is the only mechanical slot that sees it. Measured 2026-08-24.
+    empty_imgs, unstrung = [], []
+    for _s, el in els():
+        if el.get('type') != 'image':
+            continue
+        content = (el.get('props') or {}).get('image')
+        if not isinstance(content, dict):
+            continue
+        vals = content.get('values') if content.get('_localizable') else {'_': content}
+        if isinstance(vals, dict) and not vals:
+            empty_imgs.append(el.get('id'))
+        for code, entry in (vals or {}).items():
+            if isinstance(entry, dict) and not isinstance(entry.get('id'), str):
+                unstrung.append(f"{el.get('id')}[{code}]")
+    if empty_imgs:
+        warn.append(f"{len(empty_imgs)} image element(s) with an EMPTY values map "
+                    f"({', '.join(str(i) for i in empty_imgs[:4])}"
+                    f"{', …' if len(empty_imgs) > 4 else ''}) — they publish as an 'Upload Image' "
+                    f"placeholder and no gate objects. Expected when no file exists: name each "
+                    f"one in the handoff. If you WERE given the file, `flows media upload` it")
+    if unstrung:
+        warn.append(f"image asset id is missing or not a string on "
+                    f"{', '.join(unstrung[:4])}{', …' if len(unstrung) > 4 else ''} — "
+                    f"`flows media upload` prints a number, the schema wants a string")
 
     # A value under a code that `locales[]` does not declare renders nowhere. It is usually half a
     # locale run — the values written, the declaration forgotten — and the parity check above
@@ -316,6 +438,64 @@ def check(path):
                             f'preview returns 422 unknown_product_id')
             else:
                 bad.append(f'price variable references a product bound nowhere: {v}')
+
+    # ---- a `const` compared against a selection must match something that exists.
+    # transforms.md: a const matching nothing is NOT a publish blocker -- it silently sends
+    # every user down the `default` branch, so routing changes with nothing failing. Renaming
+    # a selectable option changes its `customId` and orphans every predicate keyed to it.
+    # Predicate shape, from a real export:
+    #   {"left": {"type":"var","variableId":"<gid>.selectedOptionId"},
+    #    "type":"==", "right":{"type":"const","value":"<customId>"}}
+    custom_by_group = {}
+    for _s, _e in els():
+        pr = _e.get('props') or {}
+        if pr.get('groupId') and pr.get('customId') is not None:
+            custom_by_group.setdefault(pr['groupId'], set()).add(pr['customId'])
+    preds = []
+    walk(d, lambda o: preds.append(o) if (
+        o.get('type') == '==' and isinstance(o.get('left'), dict)
+        and isinstance(o.get('right'), dict)) else None)
+    for pd_ in preds:
+        left, right = pd_['left'], pd_['right']
+        if left.get('type') != 'var' or right.get('type') != 'const':
+            continue
+        vid, val = left.get('variableId'), right.get('value')
+        if not isinstance(vid, str) or not isinstance(val, str):
+            continue
+        head = vid.split('.')[0]
+        if vid.endswith('.selectedOptionId'):
+            known = custom_by_group.get(head, set())
+            if known and val not in known:
+                warn.append(f'condition compares {vid} == {val!r}, but group {head!r} has no '
+                            f'member with that customId (has: {sorted(known)}) — a dead route: '
+                            f'this case never matches and every user takes `default`. Yours to '
+                            f'fix if you wrote it this run; if it came with the config, report '
+                            f'it and let the user decide')
+        elif vid.endswith('.selectedProduct'):
+            if val not in bound_products and val not in allprod:
+                warn.append(f'condition compares {vid} == {val!r}, but no product with that id '
+                            f'is bound on any screen — a dead route that never matches. Present '
+                            f'in a real builder export, so expect it in fetched configs')
+
+    # ---- every `<inputCustomId>.value` consumer still has its producing input element.
+    # flow-schema.md invariant 12, and the failure is remote: delete the screen holding the
+    # input and the consumers survive on screens you never opened, rendering empty.
+    INPUT_TYPES = {'text-input', 'email-input', 'password-input', 'number-input',
+                   'phone-input', 'date-picker', 'time-picker', 'date-time-picker'}
+    produced = {(e.get('props') or {}).get('customId')
+                for _, e in els() if e['type'] in INPUT_TYPES}
+    group_ids = {g['id'] for s_ in d.get('screens', [])
+                 for g in (s_.get('selectableGroups') or [])}
+    for v in sorted(set(vids)):
+        parts = v.split('.')
+        if len(parts) != 2 or parts[1] != 'value':
+            continue
+        if parts[0] in group_ids or parts[0] in allprod or parts[0] in bound_products:
+            continue                      # a group/product variable, not an input
+        if parts[0] not in produced:
+            warn.append(f'variable {v} has no producer: no input element carries '
+                        f'customId {parts[0]!r} (invariant 12 — renders empty, publishes '
+                        f'cleanly, and the consumers are often on screens you never opened)')
 
     for s in d.get('screens', []):
         gids = {(e.get('props') or {}).get('groupId')

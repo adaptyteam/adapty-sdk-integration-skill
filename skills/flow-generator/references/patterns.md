@@ -98,7 +98,7 @@ There is no `toggle` *element* — the group type is what makes it one — but t
 > has no `groupId` and no `default`, so a stack carrying them is not a group member: the props are
 > ignored, it never receives the `selected` state, and **tapping it does nothing**. The failure is
 > silent — the config saves, passes a schema check, and renders — and it was shipped to a user
-> before anyone noticed the switch would not flip. `tests/verify-fixture.py` now fails on it.
+> before anyone noticed the switch would not flip. `references/verify-config.py` now fails on it.
 >
 > Verified against real exports, the member type is dictated by the group: `product` for a
 > product group, `selectable` for `single_choice` / `multi_choice` / `toggle`, `tab-item` inside
@@ -199,6 +199,53 @@ trigger, and `On Screen Appear → Navigate Next` fires instantly — so a timed
 with `Opacity 0`, `Position Absolute`, top/left 0, and `On Timer End → Navigate Next`
 (team-recipe). And when a loader must be pinned, the `fixed` position goes on a **container**, not
 on the Loader element itself. Details of the visible countdown below.
+
+**A `spinner`'s `duration` is its ROTATION PERIOD, not a completion time.** It loops forever and
+fires nothing, on every surface. The field reads exactly like a delay — a user looking at
+`duration: 1000` reasonably asked why the screen never advanced after a second — so when a
+spinner and a Countdown share a screen, say in the handoff which one moves the flow.
+
+### DEVICE-VERIFIED: the JSON an auto-advancing screen actually needs
+
+The recipe above is written in the builder's vocabulary, and translating it to JSON left three
+gaps that together produced a screen that spun forever on a real device while `validate` returned
+`valid: true`. This is the shape that **worked on a real device** (2026-08-25) — the project's
+first confirmed `timer-end`, since no export in the corpus carries one:
+
+```json
+{"id": "el_delay", "type": "timer", "states": [], "caption": "Delay",
+ "props": {"customId": "build_delay", "behavior": "start_at_every_appear",
+           "duration": {"days": 0, "hours": 0, "minutes": 0, "seconds": 3},
+           "width": {"type": "hug"}, "height": {"type": "hug"},
+           "padding": {"top": 12, "left": 16, "right": 16, "bottom": 12},
+           "visibility": {"type": "visible"},
+           "position": {"type": "absolute", "top": 0, "left": 0}},
+ "interactions": [{"id": "int_delay", "trigger": "timer-end",
+                   "actions": [{"id": "act_after_delay", "type": "navigate",
+                                "payload": {"type": "screen", "screen": "scr_next"}}]}]}
+```
+
+Four things about it, and **which one was decisive is unisolated** — they were fixed together
+before the device test, so treat the whole shape as the unit that works:
+
+- **It is a direct child of the screen `root`, not nested in a content stack.** `absolute`
+  offsets resolve against the **parent** (trap 9), so nesting it made `top/left: 0` mean the
+  stack, which is not what "Position Absolute, top/left 0" describes.
+- **`hug` + `padding`, never a `fixed` 1×1 box.** A 1×1 timer is a degenerate size and trap 15
+  is explicit that the transformer believes those. The one real export's timer is `hug` *with*
+  padding, so it has a genuine box; copy that.
+- **No `opacity: 0`.** The recipe's opacity exists to hide a countdown showing **digits**. A
+  timer with no child `text`, no `fill` and no `border` draws nothing anyway, so the zero opacity
+  buys nothing and asks a renderer to keep ticking an element it may legitimately skip.
+- **An explicit `navigate`, not `navigateNext`.** The recipe says "Navigate Next" because that is
+  the builder's dropdown; in JSON an implicit next-in-order target silently re-routes if anyone
+  reorders the screens, and it also makes the graph invisible to the reachability check —
+  `references/verify-config.py` reported five screens unreachable the moment `navigateNext` went in,
+  which is the checker doing its job, not a false positive to suppress.
+
+**Not agent-tested.** The facts above are device-measured, but whether an agent handed "add a
+3-second loading screen" produces this shape rather than the 1×1 nested form has had no baseline
+round — per the Iron Law in `superpowers:writing-skills`, treat that as open.
 
 ```json
 {"id": "el_…", "type": "timer",
