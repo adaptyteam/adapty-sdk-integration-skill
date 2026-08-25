@@ -378,38 +378,96 @@ fixed container because each link is separately tappable and carries its own act
 
 ### A connected timeline, where a rail must reach the next chip
 
-A vertical timeline is rows of `[track, text]`, where the track is a column holding a circular
-chip and, beneath it, a connector rail. Getting the rail to *touch* the next chip is the whole
-difficulty, and the mechanism is arithmetic rather than styling.
+A row is `[chip, rail, text]` where **only the text is in flow**. The chip and the rail are
+absolute overlays on the row, and the rail is anchored **top and bottom** so it stretches to
+whatever the row turns out to be. That is the whole mechanism: the copy sets the row's height and
+the rail follows it, so there is no number to compute and nothing for a rewrite or a longer locale
+to break.
 
-The row is `hug`, so its height is `max(chip + rail, text)`. When `chip + rail` wins, the rail's
-bottom edge lands exactly on the next chip's top edge and the column is continuous **by
-construction**. When the text wins, the row grows, the rail does not, and a gap opens. So:
+The skeleton is lifted from a real builder export and **verified by render**, including under
+grown copy. The row, then its three children in this order:
 
-**Size the rail so `chip + rail` exceeds the tallest text you expect, and let the rail set the row
-pitch.** Measured on a three-row timeline: at a snug rail the column was continuous, and growing a
-single description from two lines to four reopened a **49px** gap. The same timeline with a longer
-rail stayed continuous under both the original and the grown copy. Copy grows for reasons outside
-your control — a rewrite, or a locale, since translations run longer than their source — so pick the
-generous number, not the one that just barely fits today.
+```json
+{ "id": "el_Row1", "type": "stack", "props": {
+    "width": {"type": "fill"}, "height": {"type": "hug"},
+    "layout": {"direction": "horizontal", "alignH": "start", "alignV": "start",
+               "distribution": {"type": "gap", "gap": 16}},
+    "position": {"type": "relative"} }, "states": [] }
+```
 
-Two things that look like the fix and are not:
+```json
+{ "id": "el_Chip1", "type": "stack", "caption": "Chip", "props": {
+    "fill": [{"type": "color", "color": {"type": "hex", "hex": "#E9910B", "opacity": 100}}],
+    "width": {"type": "hug"}, "height": {"type": "hug"},
+    "layout": {"direction": "horizontal", "alignH": "start", "alignV": "start",
+               "distribution": {"type": "gap", "gap": 16}},
+    "padding": {"top": 4, "left": 4, "right": 4, "bottom": 4},
+    "borderRadius": {"tl": 100, "tr": 100, "bl": 100, "br": 100},
+    "position": {"type": "absolute", "top": 0, "left": 0} }, "states": [] }
+```
 
-- **`position: absolute` plus `zIndex`, to overlap the rail under the next chip.** `zIndex` is real
-  (it lives inside `position`, not at the top level of props) and it *is* honoured — inverting it
-  moved the rail above the chips. But `absolute` pulls the rail out of flow, so the row collapses to
-  text height and the rail stops setting the pitch: measured, a **61px** break plus rails painted
-  over the icons. A z-order tool cannot fix a layout-flow problem. Note also that `zIndex` appears in
-  **no** real export and **no** catalog template, so it sits at the bottom of the evidence order.
-- **`height: {type: "fill"}` on the rail**, to stretch it to whatever the row needs. It collapses
-  inside a hug-height parent — see trap 13 in `flow-schema.md`.
+```json
+{ "id": "el_Rail1", "type": "stack", "caption": "Connector", "props": {
+    "fill": [{"type": "gradient", "angle": 180, "stops": [
+        {"position": 0, "color": {"type": "hex", "hex": "#E9910B", "opacity": 100}},
+        {"position": 1, "color": {"type": "hex", "hex": "#E9910B", "opacity": 26}}]}],
+    "width": {"type": "fixed", "value": 8}, "height": {"type": "auto"},
+    "position": {"type": "absolute", "top": 10, "left": 12, "bottom": -18, "zIndex": -10},
+    "visibility": {"type": "visible"} }, "states": [] }
+```
 
-Derive the number from the reference if you have one: measure its chip-to-chip pitch in pixels,
-divide by (image width ÷ device points), and subtract the chip. On the paywall this was built
-against, 190px and 142px at 1.544x gave pitches of 123pt and 92pt, so rails of ~77 and ~46.
+```json
+{ "id": "el_Text1", "type": "stack", "props": {
+    "width": {"type": "fill"}, "height": {"type": "hug"},
+    "layout": {"direction": "vertical", "alignH": "start", "alignV": "start",
+               "distribution": {"type": "gap", "gap": 8}},
+    "padding": {"left": 40}, "position": {"type": "relative"} }, "states": [] }
+```
 
-Verify by measurement, never by eye: walk the painted runs down the track column and assert **zero
-gaps**. A rail that stops one pixel short looks like a design choice in a screenshot.
+The chip holds one 24pt `icon`; the text column holds a title and a description. **The last row
+carries no rail.**
+
+**Three parts of the rail are load-bearing, each measured by removing it** from a rendered row
+whose description had been grown from two lines to four — the exact copy growth that used to
+reopen the gap:
+
+| Change | Result |
+| :--- | :--- |
+| as above | rail runs continuously into the next chip and under it |
+| drop `bottom` | rail collapses to nothing — **108px of white** below the chip |
+| `height: fill` instead of `auto` | rail stretches but stops **2px short** — a hairline break |
+| drop `zIndex: -10` | rail paints **over** the chip, erasing the icon inside it |
+
+So: `bottom` is what gives the element height, `auto` is what makes the anchors authoritative, and
+the negative `zIndex` is what keeps the rail behind the chips it runs under. `flowkit.absolute()`
+emits the position object and refuses the two broken pairings; `verify-config.py` warns on both if
+you hand-write them.
+
+Derive the offsets rather than copying the numbers, since they follow from the chip:
+
+- **chip** = icon + 2 × padding (24 + 8 = **32** above).
+- **rail `left`** = (chip − rail width) ÷ 2, to centre it under the chip — (32 − 8) ÷ 2 = 12.
+- **text `padding-left`** = chip + clearance (32 + 8 = 40).
+- **rail `top`** = any value smaller than the chip's height, so the rail's head starts behind the
+  chip rather than below it.
+- **rail `bottom`** = −(the list's row gap + a few px of overlap), so the tail passes *under* the
+  next chip instead of stopping at its edge — −18 against a `gap: 12` list.
+
+**Fade the rail on alpha, not toward the page colour.** The gradient above runs one hex from
+`opacity: 100` to `26`; a fade whose last stop *is* the background renders the tail invisible and
+costs you 14px per row — trap 12 in `flow-schema.md`, and it reads as "the connectors are too
+short" while the config is right.
+
+Verify by measurement, never by eye: walk the painted runs down the rail column and assert **zero
+gaps** (`references/render-measure.py --column`). A rail that stops one pixel short looks like a
+design choice in a screenshot.
+
+> Superseded, and recorded so it is not rebuilt: this used to be an in-flow rail sized by
+> arithmetic, so that `chip + rail` exceeded the tallest text and the rail set the row pitch. It
+> works until the copy grows — a description going from two lines to four reopened a **49px** gap —
+> and every fix is another guess at a number a translator can invalidate. The absolute form has no
+> such number. The old note that `absolute` "cannot fix a layout-flow problem" was drawn from a
+> probe that never tried a `bottom` anchor.
 
 ### A selectable plan card
 
@@ -655,7 +713,7 @@ overlap. Budget the row explicitly: `left + w1 + gap + w2 + right` should equal 
 (here `11 + 170 + 17 + 182 + 11 = 391` on a 390pt phone). And leave the screen enough
 `padding.bottom` to clear the whole bar, or the docked row lands on top of the last content —
 measure it rather than assuming, with
-[`tests/render-measure.py`](../../../tests/render-measure.py).
+[`render-measure.py`](render-measure.py).
 
 ### A back button, and authoring an icon that does not exist yet
 
