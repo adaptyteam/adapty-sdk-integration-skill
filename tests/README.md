@@ -6,8 +6,9 @@ check it. The skills themselves are prose; testing those means running agents ag
 
 ## The corpus
 
-`fixtures/` holds four sanitized flow configs, tracked. The raw exports stay gitignored in
-`fixtures-raw/` because they carry real product UUIDs and real `public-media.adapty.io` URLs.
+`fixtures/` holds four sanitized flow configs plus one shape fixture, all tracked. The raw exports
+stay gitignored in `fixtures-raw/` because they carry real product UUIDs and real
+`public-media.adapty.io` URLs.
 
 | Fixture | What it exercises |
 | :--- | :--- |
@@ -15,9 +16,21 @@ check it. The skills themselves are prose; testing those means running agents ag
 | `comparison-paywall.json` | comparison table, custom typography preset, one product |
 | `vpn-timer-draft.json` | countdown timer, four uploaded custom fonts, no products |
 | `tabs-paywall.json` | the five-element tabs composite, three `const` product purchases — **confirmed to render** |
+| `timeline-anchored.json` | the stretch-between-anchors form — `absolute` with `top`+`bottom`, `height: auto`, negative `zIndex` — **confirmed to render**, and the calibration target for the two checks that guard it |
 
-**Why these are tracked and not gitignored.** The shipped skill never reads them — it has zero
-references to `tests/fixtures/` — so they are not skill content and a runtime agent never sees one.
+**`timeline-anchored.json` is a hybrid and is excluded from the census.** Its screen is a real
+builder export (element ids and all), but the theme comes from `onboarding-quiz-paywall.json`, the
+copy was replaced with English, and the `_meta.icons` SVG was hand-authored so it would draw. It
+earns a place because it is the only tracked artifact carrying that position form — the four census
+exports have none of it, and both `verify-config.py` warnings about it were calibrated against this
+file and two deliberately broken copies of it. Do **not** fold it into the counted claims in
+`flow-schema.md` ("234 of 246 positions are relative" and the rest): those are over the four
+exports, and a hybrid would quietly move numbers the skill presents as measurements of real
+builder output.
+
+**Why these are tracked and not gitignored.** The shipped skill never reads them at runtime — its
+references cite them only as provenance for a claim, never as a file to open or a script to run —
+so they are not skill content and a runtime agent never depends on one being there.
 They are tracked for two reasons that outlive any single session:
 
 1. **They are the regression corpus for the tooling.** Every check in `verify-config.py` was added
@@ -42,8 +55,8 @@ python3 skills/flow-generator/references/verify-config.py tests/fixtures/*.json 
 python3 tests/render-check.py                                           # does it draw?
 python3 tests/render-check.py --baseline                                # record references
 python3 tests/render-check.py --keep                                    # keep PNGs to look at
-python3 tests/render-measure.py shot.png --column 23:68                 # is a column continuous?
-python3 tests/render-measure.py shot.png --row 343                       # how wide is it, really?
+python3 skills/flow-generator/references/render-measure.py shot.png --column 23:68                 # is a column continuous?
+python3 skills/flow-generator/references/render-measure.py shot.png --row 343                       # how wide is it, really?
 python3 tests/test-flowkit.py                                            # the authoring helpers
 ```
 
@@ -81,6 +94,8 @@ means "this looked right at this size", never "the flow opens".
 
 
 ## `render-measure.py` — measure a render instead of eyeballing it
+
+*(Lives in `skills/flow-generator/references/` so it ships with the skill; the skill instructs agents to run it.)*
 
 `render-check.py` answers *did it draw*. This answers *where and how big*, which is the question
 you actually have when matching a screenshot.

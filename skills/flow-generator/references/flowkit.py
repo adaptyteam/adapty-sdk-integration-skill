@@ -84,13 +84,19 @@ def fill(color_id=None, *, hexval=None, layers=None):
 
 
 def gradient(angle, *stops):
-    """`gradient(180, ('#E1D6EB', 0), ('#EDE9F0', 1))`.
+    """`gradient(180, ('#E1D6EB', 0), ('#EDE9F0', 1))`, or with a per-stop alpha as a third
+    item: `gradient(180, ('#0E9F6E', 0, 100), ('#0E9F6E', 1, 22))`.
 
     A fade whose last stop IS the page colour makes the element's tail invisible, so it renders
-    shorter than it is — see trap 12. Stop one step short of the background.
+    shorter than it is — see trap 12. Stop one step short of the background, or better, fade
+    ONE hex toward transparency with the opacity form: that survives a change of background,
+    where a hardcoded near-background stop silently stops matching.
     """
-    return [{'type': 'gradient', 'angle': angle,
-             'stops': [{'color': hex_color(h), 'position': p} for h, p in stops]}]
+    out = []
+    for stop in stops:
+        h, p, *alpha = stop
+        out.append({'color': hex_color(h, alpha[0] if alpha else None), 'position': p})
+    return [{'type': 'gradient', 'angle': angle, 'stops': out}]
 
 
 def pad(top, left, right, bottom):
@@ -128,12 +134,20 @@ def layout(direction='vertical', gap=0, align_h='start', align_v='start',
             'distribution': dist}
 
 
+SIZE_KINDS = ('fill', 'hug', 'fixed', 'auto')
+
+
 def size(kind='fill', value=None):
-    """`fill`, `hug`, or `fixed` with a value.
+    """`fill`, `hug`, `fixed` with a value, or `auto`.
 
     `fill` height collapses inside a hug-height parent (trap 13) — inside a hug row, a stretch
-    has to be an explicit number.
+    has to be an explicit number, or the element has to leave the flow: see `absolute()`.
+
+    `auto` is the stretch-between-anchors height, and it is meaningless without them. `stack()`
+    enforces the pairing in both directions.
     """
+    if kind not in SIZE_KINDS:
+        raise ValueError(f'size kind must be one of {SIZE_KINDS}, not {kind!r}')
     return {'type': 'fixed', 'value': value} if kind == 'fixed' else {'type': kind}
 
 
@@ -141,6 +155,27 @@ def relative(z=None):
     p = {'type': 'relative'}
     if z is not None:
         p['zIndex'] = z
+    return p
+
+
+def absolute(*, top=None, left=None, right=None, bottom=None, z=None):
+    """An element pulled out of flow, offset against its PARENT (`fixed` pins to the screen).
+
+    Supply an offset for whichever axis the parent does not settle, or the element falls back
+    into flow order and lands wherever the flow carries it (trap 9).
+
+    Give it **both** `top` and `bottom` — with `height='auto'` — and it stretches between the
+    anchors instead, following its parent's height however the content grows. A negative
+    `bottom` overshoots past the parent's edge, which is how a timeline rail reaches into the
+    next row. Measured, all three parts load-bearing: drop `bottom` and the element collapses to
+    nothing; swap `auto` for `fill` and it stops 2px short; drop a negative `z` and it paints
+    OVER its siblings rather than behind them.
+    """
+    p = {'type': 'absolute'}
+    for k, v in (('top', top), ('left', left), ('right', right), ('bottom', bottom),
+                 ('zIndex', z)):
+        if v is not None:
+            p[k] = v
     return p
 
 
@@ -243,6 +278,25 @@ def _node(kind, props, *, children=None, caption=None, states=None,
     return node
 
 
+def _check_stretch(props):
+    """`height: auto` and a top+bottom anchor pair are one construct, so neither half is
+    representable alone. Both halves were measured on a rendered timeline row: anchors without
+    `auto` (a `fill` height) stopped 2px short of the next chip, and `auto` without the `bottom`
+    anchor collapsed the rail to nothing and left 108px of white.
+    """
+    pos, h = props['position'], props['height']
+    anchored = (pos.get('type') == 'absolute'
+                and pos.get('top') is not None and pos.get('bottom') is not None)
+    if anchored and h.get('type') != 'auto':
+        raise ValueError(
+            f"an absolute element anchored top AND bottom needs height='auto' to stretch "
+            f"between them, not {h.get('type')!r} — a fill height stops 2px short")
+    if h.get('type') == 'auto' and not anchored:
+        raise ValueError(
+            "height='auto' only means anything on an absolute element carrying BOTH a top and "
+            "a bottom offset; on its own it collapses to nothing. Use absolute(top=…, bottom=…)")
+
+
 def stack(children=(), *, width='fill', height='hug', fixed_w=None, fixed_h=None,
           direction='vertical', gap=0, align_h='start', align_v='start',
           distribution=None, fill_=None, padding=None, margin=None, corner=None,
@@ -254,6 +308,7 @@ def stack(children=(), *, width='fill', height='hug', fixed_w=None, fixed_h=None
         'layout': layout(direction, gap, align_h, align_v, distribution),
         'position': position or relative(),
     }
+    _check_stretch(props)
     if fill_ is not None:     props['fill'] = fill_
     if padding is not None:   props['padding'] = padding
     if margin is not None:    props['margin'] = margin
@@ -517,6 +572,23 @@ def screen(screen_id, nodes, *, caption=None, fill_=None, padding=None,
     return out
 
 
+def _typo(entry):
+    """`(id, name, size, weight)`, optionally extended with `lineHeight` and `letterSpacing`.
+
+    Both extras are plain numbers inside `settings`, verified against a real export that carries
+    them on 6 of its 7 presets. Leading is a design lever, not a nicety: at the default the
+    renderer gives a 30pt heading noticeably loose line spacing, and there is nowhere else to
+    set it — a `text` element cannot override what the preset does not carry.
+    """
+    i, n, s, w, *rest = entry
+    settings = {'size': s, 'weight': w}
+    if len(rest) > 0 and rest[0] is not None:
+        settings['lineHeight'] = rest[0]
+    if len(rest) > 1 and rest[1] is not None:
+        settings['letterSpacing'] = rest[1]
+    return {'id': i, 'name': n, 'settings': settings}
+
+
 PREDECLARE_NS = uuid.UUID('1b671a64-40d5-491e-99b0-da01ff1f3341')
 
 
@@ -592,8 +664,7 @@ def config(*, screens, colors=(), typography=(), icons=(), locales=(('en', 'Engl
         'theme': {
             'colors': [{'id': i, 'name': n, 'light': {'hex': lt}, 'dark': {'hex': dk}}
                        for i, n, lt, dk in colors],
-            'typography': [{'id': i, 'name': n, 'settings': {'size': s, 'weight': w}}
-                           for i, n, s, w in typography],
+            'typography': [_typo(t) for t in typography],
         },
         '_meta': {'icons': list(icons), 'fonts': [],
                   'screens': dict(meta_screens) if meta_screens else {}},

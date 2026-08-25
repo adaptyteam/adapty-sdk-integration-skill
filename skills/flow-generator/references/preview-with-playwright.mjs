@@ -4,7 +4,8 @@
  *
  * Point it at the file `adapty flows config get` gave you:
  *
- *   npx --yes --package=playwright node <this-file> --config flow.working.json \
+ *   npm i --prefix ~/.cache/adapty-flow-playwright playwright        # ONCE, not per call
+ *   (cd ~/.cache/adapty-flow-playwright && node <this-file> --config flow.working.json \
  *     --screen <screen_id> --out preview.png
  *
  * It opens the render page on a short URL and hands the config to the page's file input, so the

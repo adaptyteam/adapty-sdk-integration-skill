@@ -351,6 +351,28 @@ def check(path):
                     bad.append(f"{s['id']}/{e['id']}: {dim} fixed at {v.get('value')!r} — "
                                f"saves fine, kills the element on device")
 
+    # The stretch-between-anchors pair: an absolute element anchored top AND bottom stretches to
+    # its parent, and ONLY with height `auto`. Both halves are measured render failures on a
+    # timeline rail and both read as "the line is too short", which is why they are mechanical:
+    # `fill` with the anchors stopped 2px before the next chip, and `auto` with no bottom anchor
+    # collapsed the rail and left 108px of white. Nothing else sees either one — the schema types
+    # both heights as legal and `validate` has no opinion on layout.
+    for s, e in els():
+        p = (e.get('props') or {})
+        pos, h = p.get('position'), p.get('height')
+        if not isinstance(pos, dict) or not isinstance(h, dict):
+            continue
+        anchored = (pos.get('type') == 'absolute'
+                    and pos.get('top') is not None and pos.get('bottom') is not None)
+        if anchored and h.get('type') != 'auto':
+            warn.append(f"{s['id']}/{e['id']}: absolute and anchored top+bottom, but height is "
+                        f"{h.get('type')!r} — only `auto` stretches between the anchors; a fill "
+                        f"height stops 2px short of where it should end")
+        if h.get('type') == 'auto' and not anchored:
+            warn.append(f"{s['id']}/{e['id']}: height `auto` without an absolute top+bottom "
+                        f"anchor pair collapses to nothing — give it both offsets, or use a "
+                        f"real height")
+
     # groupId naming rules, both team-stated from publish failures: digit-led ids generate
     # invalid JavaScript (publish blocker), and a groupId reused on another screen broke
     # selection rendering.

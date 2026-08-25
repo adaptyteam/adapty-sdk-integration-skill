@@ -10,15 +10,15 @@ report. Reach for this whenever a judgement about a render is about position or 
 Stdlib only (no Pillow): 8-bit non-interlaced PNG, which is what headless Chrome writes.
 
     # is a column continuous? (connectors, timelines, rails, dividers)
-    tests/render-measure.py shot.png --column 23:68
-    tests/render-measure.py shot.png --column 23:68 --rows 300:700
+    render-measure.py shot.png --column 23:68
+    render-measure.py shot.png --column 23:68 --rows 300:700
 
     # how wide is a thing, actually? (chips, cards, buttons)
-    tests/render-measure.py shot.png --row 343
-    tests/render-measure.py shot.png --row 343 --cols 0:120
+    render-measure.py shot.png --row 343
+    render-measure.py shot.png --row 343 --cols 0:120
 
     # comparing against a reference screenshot at a different scale
-    tests/render-measure.py ref.png --column 50:121 --scale 602:390
+    render-measure.py ref.png --column 50:121 --scale 602:390
 
 `--column` reports painted vertical runs and the GAPS between them; zero gaps is what
 "connected" means. `--row` reports painted horizontal runs, i.e. widths. Both decide "painted"

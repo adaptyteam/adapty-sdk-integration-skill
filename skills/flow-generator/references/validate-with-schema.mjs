@@ -2,7 +2,8 @@
 /**
  * Schema-validate a flow config against the published JSON Schema.
  *
- *   npx --yes --package=ajv@8 node <this-file> --config flow.working.json
+ *   npm i --prefix ~/.cache/adapty-flow-schema ajv@8        # ONCE, not per call
+ *   (cd ~/.cache/adapty-flow-schema && node <this-file> --config flow.working.json
  *
  * `adapty flows config validate` checks publishability, not shape: it passes `fill: "banana"`
  * and `schemaVersion: 999` without complaint. This fills that gap — it reports the wrong-shaped
@@ -57,7 +58,8 @@ function loadAjv() {
   }
 
   console.error(
-    'Could not resolve ajv. Run this through `npx --yes --package=ajv@8 node ...`, or `npm i -D ajv@8` first.',
+    'Could not resolve ajv. Install it ONCE (`npm i --prefix ~/.cache/adapty-flow-schema ajv@8`) '
+    + 'and run from that directory. The `npx --package=ajv@8` form works but costs ~12s PER CALL.',
   )
   process.exit(1)
 }

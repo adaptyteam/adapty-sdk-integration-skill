@@ -34,6 +34,14 @@ def check(name, cond, detail=''):
         FAILURES.append(name)
 
 
+def raises(fn, exc=ValueError):
+    try:
+        fn()
+        return False
+    except exc:
+        return True
+
+
 def sample():
     """A document exercising the pieces most likely to drift."""
     ids = fk.Ids('el_T')
@@ -236,6 +244,48 @@ def main():
                     scrollable=False)['props']['layout']['distribution']
           == {'type': 'space-between'})
 
+    # The stretch-between-anchors pair. Both halves are measured render failures, so flowkit
+    # refuses each half alone rather than emitting it and warning about it later.
+    rail = fk.stack([], width='fixed', fixed_w=8, height='auto',
+                    position=fk.absolute(top=10, left=12, bottom=-18, z=-10))
+    check('absolute() keeps every offset it was given',
+          rail['props']['position'] == {'type': 'absolute', 'top': 10, 'left': 12,
+                                        'bottom': -18, 'zIndex': -10})
+    check('a top+bottom anchored stack takes height auto',
+          rail['props']['height'] == {'type': 'auto'})
+    check('absolute() omits the offsets it was not given',
+          fk.absolute(top=0, left=0) == {'type': 'absolute', 'top': 0, 'left': 0})
+    check('anchored top+bottom with a fill height raises',
+          raises(lambda: fk.stack([], height='fill',
+                                  position=fk.absolute(top=10, bottom=-18))))
+    check('height auto without a bottom anchor raises',
+          raises(lambda: fk.stack([], height='auto', position=fk.absolute(top=10))))
+    check('height auto on a relative element raises',
+          raises(lambda: fk.stack([], height='auto')))
+    check('size rejects a kind that is not a kind',
+          raises(lambda: fk.size('atuo')))
+
+    # A rail fades on ALPHA, so a stop needs an optional third item; without it the composition
+    # in patterns.md was unreachable from this module.
+    fade = fk.gradient(180, ('#0E9F6E', 0, 100), ('#0E9F6E', 1, 22))
+    check('a gradient stop carries a per-stop opacity when given one',
+          [s['color'].get('opacity') for s in fade[0]['stops']] == [100, 22])
+    check('a two-item gradient stop still omits opacity entirely',
+          'opacity' not in fk.gradient(180, ('#FFF', 0), ('#000', 1))[0]['stops'][0]['color'])
+
+    # Typography leading, verified present on 6 of 7 presets in a real export.
+    typo = fk.config(screens=[fk.screen('scr_t', [])],
+                     typography=[('a', 'A', 30, 'bold', 34, -0.5),
+                                 ('b', 'B', 15, 'regular', 21),
+                                 ('c', 'C', 13, 'regular')])['theme']['typography']
+    check('typography carries lineHeight and letterSpacing when given',
+          typo[0]['settings'] == {'size': 30, 'weight': 'bold', 'lineHeight': 34,
+                                  'letterSpacing': -0.5})
+    check('lineHeight alone is allowed', typo[1]['settings'].get('lineHeight') == 21
+          and 'letterSpacing' not in typo[1]['settings'])
+    check('the plain four-item preset is unchanged',
+          typo[2]['settings'] == {'size': 13, 'weight': 'regular'})
+
     # --- timer -------------------------------------------------------------------------
     # The bug this guards: a countdown's digit tokens carry a `timer_` PREFIX. The bare names
     # save and pass `flows config validate`, and the Flow Builder then paints them red
@@ -254,12 +304,8 @@ def main():
     check('the separator is a rich-text node, not a bare string',
           [n.get('text') for n in nodes if n.get('type') == 'text'] == [':', ':']
           and all('attrs' in n for n in nodes if n.get('type') == 'text'))
-    try:
-        fk.timer_digits(units=('hours', 'mins'))
-        check('an unknown timer unit raises rather than emitting a bare token', False,
-              "'mins' was accepted")
-    except ValueError:
-        check('an unknown timer unit raises rather than emitting a bare token', True)
+    check('an unknown timer unit raises rather than emitting a bare token',
+          raises(lambda: fk.timer_digits(units=('hours', 'mins'))))
 
     delay = fk.timer(actions=[{'id': 'act_next', 'type': 'navigate',
                                'payload': {'type': 'screen', 'screen': 'scr_next'}}],
