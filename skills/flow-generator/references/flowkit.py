@@ -70,7 +70,13 @@ def hex_color(hexval, opacity=None):
 
 
 def fill(color_id=None, *, hexval=None, layers=None):
-    """A fill. v10 spells this as an ARRAY of layers composited bottom -> top."""
+    """A fill. v10 spells this as an ARRAY -- but pass ONE layer.
+
+    A two-layer fill draws in `config preview` and is IGNORED on device (measured: an
+    image+gradient screen fill shipped with the tint missing, after validate, the schema check
+    and the render all passed). No real export has a multi-layer fill. Bake a tint into the
+    asset instead, or give it its own element.
+    """
     if layers is not None:
         return list(layers)
     c = color(color_id) if color_id is not None else hex_color(hexval)
@@ -277,6 +283,54 @@ def icon(name, *, size_pt=22, color_id=None, weight='regular', position=None, **
     if color_id is not None:
         props['icon']['color'] = color(color_id)
     return _node('icon', props, **kw)
+
+
+#: The deliberate "no asset exists" content for `image()`. Spelled as a constant so an empty
+#: values map is something you *asked* for and a reader can grep, never something you forgot.
+PLACEHOLDER = object()
+
+OBJECT_FIT = ('cover', 'fit')
+
+
+def image(url, *, media_id=None, fit='cover', width='fill', height='hug',
+          fixed_w=None, fixed_h=None, corner=None, margin=None, position=None,
+          locale='en', **kw):
+    """An `image` element bound to an uploaded asset.
+
+    `url` is the CDN URL that `flows media upload` printed, and `media_id` the id it printed
+    alongside — passed through `str()`, because the command prints a number while the schema
+    declares `IImage.id` as a string. Pass `flowkit.PLACEHOLDER` as the url for the no-asset
+    case; anything else falsy is an error rather than a silent empty map.
+
+    Geometry, measured (media.md): with `height='hug'` the drawn height comes from the ASSET's
+    aspect ratio, so the screen re-flows if the file is swapped and `fit` has no visible effect.
+    With a fixed height the box wins and the asset absorbs the mismatch — `cover` crops it,
+    `fit` letterboxes it and leaves a dead band.
+    """
+    if fit not in OBJECT_FIT:
+        raise ValueError(f'objectFit must be one of {OBJECT_FIT}, not {fit!r}')
+    if url is PLACEHOLDER:
+        content = {'values': {}, '_localizable': True}
+    elif isinstance(url, str) and url.strip():
+        entry = {'url': url}
+        if media_id is not None:
+            entry['id'] = str(media_id)
+        content = {'values': {locale: entry}, '_localizable': True}
+    else:
+        raise TypeError(
+            'image(url=...) wants the URL that `flows media upload` printed, or '
+            'flowkit.PLACEHOLDER for an image no file exists for — never an invented URL, and '
+            f'never {url!r}')
+    props = {
+        'image': content,
+        'width': size('fixed', fixed_w) if fixed_w is not None else size(width),
+        'height': size('fixed', fixed_h) if fixed_h is not None else size(height),
+        'objectFit': fit,
+        'position': position or relative(),
+    }
+    if corner is not None:  props['borderRadius'] = corner
+    if margin is not None:  props['margin'] = margin
+    return _node('image', props, **kw)
 
 
 def product(children=(), *, product_id, group_id, default=False, **kw):

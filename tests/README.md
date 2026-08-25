@@ -20,7 +20,7 @@ check it. The skills themselves are prose; testing those means running agents ag
 references to `tests/fixtures/` — so they are not skill content and a runtime agent never sees one.
 They are tracked for two reasons that outlive any single session:
 
-1. **They are the regression corpus for the tooling.** Every check in `verify-fixture.py` was added
+1. **They are the regression corpus for the tooling.** Every check in `verify-config.py` was added
    after a real defect and then run against all four to confirm it does not false-positive. That
    caught a wrong rule once already: a hex-fill check, added in the belief that a raw hex in a `fill`
    is ignored, **fired on two of these fixtures** — which is how the real cause (opacity is a 0-100
@@ -38,7 +38,7 @@ crash, so it is evidence rather than just coverage. Sanitizing it does **not** c
 
 ```bash
 python3 tests/sanitize-fixture.py fixtures-raw/x.json fixtures/x.json   # regenerate a fixture
-python3 tests/verify-fixture.py tests/fixtures/*.json                   # structural checks
+python3 skills/flow-generator/references/verify-config.py tests/fixtures/*.json                   # structural checks
 python3 tests/render-check.py                                           # does it draw?
 python3 tests/render-check.py --baseline                                # record references
 python3 tests/render-check.py --keep                                    # keep PNGs to look at
@@ -58,7 +58,7 @@ no auth) and Chrome or Chromium.
 Measured 2026-08-20 by injecting the two defects from `flow-schema.md` trap 10 into
 `tabs-paywall.json`, the config confirmed to render:
 
-| Defect | `verify-fixture` | `render-check` blank test | `render-check` baseline diff |
+| Defect | `verify-config` | `render-check` blank test | `render-check` baseline diff |
 | :--- | :--- | :--- | :--- |
 | 108 elements missing `states` | **caught** | passed | caught — 1.2% |
 | group typed `tabs` not `single_choice` | **caught** | passed | caught — 1.2% |

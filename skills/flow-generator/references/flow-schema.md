@@ -102,7 +102,7 @@ the one invariant on this list that a real multi-locale export has never exercis
 | 5 | A price variable resolves by **one of two forms**, and which one decides what it must name. Product-relative — `<productUUID>.prod_price_per_*`, head is a product id declared in `_meta.screens` (in the corpus, always on the same screen that reads it). Group-relative — `<groupId>.selectedProduct.<field>`, head is a `product`-typed `selectableGroups` id, **not** a product id | copy rewrite, moving a screen or element | The price renders empty. Nothing fails loudly. **Validate the head against the form, or you generate a false positive:** checking the first segment of a group-relative variable against the product list rejects a valid file and invites an agent to "repair" correct work. Provenance, precisely: the product-relative form is the only one in the corpus. The **field names are documented** — [Element variables](https://adapty.io/docs/onboarding-variables.md) lists `prod_price` alongside `prod_price_per_{day,week,month,year}`. What is unverified is the group-relative **reference syntax** `<groupId>.selectedProduct.<field>`: it appears in no export and on no docs page, only in a live Flow Builder screen. **That syntax is now device-verified and safe to author:** on a real device a root-level line reading `<groupId>.selectedProduct.prod_price` resolved to a real price and **changed as each card was tapped**, so it tracks the live selection rather than resolving once. `prod_price_per_month` on an **annual** product likewise resolved to a real derived figure, so a per-month field does not require a monthly product. Preserve it verbatim where you find it, and authoring it is fine. [`products.md`](products.md) owns the handling rules. |
 | 6 | Every `selectableGroups[].id` has at least one member element carrying that `groupId`, and every `groupId` in use has a declared group | branching edits | A group with no members and a member with no group are both broken selection state. Groups are per screen and typed (`single_choice`, `product`). Two team-stated naming rules: a `groupId` must **not start with a digit** (`1a` generated invalid JavaScript and blocked publish), and should be **unique across the flow**, not merely its screen — two screens sharing `"products"` broke selection rendering. |
 | 7 | Every `const` compared against `<groupId>.selectedOptionId` matches some member's `customId` | branching edits, renaming an option | The case never matches, so every user takes the `default` branch. Silent — the flow still routes somewhere. |
-| 8 | Every `colorId` and every `font.preset` resolves in **that file's own** `theme` | pasting a screen from another flow | **A hard 422, confirmed.** A screen pasted in from another flow kept `font.preset: "button-label"`, a preset the destination theme does not define; device preview returned `unknown_font_preset` as **severity `error`**, once per text element, blocking the whole flow. `config update` had saved it without complaint. So this is a publish blocker, not a cosmetic drift — and `tests/verify-fixture.py` catches it, which is the check earning its place. Fix by repointing to a preset the destination theme has, not by adding the source's name to the theme. Never validate these against a remembered list of built-in names — see [Shape traps](#shape-traps). |
+| 8 | Every `colorId` and every `font.preset` resolves in **that file's own** `theme` | pasting a screen from another flow | **A hard 422, confirmed.** A screen pasted in from another flow kept `font.preset: "button-label"`, a preset the destination theme does not define; device preview returned `unknown_font_preset` as **severity `error`**, once per text element, blocking the whole flow. `config update` had saved it without complaint. So this is a publish blocker, not a cosmetic drift — and `references/verify-config.py` catches it, which is the check earning its place. Fix by repointing to a preset the destination theme has, not by adding the source's name to the theme. Never validate these against a remembered list of built-in names — see [Shape traps](#shape-traps). |
 | 9 | Every `family.id` resolves in `_meta.fonts` — via **both** reference paths: an element's `props.font.family.id`, and `theme.typography[].settings.family.id` | pasting a screen from another flow, editing or deleting a typography preset | Unresolvable font reference. **Check both paths or you check nothing**: element-level refs number 7 in `timer` and 0 in both `quiz` and `comparison`, so in `comparison` all three declared fonts are reached only through theme presets, and in `timer` the two paths together are what reach all four. A check that reads only element props would find `comparison`'s `_meta.fonts` entirely unreferenced and could license deleting them. Resolving here also does not mean the font ships — trap 7. |
 | 10 | Every `(name, weight)` icon pair used by an `icon` element appears in `_meta.icons` | adding an icon | `_meta.icons[].raw` carries the literal SVG markup the renderer draws, so an unlisted pair has nothing to draw. `raw` cannot be synthesized. |
 | 11 | Every locale in `locales[]` has an entry in every `_localizable` `values` map | adding a locale | The field falls back or renders empty for that locale. There are three localizable families, not one — trap 1. |
@@ -162,7 +162,7 @@ Measured by bisection, holding everything else constant:
 | `{"values": {"en": "Age"}}` | renders |
 | `"Age"` | renders |
 
-Neither `verify-fixture.py` nor the official v10 schema catches it — both pass the broken config.
+Neither `verify-config.py` nor the official v10 schema catches it — both pass the broken config.
 Only the render does, which is trap 10's lesson with a louder failure: **one wrong value shape on
 one prop is a screen-level outage**, not a local defect. So a helper that builds rich text is the
 wrong tool for a placeholder, and reusing one across both families is how this project broke two
@@ -293,17 +293,25 @@ variables](https://adapty.io/docs/onboarding-variables.md) documents the UI as o
 `selected_id` and `selected_title`; the JSON writes `selectedOptionId`. Take the string from
 the file, never from a docs table.
 
-### 5. An asset you do not have is an EMPTY values map, never a made-up URL
+### 5. An asset you have no FILE for is an EMPTY values map, never a made-up URL
 
-You cannot create media. An `image` (or video) whose asset the user has not uploaded yet is
-written with the localizable wrapper intact and **nothing in it**:
+**If you were given a file, upload it** — `flows media upload` returns a live CDN URL to bind, and
+the shapes it binds into (per-locale `values` map on an element, flat inside a `fill`) plus the
+`id`-is-a-string rule live in [media.md](media.md). This trap governs what is left after that: an
+image nobody has a file for, an SVG (upload returns `http_500`), or a video (no path at all).
+
+You still cannot *create* media. An `image` whose asset does not exist is written with the
+localizable wrapper intact and **nothing in it**:
 
 ```json
 "image": {"_localizable": true, "values": {}}
 ```
 
 Not a placeholder URL, not `example.com`, not a plausible-looking
-`public-media.adapty.io` path. An invented URL is worse than an empty map three ways: it looks
+`public-media.adapty.io` path — and that last one matters more now that real uploads live on
+exactly that host: a `public-media.adapty.io` URL is legitimate **only** if `flows media upload`
+printed it in this session. Copying one from another flow, from a fixture, or from the shape of
+one you saw is an invented URL wearing the right costume. An invented URL is worse than an empty map three ways: it looks
 resolved so nobody uploads anything, it silently fails at runtime rather than showing as
 unset in the builder, and a fabricated `id` collides with the real asset namespace.
 
@@ -313,8 +321,12 @@ exactly what to upload.
 
 **A styled placeholder beats a lookalike substitute — never stand an emoji in for a designed
 glyph.** When the reference uses icons you cannot author faithfully, the ladder is: author a
-monochrome SVG and render-verify it ([patterns.md](patterns.md)); failing that, ship an **empty
-styled `image` element**; never an emoji or a text glyph. The reason is what each one tells the
+monochrome SVG and render-verify it ([patterns.md](patterns.md)); if the glyph is **multicolour or
+gradient**, which `fill="currentColor"` cannot express, **draw it, rasterize it on a transparent
+background and upload it** ([media.md → When a graphic cannot be an element](media.md)) — and say
+you drew it; failing both, ship an **empty styled `image` element**; never an emoji or a text
+glyph. Nothing with **text** in it, nothing **selectable**, and nothing that must follow the
+**theme** may become a bitmap — those three are the exclusions media.md owns. The reason is what each one tells the
 person who opens the flow: a placeholder is visibly unfinished and asks to be filled, while an
 emoji looks finished and quietly ships a different design — and nothing downstream flags it,
 because a substitute is structurally valid. This was the user's own call on a build where four
@@ -431,7 +443,7 @@ Neither is caught by `flows config validate` — re-measured against `adapty/0.8
 that endpoint answers *publishable*, which both of these configs were. And neither is caught by `flows config preview`: both defects were
 re-injected into a config known to render, and both still rendered, losing only a selected-tab
 highlight. **The two well-formedness rows in `SKILL.md`'s Verify list are what catch these**, and
-`tests/verify-fixture.py` in this repo checks both mechanically. Preview earns its place on the
+`references/verify-config.py` in this repo checks both mechanically. Preview earns its place on the
 class these two are not: layout and spacing defects that are structurally perfect.
 
 Both mistakes came from trusting the wrong kind of evidence. Order sources by what they prove:
@@ -583,7 +595,7 @@ also saves, and kills the element on device. Rules:
   element you are editing anyway, report the rest, and treat a large one (bigger than a screen)
   as the likely cause of a "content vanished on device" complaint.
 
-`tests/verify-fixture.py` warns on both forms.
+`references/verify-config.py` warns on both forms.
 
 ### 16. `purchase` hard-terminates the flow — nothing can be shown after it
 
@@ -613,6 +625,89 @@ is inert twice over: the transform service reports
 produced a **byte-identical render**. Authoring it buys one warning per text element and nothing
 else, so **do not add it to text you create**. Leave it where you found it — stripping a key you
 did not add is an unrequested edit — but there is no reason to write a new one.
+
+### `theme.colors` and `theme.typography` share ONE id namespace
+
+Reuse an id across the two and the **device SDK fails to decode the flow at all**:
+`DecodingError: dataCorrupted … Debug description: Duplicate Key`. The screen never opens — this
+is not a cosmetic defect.
+
+Nothing an agent can run locally catches it. Measured on the offending config: `flows config
+validate` returned **`valid: true`**, the schema check passed, and `config preview` rendered the
+screen perfectly, because the preview renderer resolves the two lookups separately while the SDK
+builds one keyed container from `theme`. Reported from a real device after every gate was green.
+
+Evidence that the namespace really is shared: **8 of 8 real exports** in the corpus (sanitized and
+raw alike) have **zero** overlap between the two id sets, and the builder's own naming keeps them
+apart — colours are `accent`, `gray-200`, `clr_RvBg`; presets are `body`, `caption`,
+`button-label`. The single collision ever seen was authored here: a `footer` colour next to a
+`footer` typography preset.
+
+So **name presets and colours in separate spaces** (`legal` for the preset, `footer` for the
+colour). `references/verify-config.py` is the only gate that will tell you, and it now covers the
+whole class rather than this one instance: it **errors** on a repeated id in any id-keyed
+collection — `theme.colors`, `theme.typography`, `locales[].code`/`.id`, `screens[].id`,
+`variables[].id`, `_meta.fonts[].id`, `_meta.icons` by name+weight, a screen's
+`selectableGroups`, an element's `states` and `interactions`, action ids within an element, and
+`_meta.screens[].products` — plus the colour/preset cross-collision above. It **warns** where the
+collision is plausible but unproven: the same icon *name* at two weights, which no real export
+does (0 of 8) but which only collides if the consumer keys icons by name alone.
+
+Calibrated both directions: silent on all 8 corpus files (sanitized and raw), and each check
+fires on its own injected duplicate.
+
+### The schema tells you which actions are supported: `x-supported`
+
+Every `IAction*` definition carries an **`x-supported`** boolean. Checked across all 16:
+**`selectProduct` is the only `false`** — everything else (`purchase`, `openUrl`,
+`restorePurchases`, `navigate`, `conditional`, `showElement`/`hideElement`, `alert`, `custom`,
+`setVariable`, `closeFlow`, `navigateBack`/`navigateNext`, `nothing`) is `true`. Read the flag
+before authoring an action you have not used before; it is cheaper than a device round trip, and
+it is the only place this is written down.
+
+Same caution as everywhere else, though: the flag is *schema* metadata, so `validate` still
+outranks it. Grep it with `jq`, never by reading the file.
+
+### Which group types a conditional can read — and the one action that does not work
+
+Measured 2026-08-25 against `flows config validate` on a real flow, one predicate per run. A
+conditional whose predicate names an unreadable variable fails the publish gate with
+**`Generated scripts failed validation`** — location-free, exactly like a malformed hex, because
+the transformer compiles predicates into JavaScript and an unresolvable name yields invalid script.
+
+| group `type` | predicate variable | `validate` |
+|---|---|---|
+| `product` | `<groupId>.selectedProduct` | **valid** |
+| `single_choice` | `<groupId>.selectedOptionId` | **valid** |
+| `multi_choice` | `<groupId>.selectedOptionId` | **fails** |
+| `toggle` | `.selectedOptionId`, `.selected`, `.value` — all three tried | **fails** |
+
+So **a `toggle` group exposes nothing a condition can read.** This corrects the support-channel
+workaround recorded for driving plan selection from a switch: it cannot be keyed on the toggle.
+
+**`selectProduct` is the one action the schema flags `"x-supported": false`** — every other action
+type is `true` — and its payload takes `{element: <element id>}`, not a product id. Bisected: a
+conditional containing only `nothing` actions failed too, so the gate was objecting to the
+predicate rather than to `selectProduct`; but the flag plus the unreadable toggle variable mean
+**a toggle cannot move a product group's selection**. Drive the visible difference with
+`propsByState` on the toggle's own element, and put the conditional where it reads a product
+group.
+
+**Conditional rich text validates, and the `switch` nests INSIDE the locale value**, with each
+branch a `const` holding that locale's paragraph array:
+
+```json
+"content": {"_localizable": true, "values": {"en": {
+  "type": "switch",
+  "cases": [[ {"type": "&&", "predicates": [
+                {"left": {"type": "var", "variableId": "plans.selectedProduct"},
+                 "type": "==", "right": {"type": "const", "value": "<product-uuid>"}}]},
+              {"type": "const", "value": [ …paragraph runs… ]} ]],
+  "default": {"type": "const", "value": [ …paragraph runs… ]}}}}
+```
+
+The render draws **one branch of one locale with no tell in the PNG**, so read it, do not look at
+it.
 
 ## The schema, the catalog, and the two different validators
 
@@ -692,11 +787,24 @@ documented by its own publishers:
   writes, not inferred from `required`.)
 - **Where the schema and `validate` disagree, `validate` wins** — in both directions. And a clean
   `validate` is still not proof: it passes plenty of malformed props without complaint.
+- **It has at least one unsatisfiable definition, so some findings can never be cleared.**
+  `IDynamicProductValue` is a `oneOf` over **two branches that are byte-identical** — both
+  `{"type": "object", "properties": {"type": {"type": "string"}}, "required": ["type"]}`, one
+  commented `JSONVariable` and one `JSONConstant`, both marked "shape intentionally opaque,
+  validated by the transformer". Any value that matches one matches both, and `oneOf` demands
+  exactly one, so **every `purchase` action fails the schema check** — that is, every paywall
+  with a plan picker. Verified 2026-08-25 both ways: the reported errors vanish when the
+  `purchase` action alone is swapped out of an otherwise-clean 343-element config, and
+  `tests/fixtures/onboarding-quiz-paywall.json` — a real builder export that renders and sells —
+  carries the identical `{"type": "var", "variableId": "<group>.selectedProduct"}` payload and
+  fails the same way. **Do not "fix" this.** Recognise the signature: four findings clustered on
+  one element id, on `type`, `interactions/0/actions/0/type`, `.../payload` and `props/layout` —
+  the last two are ajv reporting sibling `oneOf` branches, not separate defects.
 
 ### The `fill` shapes are a version difference, with a live exception
 
-v9 spells a fill as a single object; v10 as an array of layers composited bottom → top, which is
-how a tint over an image is expressed. Measured across four real exports plus one hand-built config:
+v9 spells a fill as a single object; v10 as an **array** — but read the next section before you
+put two things in that array. Measured across four real exports plus one hand-built config:
 
 | Config | `schemaVersion` | fill form |
 | :--- | :-- | :--- |
@@ -706,6 +814,27 @@ how a tint over an image is expressed. Measured across four real exports plus on
 So the version rule is the explanation, not a law: a v9 flow carrying array fills exists and works.
 Which is why the operating rule is unchanged and is the safe one either way — **read the form the
 input uses and keep it.** Author the array form only in a config that already uses it.
+
+#### One layer per fill: the array is a container, not proof of compositing
+
+**A fill with two layers draws in `config preview` and is ignored on the device.** Measured the
+hard way: a screen fill of `[{image}, {gradient}]` — an asset with a dark scrim over it — rendered
+exactly as intended in the preview page, passed `flows config validate` (`valid: true`), passed
+the schema check, and shipped to an iOS device **with the tint simply absent**. The extra layer
+was dropped.
+
+The corroboration was sitting in the corpus the whole time: **every array fill in every real
+export has exactly one layer — 0 of 8 files contain a multi-layer fill**, and image fills and
+gradient fills always live on separate elements. The builder never emits the shape, so nothing
+downstream is obliged to composite it.
+
+An earlier version of this section said the array is "composited bottom → top, which is how a tint
+over an image is expressed". That sentence is what produced the bug; the array form is a container
+the schema permits, not a compositing feature you can rely on.
+
+**So express a tint one of two ways:** bake it into the asset and upload the result (one `image`
+layer — see [media.md](media.md)), or put the second visual on its own element. **One visual
+layer per fill.**
 
 ### `effects` renders — a drop shadow is available, and measured
 
@@ -757,7 +886,7 @@ Four consequences, and the nesting order is the reason for all of them:
   about a product id is silently two different screens.
 - **Locale parity is per branch, not per field.** A field that "has a `ru` value" can still be
   half-translated: the case in Russian, the default in English. Whoever sees it is the user who
-  picked the *other* plan. `tests/verify-fixture.py` compares branch counts across locales for
+  picked the *other* plan. `references/verify-config.py` compares branch counts across locales for
   exactly this, and crashed on this shape until it was taught about it.
 - **`<groupId>.selectedProduct` compares against a product UUID**, the product-group analogue of
   `<groupId>.selectedOptionId == "<customId>"`. Invariant 5's rule applies from the other

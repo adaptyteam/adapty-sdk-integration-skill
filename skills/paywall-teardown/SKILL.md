@@ -103,7 +103,7 @@ observable, and they usually leave one or two candidates standing.
 | Archetype | Centerpiece | Pick it when | Rules it out |
 | :-- | :-- | :-- | :-- |
 | **Comparison-led** | Free-vs-paid table above the plans | The app has a real free tier **and you know its actual limits**; analytical categories (productivity, finance, AI tools) | No free tier, or you would have to guess the limits |
-| **Hero / visual-led** | A large image or looping video of the result | You have the asset, and the app's value is visible output (beauty, photo/video, fitness) | You do not have the asset — an image you cannot upload is not an archetype |
+| **Hero / visual-led** | A large image or looping video of **the real result** | You have a readable path to that asset, and the app's value is visible output (beauty, photo/video, fitness) | Nobody has the file. A file you *were* given is no longer a blocker — `flows media upload` places it (SVG and video excepted) — but **a graphic you drew yourself does not satisfy this prerequisite**: the archetype sells the app's actual output, and an illustration standing in for it is a fabricated result, the same class as a fabricated rating |
 | **Trial-timeline** | Day 0 → reminder → charge, as a connected timeline | The product **really carries an intro offer or trial** you can name | No verified offer on the product. A timeline for a trial that may not exist is a fabricated offer |
 | **Segmented tabs** | Period switcher (Yearly / Monthly) over one price panel | Plans differ **only by period** within one tier | Tiers differ by feature set — a switcher hides the difference that matters |
 | **Editorial benefit list** | Outcome-led benefit rows with titles and descriptions | Value is explanatory rather than comparative; no free tier to compare against; emotion-driven categories | The decision really is free-vs-paid |
@@ -120,7 +120,9 @@ switcher). What is not defensible is arriving at a composition by inertia.
   strongest for a trial-first funnel is the timeline — and both are unavailable when you have no
   asset or no verified offer. Say which one you *wanted* and why you could not have it; that
   sentence is often the most valuable line in the write-up, because it tells the user which asset
-  to go get.
+  to go get. **Check whether the prerequisite is actually missing before you rule an archetype
+  out**: an image file the user already handed over is uploadable now, so "no asset" means nobody
+  has the file — not that the file cannot be placed.
 - **The same archetype twice in a row is a smell.** If your last screen used this composition,
   check that you are choosing it rather than carrying a previous build's script forward. That is
   the actual mechanism behind the measurement above: not a bad judgement, a copied file.
@@ -220,7 +222,7 @@ the patterns that depend on them must name that in **Needs from you**:
 | Social proof | Element yes | The real rating and volume |
 | Results/proof with real data | Element yes | The real outcome data — otherwise drop to outcome *framing*, which is a copy-tier change |
 | Countdown timer | Yes | A real discount to count down to; no offer means no timer |
-| Hero image / video, background image | **No** — an uploaded asset | The file. An image you do not have is an empty values map, never a made-up URL |
+| Hero image / video, background image | **Yes, given the file** — `flow-generator` uploads it (not SVG, not video) | The file itself. An image nobody has a file for is an empty values map, never a made-up URL |
 | Goal-personalized headline | Yes, if a variable producer exists earlier in the flow | The onboarding step that captures the goal, if there isn't one |
 
 Mechanics for all of these — the `old-price` element, `_meta.icons`, empty asset maps, variable

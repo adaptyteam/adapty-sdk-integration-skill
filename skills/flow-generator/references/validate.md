@@ -93,6 +93,19 @@ Each row measured by injecting the defect into a real, previously-clean config.
 | `defaultLocale` naming no configured locale | `Default locale "<code>" does not match a configured locale (defaultLocale)` |
 | A locale declared in `locales[]` with no translated values | `Generated JSON failed schema validation` |
 | A malformed hex colour (e.g. `#FFf`) | `Generated JSON failed schema validation` |
+| An `icon` used but not declared in `_meta.icons` — **including a `custom` icon whose name is a builtin** | `Unsupported flow input: Icon "<name>" with weight "<w>" is missing from flow._meta.icons (screens[…].props.icon)` |
+
+That last row surprised a real build and is worth stating on its own: a **`spinner`** whose
+`props.icon` is `{"type": "custom", "name": "spinner1"}` — a name lifted straight out of
+`component-catalog.json`, i.e. one the builder ships — is still refused until `_meta.icons`
+carries an entry for it. Measured 2026-08-25: that was the only issue on an otherwise-clean
+343-element config, and adding a `{"name": "spinner1", "weight": "regular", "raw": "<svg …>"}`
+entry cleared it. So the Verify rule "every icon used appears in `_meta.icons` with real `raw`
+SVG" has no builtin exemption, and `type: "custom"` does not mean "the runtime already has it".
+Note also what the render then does with it: `config preview` drew **its own** arc spinner rather
+than the authored `raw` path — the same authored-versus-bundled ambiguity
+[patterns.md](patterns.md) records for icon names, so the `raw` you ship is what the device gets
+and the preview cannot confirm it.
 
 The first four are the ones that matter most in practice, because they are the ones an ordinary
 transform produces: removing a screen strands a `navigate`, moving an element strands a `groupId`,
@@ -109,7 +122,7 @@ products that no `_meta.screens` block declares. Adding a declaration for the fi
 with a made-up `flowProductId` — cleared that error and surfaced **the next undeclared product**,
 on a different element. One fatal per run, the fix confirmed by the error moving on.
 
-The local check beats the round trip here: `tests/verify-fixture.py` names **all three**
+The local check beats the round trip here: `references/verify-config.py` names **all three**
 undeclared products in one pass, where `validate` would have taken three calls to reach them. That
 is the whole argument for walking [Verify](../SKILL.md#verify) first.
 
@@ -125,8 +138,8 @@ A clean `validate` is a floor, not a proof. Every one of these passed with `vali
 |---|---|
 | `fill: "banana"` and most malformed props | the schema check (`validate-with-schema.mjs`) |
 | `schemaVersion: 999` | the schema check |
-| A top-level `status` / `id` on a file deliverable | `tests/verify-fixture.py` |
-| An element with no `states` key — a config the builder cannot open | `tests/verify-fixture.py` |
+| A top-level `status` / `id` on a file deliverable | `references/verify-config.py` |
+| An element with no `states` key — a config the builder cannot open | `references/verify-config.py` |
 | A missing `defaultLocale` | nothing — and the schema is wrong to call it required |
 | A hyphen in an element id, which breaks the generated runtime script | nothing; renders as a black screen on device |
 | Advisory warnings about silently dropped props (`verticalAlign` and friends) | nothing reachable from the CLI |
