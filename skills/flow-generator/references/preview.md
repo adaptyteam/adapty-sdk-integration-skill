@@ -38,7 +38,7 @@ has already dropped out of context, it is recoverable — user attachments are s
 session transcript (`~/.claude/projects/<project>/<session>.jsonl`, blocks with
 `"type":"image"`) — so extract it rather than guessing again.
 
-Comparing means *measuring*, not glancing. `tests/render-measure.py` does it for either image —
+Comparing means *measuring*, not glancing. [`render-measure.py`](render-measure.py) does it for either image —
 `--row Y` for widths, `--column X0:X1` for painted runs and the gaps between them, and
 `--scale <image-width>:<device-points>` to convert a reference's pixels into the numbers you put in
 a config.
@@ -52,6 +52,60 @@ hits dark glyphs and dark pixels in a hero image, which truncates the run and yi
 is confidently wrong — it took three attempts on one mockup, each producing a different "screen
 height", before the row-mean scan gave the real 393×875. With true bounds, sampling the palette
 becomes exact: three independent samples of the same accent returned the identical hex.
+
+## What a render costs, and which knobs do nothing
+
+The screenshot is the most expensive step in the whole workflow, so it is worth knowing what
+actually drives it. Measured on one config, same machine:
+
+| | |
+|---|---|
+| One headless screenshot | **17-20 s** |
+| `flows config preview` (the URL) | **0.08-0.11 s** — and a 187 KB config is no slower than a 57 KB one |
+| `--virtual-time-budget` 5000 vs 9000 ms | **byte-identical output**, 20.2 s vs 17.1 s |
+| `--virtual-time-budget` 1500 ms | **no file at all**, and the wait runs to your timeout |
+| 3 Chrome instances at once | did **not** finish in 120 s, when one alone takes 18 s |
+
+So *when the host is fast* the cost is Chrome's **cold start** — not the page, not the config size,
+and not the budget.
+
+**Corrected the same day, and the correction matters more than the table:** when the render host
+is *slow*, the budget is the only thing that decides whether you get a file at all. Measured on a
+slow afternoon — an 8 s budget produced nothing for a config that had rendered fine hours earlier,
+Playwright timed out at 30 s on `domcontentloaded`, and **a 60 s budget produced a correct
+screenshot ~72 s later**. The same page loaded normally in a real (non-headless) browser
+throughout. So **"no file" is far more often a slow host than a broken config**: escalate the
+budget, then check the URL in a real browser, and only then suspect your work.
+[`shoot.sh`](shoot.sh) retries at 60 s automatically.
+
+Three consequences:
+
+- **The number of renders is the cost of phase 4.** Render the screens you changed, not every
+  screen. A seven-screen re-render to check one edit is six launches of pure waste.
+- **Do not tune the budget *down*.** Lowering it buys nothing on a fast host and yields no file at
+  all below a threshold, and the failure looks exactly like a hung render rather than a bad flag.
+  Raising it is the correct response to an empty shot — see the correction above.
+- **Do not parallelise.** Instances contend; `--user-data-dir` (the obvious fix for that) makes
+  the launch fail outright, which is a second way to lose a minute.
+
+**Join the screenshots into one strip before looking**, with
+[`montage.py`](montage.py) — `montage.py strip.png a.png b.png c.png`. It is pure stdlib, so
+there is nothing to install. That turns N inspections into one, and a before/after pair only reads
+as a *difference* when the halves are adjacent; `--gutter 0` butts them together when you are
+comparing pixel positions rather than eyeballing.
+
+## Two things a render equates that the config does not
+
+- **An identical screenshot is not an identical config.** Measured: deleting an entire
+  `bottom-sheet` element gave a **byte-identical** render, because the sheet was hidden in the
+  state that draws. So a before/after pair that looks the same is not evidence the change was
+  cosmetic — it may be evidence the change is invisible *in this state*. Structural summaries are
+  what cover the gap, which is why the phase-5 approval ask has a second list for changes with
+  nothing to see.
+- **The page renders one screen and does not walk the flow.** Measured: a button carrying a
+  `navigate` action left the page where it was, across two real clicks and a synthetic dispatch.
+  So a multi-screen change is N separate renders, and opening N tabs buys noise rather than a
+  walkthrough; branching cannot be exercised here at all.
 
 ## What a render cannot show you
 

@@ -12,15 +12,12 @@ grounded in a document that already works.
 **Authoring a new flow is also in scope**, and three things — and only these three — genuinely
 cannot be synthesized:
 
-- **`flowProductId`**, the per-screen product declaration in `_meta.screens[].products[]`. Only the
-  Flow Builder writes it, and it is not a UUIDv5 over anything the config contains (2,944
-  combinations over 4 triples with full provenance). But you do not need the real value: the
-  transform service only checks that a declaration is **present and consistent**, so **write a
-  provisional one and a brand-new draft previews on a device straight away** — measured, with no
-  publish and no builder visit. Use `flowkit.predeclare(screen_id, product_ids)`. Omit it and
-  device preview returns 422 (`missing_flow_product_id`, `unknown_product_id`) until the builder
-  saves the flow. When *rewriting* a flow, never generate one — carry the live `_meta.screens`
-  forward. See [products.md](references/products.md).
+- **`flowProductId`**, the per-screen declaration in `_meta.screens[].products[]` — only the
+  builder mints the real value. But you do not need it: the transform service checks a declaration
+  is **present and consistent**, so `flowkit.predeclare(screen_id, product_ids)` lets a brand-new
+  draft preview on a device with no publish and no builder visit. Omit it and device preview 422s.
+  When *rewriting* a flow, never generate one — carry the live `_meta.screens` forward
+  ([products.md](references/products.md)).
 - **An image you have no readable FILE for.** Given a path you can now upload it —
   `flows media upload` ([media.md](references/media.md)). An image you can only *see* — pasted or
   attached into the conversation — is not one you have: ask for a path. With no file there is
@@ -74,13 +71,19 @@ $ADAPTY flows media upload    <IMAGE_FILE> --app <APP_UUID>   # PNG/JPEG/WEBP/GI
 "validate and preview do not exist" and skipped phases 3 and 4:
 
 ```bash
-adapty --version                      # >= 0.8.0 ?  ADAPTY="adapty"
-ADAPTY="npx --yes adapty@latest"      # otherwise, and always pass --yes
+adapty --version                                   # >= 0.8.0 ?  ADAPTY="adapty", done
+npm i -g adapty@latest >/dev/null 2>&1 \
+  && ADAPTY="adapty" \
+  || ADAPTY="npx --yes adapty@latest"              # fallback: prefix not writable
 ```
 
-`--yes` is not optional: without it `npx` stops to ask permission to install. Declare a command
-unavailable only after `npx --yes adapty@latest` *and* `npx --yes adapty@beta` both lack it — never
-from a version number you read somewhere.
+**Install once; do not wrap every call in `npx`.** The wrapper costs ~1 s *per call* against
+0.07 s installed — more than most of the commands it wraps — and a run makes dozens of calls. When
+the global prefix is not writable the `npx` form still works, and there `--yes` is not optional:
+without it npx stops to ask permission to install.
+
+Declare a command unavailable only after `npx --yes adapty@latest` *and* `npx --yes adapty@beta`
+both lack it — never from a version number you read somewhere.
 
 **In `zsh` — the macOS default — a multi-word `$ADAPTY` is not split into words**, so every command
 below fails with `command not found: npx --yes adapty@latest`. Run `setopt shwordsplit` once in the
@@ -118,8 +121,9 @@ Four facts about the config commands that are not guessable:
 
 ### 1. Resolve the invocation, then authenticate
 
-**First** set `$ADAPTY` as [the CLI surface](#the-cli-surface) describes — probe `adapty --version`
-and fall back to `npx --yes adapty@latest`. Do it before the first command, not after one fails,
+**First** set `$ADAPTY` as [the CLI surface](#the-cli-surface) describes — probe
+`adapty --version`, and if it is old **install once globally** rather than paying the npx wrapper's
+~1 s on every later call (`npx` only as the fallback). Do it before the first command, not after one fails,
 and print the version you resolved in the same command you run next so the two cannot disagree.
 
 Then `$ADAPTY auth whoami`. It hits the server and prints the name and companies, so it proves the
@@ -147,12 +151,10 @@ cp flow.working.json flow.backup.json
 ```
 
 **New flow** — `flows create`, then seed its config from one the user already has
-(`flows list` → `config get`) so theme, fonts, locales and products are real. A brand-new flow
-has no config, so its first `config update` omits `--expected-updated-at`.
-
-Building into a *new* flow is the safe default whenever the user asks for something new:
-`config update` replaces the whole config, so generating over a flow that already has content
-discards that content.
+(`flows list` → `config get`) so theme, fonts, locales and products are real. Its first
+`config update` omits `--expected-updated-at`. **A new flow is the safe default for anything the
+user calls new**, because `config update` replaces everything and generating over a flow with
+content discards that content.
 
 Then, before editing: **report what the source config contains** — screens and captions,
 locales, products, the navigation graph. Before proposing anything; it grounds the user and
@@ -161,29 +163,24 @@ catches a wrong flow immediately.
 **Confirm the transform.** In scope: add a locale, rewrite copy, add/remove/reorder screens,
 branching and conditions. A request outside those is named as out of scope, not improvised.
 
-**Were you given a design to follow?** Answer it out loud, because it decides who is choosing the
-design. A reference image, an existing screen to copy, or a layout the user spelled out means
-*they* chose it: follow the reference, and compare against the file rather than your memory of it
-(phase 4). **Follow the reference for visual style, colors, typography, icon style and element
-hierarchy, but always preserve Adapty's fluid layout discipline** (`width: fill`,
-`height: hug`, `position: relative`). Never hardcode fixed container dimensions or fixed
-positioning offsets just to match a screenshot's static pixel measurements — fixed geometry
-breaks across devices (ADP-7117). **No reference means you are choosing it** — "build me a
-paywall", "add a paywall
-screen", "make one that converts" — and the request map only turns their nouns into element types;
-it says nothing about what belongs on a screen that sells.
+**Were you given a design to follow?** Answer it out loud: it decides who is choosing. A reference
+image, a screen to copy, or a layout they spelled out means *they* chose it — follow it, and
+compare against the file rather than your memory of it (phase 4). **Follow the reference for style,
+colour, typography, icon style and hierarchy, but keep Adapty's fluid layout discipline**
+(`width: fill`, `height: hug`, `position: relative`): never hardcode fixed dimensions or offsets to
+match a screenshot's pixels, because fixed geometry breaks across devices (ADP-7117). **No
+reference means you are choosing it** — "build me a paywall", "make one that converts" — and the
+request map only turns nouns into element types; it says nothing about what sells.
 
 When you are the one choosing, the **`paywall-teardown`** skill is the reference. Invoke it before
-you write anything and build from its list: it returns a **composition** for the screen plus the
-patterns this vertical needs, in priority order, and it names the values it refuses to invent — a rating, a review count, an outcome
-stat, a discount, an uploaded hero. **Put those asks to the user before you write the config**, and
-leave the element out rather than filling it with a plausible number. A screen that ships with an
-element missing is recoverable; one that ships with a fabricated rating is a lie in front of real
-buyers. Build the composition it names — **do not substitute a shape you built last time.** Two
-paywalls in a row came out of this pairing as the same comparison-table-over-plan-cards screen in
-two unrelated verticals, from a build script copied forward rather than a decision. That skill also
-evaluates and corrects the result — see phase 4, where the correction is still free. And reach for it when the user wants to know how good a flow is rather than to change
-it: that answer is a teardown, not a transform.
+you write anything: it returns a **composition** plus the patterns this vertical needs, and it
+names the values it refuses to invent — a rating, a review count, an outcome stat, a discount, a
+hero asset. **Put those asks to the user before you write the config**, and leave the element out
+rather than filling it with a plausible number: a missing element is recoverable, a fabricated
+rating is a lie in front of real buyers. Build the composition it names and **do not substitute a
+shape you built last time** — that is how two unrelated verticals got the same screen. It also
+grades the result in phase 4, where a correction is still free. And when the user wants to know how
+*good* a flow is rather than to change it, that answer is a teardown, not a transform.
 
 **Products are the user's to pick — catalog first, store ids second, create last.** For any
 screen that sells, resolve the products **before the design**, in this order, and never skip a
@@ -197,11 +194,10 @@ step silently:
 3. Only then `products create`, behind its own confirmation gate
    ([products.md → Creating a product](references/products.md)).
 
-Before the design because the catalog *gates* the design: a trial-timeline archetype needs a
-verified offer, a period switcher needs plans differing only by period, and a price variable needs
-a product whose period matches its field. Picking a product yourself from the list is not a
-shortcut — it decides what the user sells, and it is the one choice on the screen they cannot see
-in a screenshot.
+Before the design, because the catalog *gates* it: a trial timeline needs a verified offer, a
+period switcher needs plans differing only by period, a price variable needs a matching period.
+And picking for them is not a shortcut — it decides what they sell, and it is the one choice on
+the screen a screenshot cannot show.
 
 **Assets are resolved here too — upload the file, then build with its URL.** The upload reads a
 **path**, so **an image you can only see is not an image you have**: one the user pasted or
@@ -224,17 +220,32 @@ element:
 3. **Nobody has a file** — an empty `values` map (trap 5), reported in the handoff.
 
 **Upload before the preview loop, not after it, and upload each asset once.** A placeholder does
-not occupy the space the real asset will: measured, the empty checkerboard drew **95 px taller**
-than the same element carrying its real 3:2 image, so a screen previewed with placeholders is a
-screen whose layout was never checked. And the upload does not deduplicate — re-running it per
-iteration leaves indistinguishable copies in the user's media library that no CLI command can
-remove.
+not occupy the space the real asset will, so a screen previewed with placeholders is a screen whose
+layout was never checked; and the upload does not deduplicate, so re-running it per iteration
+litters the user's media library with copies no CLI command can remove
+([media.md](references/media.md#geometry-what-changes-when-the-asset-lands)).
+
+**Before you author a construct you have not seen in a real document, count it.** The schema says
+what is *permitted*; a real export says what is *produced*; only the second predicts the device.
+One `jq` over the config you fetched and over `references/component-catalog.json` settles it in
+seconds — and a count of **zero** is a finding to say out loud, not an absence to shrug at. Three
+device-only defects have shipped from skipping this, two of them green on every local gate
+([flow-schema.md → Before authoring a shape you have not seen
+produced](references/flow-schema.md)).
 
 **Resolve the request into schema terms.** The user's noun is rarely the element `type` — there
 is no `button` and no `toggle` element, and tabs are a five-element composite. Use the request
 map in [flow-schema.md → Vocabulary](references/flow-schema.md), and source any shape the config
 does not already contain via
 [patterns.md → Where to source a pattern, in order](references/patterns.md).
+
+**Editing one screen of many? Patch in place with a script — never slice the screen out.** An
+isolated mid-flow screen **fails the publish gate** the moment it navigates to a screen that is no
+longer there, and isolation buys no speed anyway: `validate` is latency-bound not size-bound, and
+`--screen` already isolates the render. A scripted patch of a 187 KB config took 0.01 s and left
+every other screen and every flow-level key byte-identical, so there is nothing to stitch back
+([transforms.md](references/transforms.md)). Reach the screen with `jq` or a short Python patch
+instead of reading the whole file into context.
 
 **Apply**, preserving every key you did not deliberately change — including unrecognized ones.
 **Nested** unknown keys survive a round trip; unknown keys at the **top level of `config`** are
@@ -254,20 +265,20 @@ act on it, never paste it through.
 ### 3. Check the shape, then clear the publish gate
 
 Walk [Verify](#verify) first — it is local and free and it finds every defect at once, which the
-commands below do not. Then three checks, in this order — the first two are local, only the third
-is a round trip:
+commands below do not. Then **all three gates in one call**:
 
 ```bash
-python3 references/verify-config.py flow.working.json             # do the internal refs agree?
-
-npx --yes --package=ajv@8 node references/validate-with-schema.mjs \
-  --config flow.working.json --baseline flow.backup.json          # are the props well-formed?
-
-$ADAPTY flows config validate <FLOW_ID> --app <APP_UUID> \
-  --config-file flow.working.json --json                          # is it publishable?
+BASELINE=flow.backup.json references/gates.sh flow.working.json <APP_UUID> <FLOW_ID>
 ```
 
-**Always pass `--baseline`** — the pristine copy from step 2. The schema tracks the newest
+It runs the structural walk, the schema shape check and the publish gate over the *same bytes*,
+prints one verdict, and exits non-zero only when something blocking was found. **One call, not
+three** — the gates cost well under a second each while an extra round trip costs tens of seconds,
+so the turns were the expensive part. Drop the app and flow ids and it says so rather than
+pretending a local pass is a publish gate. The three underlying commands, if you need to run one
+alone, are in [validate.md](references/validate.md).
+
+**Always pass `BASELINE=`** — the pristine copy from step 2. The schema tracks the newest
 `schemaVersion` while most live flows are older, so an unbaselined run on a v9 flow reports
 hundreds of pre-existing mismatches, none of them yours. Details in
 [flow-schema.md → the two different validators](references/flow-schema.md).
@@ -293,85 +304,64 @@ message family: [validate.md](references/validate.md).
 
 ### 4. Preview, and iterate until it looks right
 
+**Render the screens you changed, in ONE call, and get back one strip to look at:**
+
 ```bash
-# no --json (it prints an object, not the URL); never print the URL itself — it is ~6K chars
-URL="$($ADAPTY flows config preview draft.json)"  # local: no --app, no auth, no save — file-only tasks included
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu \
-  --hide-scrollbars --window-size=430,932 --virtual-time-budget=12000 \
-  --screenshot=shot.png "$URL"
+references/shoot.sh draft.json scr_a scr_b scr_c     # preview + screenshot + montage
 ```
 
-**Open `shot.png` and look at it**, against what the user asked for and — if they gave one — against
-the reference image file, re-opened, not remembered. `--screen <id>` steps through the rest.
-Measure rather than eyeball with `tests/render-measure.py`. Always try the preview: never decide
+It previews locally (no `--app`, no auth, no save — file-only tasks included), screenshots each
+screen with a watchdog, joins them left-to-right and prints the one path to open. **Open that
+image and look at it**, against what the user asked for and — if they gave one — against the
+reference image file, re-opened, not remembered.
+
+**Render only what you changed.** A screenshot is ~18 s of Chrome cold start, so the number of
+renders *is* the cost of this phase, and re-shooting seven screens to check an edit to one is six
+wasted launches. One strip is also one *look* instead of N, and a before/after or
+default-vs-selected pair only reads as a *difference* when the halves are adjacent.
+
+**Do not try to speed the screenshot itself up** — shrinking `--virtual-time-budget` does nothing
+on a fast host, and parallel Chrome is slower than serial. But **raise it when a shot comes back
+empty**: on a slow render host 8 s yields no file where 60 s renders correctly, so *no file* is
+usually a slow host, not a broken config — `shoot.sh` retries at 60 s for you, and after that,
+load the URL in a real browser before suspecting your work
+([preview.md](references/preview.md#what-a-render-costs-and-which-knobs-do-nothing)). A dead render
+is never a reason to report the work finished.
+Measure rather than eyeball with `references/render-measure.py`. Always try the preview: never decide
 from the config's size.
 
-**Every image in the render gets its properties checked here — reference build or not.** An
-uploaded asset almost never matches the box you guessed for it, and no other gate sees an image at
-all: `validate` returns `valid: true` on an image with a bad `id`, a missing `id`, or an *empty*
-placeholder, and the schema check passes all three too, because a localizable `values` map is
-unconstrained. So read the drawn box off the screenshot and pick deliberately. `height: hug` takes
-its height from the **asset's** aspect — the layout moves when the file changes, and any `value`
-left on the size is dead. `height: fixed` holds the box and makes the asset absorb the mismatch:
-`cover` crops it to fill, `fit` letterboxes it and leaves a dead band that reads as a spacing bug
-on a dark screen. `objectFit` has exactly two legal values, `fit` and `cover` — there is no CSS set
-here. Re-render after each change; measured boxes in
-[media.md → Geometry](references/media.md).
+**Every image gets its properties checked here — reference build or not — because no other gate
+looks at an image at all.** Read the drawn box off the screenshot and choose: `height: hug` takes
+its height from the **asset's** aspect, so the layout moves if the file changes and any `value` on
+the size is dead; `height: fixed` holds the box and the asset absorbs the mismatch — `cover` crops,
+`fit` letterboxes and leaves a dead band. `objectFit` is `fit` or `cover`, no CSS set. Re-render
+after each change ([media.md → Geometry](references/media.md#geometry-what-changes-when-the-asset-lands)).
 
 **A reference image raises the bar from "matches the request" to "matches the reference" — run the
 fidelity pass before anything is written, every time one was given.** "Nothing jumped out" is not a
-result: a side-by-side look passes screens the user rejects on sight, because "close" is a claim
-about structure and fidelity lives in everything else. The pass produces a written difference list,
-element by element:
+result. **Produce a written per-element difference list — colour, typeface, icon style, imagery,
+proportions — marking each one match, gap, or unreachable**, then close every gap the format can
+reach and turn the rest into named asks. The list is the mechanism, not the looking: measured,
+agents who only *looked* shipped emoji for designed icons and colours from memory while disclosing
+them, and agents who wrote the list fixed everything reachable.
 
-1. **Inventory the reference:** per-element colors, typeface feel, icon style, photos and
-   backgrounds (gradient, glow), and the proportions between blocks. For each item, record what
-   your render has — match, gap, or unreachable.
-2. **Close every gap the format can reach:** sample colors from the image instead of naming them
-   from memory; match sizes and spacing to the reference's proportions using relative layout
-   discipline (`fill`/`hug`/`relative`) — never hardcode fixed container widths or heights to
-   match image pixels; author monochrome SVG
-   icons (render-verified — [patterns.md](references/patterns.md)) where the reference uses
-   designed glyphs; where the graphic is **multicolour, gradient or illustrative** and no element
-   can express it, **draw it, rasterize it on a transparent background, upload it** and say you
-   drew it ([media.md](references/media.md)) — never with text, never selectable, never a baked
-   background; and where you cannot draw one faithfully ship a **styled empty placeholder**,
-   never an emoji — a placeholder asks to be filled, an emoji looks finished and ships a
-   different design ([trap 5](references/flow-schema.md)); rebuild gradients and glows rather
-   than flattening them. **Reach for the layout props before padding or docking** —
-   `distribution` has four modes, and `space-between` on the screen root is what puts a footer at
-   the bottom ([trap 10b](references/flow-schema.md)). A screen assembled from gaps plus reserved
-   padding is the shape that reads as "broken everywhere": a dead void under the content on a
-   tall device, or a footer sitting on top of it.
-3. **Turn what the format cannot reach into named user asks** — a font the account lacks (still a
-   manual Flow Builder upload), an image nobody has a file for, an SVG asset (upload rejects it)
-   — in the handoff, never silent downgrades. An image you *were* given a file for is not on this
-   list: upload it in phase 2 and check it here. **Ship every remaining placeholder fully
-   styled** — `borderRadius`, `objectFit`, fixed size, on the `image` element itself — so the
-   upload lands styled instead of handing the user styling work
-   ([flow-schema.md → trap 5](references/flow-schema.md)).
-4. **Re-render and walk the pair again.** Done means every remaining difference is on the ask
-   list — a user declining previews waives the deliverable, not this pass.
+**Done means every remaining difference is on the ask list** — a user declining previews waives the
+deliverable, not this pass. What to inventory and what to do with each gap:
+[fidelity.md](references/fidelity.md).
 
-**What it cannot tell you**, each measured: a stranded variable, a `states[].condition`
-(unlike a `visibility` one, which *is* evaluated), selection in any non-product group, any locale
-but the one it draws, anything resolving at runtime, an element it draws that a device will not,
-and **the device's own frame** — it draws no notch and no home indicator, and no `--device` id it
-knows is a short phone, so author `safeArea: true` and hand short-device clipping over as a device
-check. Full statements in
-[preview.md → What a render cannot show you](references/preview.md#what-a-render-cannot-show-you)
-— read them before you report what a screenshot proves.
+**Read [preview.md → What a render cannot show you](references/preview.md#what-a-render-cannot-show-you)
+before you report what a screenshot proves** — seven blindnesses, each measured, and two of them
+run the *wrong* way: the render draws things a device will not. Two you act on here: it draws no
+notch and no home indicator, so author `safeArea: true` and hand short-device clipping over as a
+device check.
 
-**If you built a screen that advances itself, make it observable before you hand it over.** The
-page never navigates, for any reason, so a working auto-advance and a broken one look identical
-here — the user's device is the only surface that can tell them apart, and each check costs them
-a real cycle. So ship the diagnostic with the first ask: on a timed screen, give the `timer` a
-child `text` carrying the `timer_minutes`/`timer_seconds` tokens so the countdown is visible.
-*Digits never appear* is the element not mounting; *digits reach zero and nothing happens* is the
-trigger not firing. Say it is temporary, and remove it once confirmed. Without it a failed test
-returns one bit and you will guess again — four blind config tweaks reached a real device that
-way before anyone made the timer visible. The working timer shape, device-verified, is in
-[patterns.md](references/patterns.md).
+**If you built a screen that advances itself, ship the diagnostic with the first ask.** The page
+never navigates, so a working auto-advance and a broken one look identical here and only the user's
+device can tell them apart — at a real cycle per attempt. Give the `timer` a child `text` carrying
+the `timer_minutes`/`timer_seconds` tokens: *digits never appear* is the element not mounting,
+*digits reach zero and nothing happens* is the trigger not firing. Without it a failed test returns
+one bit and you guess again. Say it is temporary and remove it; the device-verified timer shape is
+in [patterns.md](references/patterns.md).
 
 **Confirm you screenshotted the flow at all.** A bad `--device`, a broken fragment and a wrong host
 all render as *pages* that pass a "did anything draw" check. If the render is blank, slow or wrong,
@@ -384,14 +374,13 @@ Both, with the four surfaces and what each one proves:
 [preview.md](references/preview.md).
 
 **A render that matches the request can still be a weak paywall.** Every check above asks whether
-you built what was asked for; none asks whether the screen sells. **If you chose the design — no
-reference image, no source screen (phase 2) — running the `paywall-teardown` skill over this PNG is
-part of the work, not a courtesy.** Hand it the render *and* the config, since one shows what is
-visible and the other what is there, then **apply** what it ranks *Fix first* or *High* and
-re-render. Findings on a screen you designed yourself are defects, not suggestions: a screen handed
-over with a list of the patterns you skipped is unfinished. This is the cheapest moment for it —
-nothing is written yet, so a correction costs a screenshot instead of a `config update`. Skip it
-only on an edit the user specified literally: a typo fix, a locale add.
+you built what was asked; none asks whether the screen sells. **If you chose the design — no
+reference, no source screen — running `paywall-teardown` over this PNG is part of the work, not a
+courtesy.** Hand it the render *and* the config (one shows what is visible, the other what is
+there), then **apply** what it ranks *Fix first* or *High* and re-render. Findings on a screen you
+designed are defects, not suggestions — a screen handed over with a list of the patterns you
+skipped is unfinished — and this is the cheapest moment, a screenshot instead of a `config update`.
+Skip it only on a literal edit: a typo fix, a locale add.
 
 **Iterate here.** Anything off, go back and fix it, then re-run phases 3 and 4. Nothing has
 been saved yet, so an iteration costs a screenshot rather than a write.
@@ -406,10 +395,9 @@ There is nothing to lose and nothing to overwrite, and stopping to ask would be 
 empty document. Report what you wrote afterwards.
 
 **It does** — anything you fetched in phase 2. **Stop and get an explicit yes before the write.**
-`config update` replaces the entire config, there is no partial write, no undo and no version
-history in this surface, so the document you are about to replace exists in exactly one other
-place: the backup you took in phase 2. Put all of this in front of the user in one message and
-wait:
+`config update` replaces the entire config: no partial write, no undo, no version history here, so
+the document you are replacing exists in exactly one other place — the phase-2 backup. Put all of
+this in front of the user in one message and wait:
 
 **Show them the change first — an approval on a description is not an approval on the screen.**
 Split it in two, because the two halves need different things from the reader.
@@ -444,13 +432,10 @@ write. **Print the command instead only when there is no display** (remote or he
 that is why.
 
 One tab, whatever the size of the change: the page renders a single screen and **does not walk the
-flow** — measured, a button carrying `navigate` leaves the page where it was — so N tabs is N times
-the noise and still not the flow. Open the screen whose *state* matters most (a picker, a toggle, a
-selected plan), because state is the one thing a static PNG cannot show.
-
-**Identical screenshots do not mean an identical config.** Measured: deleting an entire
-`bottom-sheet` element produced a **byte-identical** render, because the sheet was hidden in the
-state that draws. That is what the second list is for.
+flow**, so N tabs is N times the noise and still not the flow. Open the screen whose *state* matters
+most — a picker, a toggle, a selected plan — because state is the one thing a static PNG cannot
+show. **Identical screenshots do not mean an identical config**
+([preview.md](references/preview.md)); that is what the second list is for.
 
 > About to overwrite the config of **<flow name>** (`<flow-id>`), currently **<status>**.
 >
@@ -482,15 +467,16 @@ jq '.config' flow.backup.json > restore.json
 $ADAPTY flows config update $FLOW --app $APP --config-file restore.json --expected-updated-at "$UA"
 ```
 
-Measured on a real flow: an element deleted and written, then restored this way, came back
-**byte-identical** to the backup. So the recovery is real — but it only exists if phase 2 actually
-took the backup, which is the reason that step is not optional.
+Verified byte-identical on a real flow — so the recovery is real, but only if phase 2 actually
+took the backup, which is why that step is not optional.
 
 Only then:
 
-```
-$ADAPTY flows config update <FLOW_ID> --app <APP_UUID> --config-file draft.json \
-    --expected-updated-at <int-from-config-get>
+```bash
+# one call: re-read the lock and write under it, because your own last write invalidated it
+UA="$($ADAPTY flows config get $FLOW --app $APP --json | jq -r .updated_at)" \
+  && $ADAPTY flows config update $FLOW --app $APP --config-file draft.json \
+       --expected-updated-at "$UA" --json > flow.working.json
 ```
 
 Validate and preview both run on a local file, which is why the write comes last: one write when
@@ -498,17 +484,10 @@ the thing is right, instead of one per iteration. If you have already written an
 problem, that is fine — re-read `updated_at` from `config get` before the next write, because
 yours is now stale.
 
-**Read it back — and `update --json` already gave it to you.** The write returns the **same
-envelope as `get`**: verified equal key for key, `config` for `config`, same `updated_at` and
-`status`. So redirect it over your working file and you are in sync for the next round with no
-extra call, and diff *that* against what you sent. A faithful round trip is normal — 108 of 108
-elements on a real screen — so a difference is a real finding, and it catches the drop-silently
-class: a top-level key that vanished, a `status` you should not have emitted.
-
-```bash
-$ADAPTY flows config update $FLOW --app $APP --config-file config.only.json \
-    --expected-updated-at "$UA" --json > flow.working.json
-```
+**That `--json` redirect *is* the read-back — no extra call.** The write returns the **same
+envelope as `get`**, so your working file is already in sync for the next round, and you can diff
+it against what you sent. A faithful round trip is the norm, so any difference is a real finding —
+a top-level key that vanished, a `status` you should not have emitted.
 
 A write that changes nothing does not bump `updated_at` (measured once), so re-running the same
 content is not a fresh lock token. **On a 409** someone edited the flow since you fetched it and
@@ -542,12 +521,12 @@ who can finish it. Fill the slots and keep all four lines — the last one is th
 >
 > Until you publish, everyone continues to see the previous version.
 
-**Fill that slot with the actual list, never with "check it works".** You know which of your choices
-the render could not reach — a branch that fires on tap, a toggle, a non-default locale, a progress
-bar that advances, a screen that advances itself, glyph metrics that differ on iOS. A generic
-instruction gets skipped; three named things get tapped. The one defect that reached a user from this skill was an emoji clipped on iOS in
-a build whose every preview was clean, so this slot is where that gap gets handed over deliberately
-instead of by luck.
+**Fill that slot with the actual list, never with "check it works".** You know which of your
+choices the render could not reach — a branch that fires on tap, a toggle, a non-default locale, a
+progress bar that advances, a screen that advances itself, glyph metrics that differ on iOS. A
+generic instruction gets skipped; three named things get tapped, and every defect this skill has
+shipped to a user came through a gap this slot exists to hand over
+([preview.md](references/preview.md)).
 
 ## Safety
 
@@ -575,67 +554,58 @@ to delete it.
 
 ## Verify
 
-Walked in phase 3 **before** the two commands, because this finds every row at once locally
-where `validate` reports one per round trip. **[V]** = `validate` catches it too, so a miss is
-recoverable. **[F]** = mechanised in [`references/verify-config.py`](references/verify-config.py),
-which ships — run it (phase 3) and 13 of these 15 rows are checked for you. **Still read every
-row**: the marks say who *also* catches a miss, not who is responsible.
+Walked in phase 3 **before** the two commands, because this finds every row at once locally where
+`validate` reports one per round trip.
 
-| # | Check | Caught by |
-| :-- | :--- | :-- |
-| 1 | `elements.map` keys equal each element's own `id` | [F] |
-| 2 | `hierarchy` resolves into `map` — `root` and `{"type": "global"}` component nodes are the only hierarchy ids with no `map` entry | [V] [F] |
-| 3 | every `navigate` `payload.screen` names a screen that still exists, **including targets nested inside a `conditional`'s `cases` and `default`** | [V] [F] |
-| 4 | every `product` element's `props.product.id` is declared in `_meta.screens.<thatScreenId>.products[]` — **and so is every product named only by a `const` purchase action**, which has no element of its own ([validate.md](references/validate.md)) | [V] [F] |
-| 5 | price variables resolve **by their own form**: a product-relative head is a declared product, a group-relative head is a `product`-typed group. **Never validate one against the other** | [F] |
-| 6 | `selectableGroups` and `groupId` agree in **both** directions | [V] [F] |
-| 7 | every `const` compared against `<groupId>.selectedOptionId` matches a member's `customId`, and every `const` compared against `<groupId>.selectedProduct` is a product bound on that screen — a miss sends **every** user down `default`, silently | [F] |
-| 8 | every variable consumer still has its producer, **including across screens** — a stranded one renders empty on screens you never opened | [F] |
-| 9 | `colorId` and `font.preset` resolve in *this config's* `theme`; `font.family.id` in `_meta.fonts` | [F] |
-| 10 | every icon used appears in `_meta.icons` **with real `raw` SVG** — never fabricate the markup, and a `custom` icon whose name is a builtin is **not** exempt | [V] [F] |
-| 11 | every `image` element carries a URL `flows media upload` printed in **this** session, `id` as a **string** — or an empty `values` map you name in the handoff. **No gate looks at an image**, so an empty hero publishes a checkerboard | [F] |
-| 12 | every locale in `locales[]` has a value in each `_localizable` field you touched — and where that value is a `switch`, the **same number of branches** as the default locale | [V] [F] |
-| 13 | **every element under a screen's `elements.map` carries `states`** (`[]` is fine) — missing it built a config the API accepted and the **builder could not open** | [F] |
-| 14 | `id`, `type`, `props` present on every element | [F] |
-| 15 | `fill` keeps the form the input used — object or array, **never converted** | — |
+**`references/verify-config.py` ships and phase 3 runs it, and it mechanises all but two of the
+referential rows.** So do not re-derive them by eye: run it, and read its output as the checklist.
+The full statements — what each invariant is, what breaks it, what a violation does — are
+[flow-schema.md → Invariants](references/flow-schema.md#invariants), which owns them.
 
-**Every price variable's field agrees with its product's period.** If the catalog has no product
-with the period the design needs, **stop before the write** — that one is not a disclosure.
+**What the tool cannot answer, and you must:**
 
-**Publish blockers** ([Common issues](https://adapty.io/docs/flow-common-issues.md)): no screen
-with zero elements; no product element with no product attached; no incomplete interaction. These
-are what `validate` is for, one per run. **Never treat a publish blocker as protection for a defect
-you left in** — the user clears blockers, and clearing one often activates whatever it was masking
+| Check | Why no tool catches it |
+| :--- | :--- |
+| `fill` keeps the form the input used — object or array, **never converted**, and **one layer** | the form is only wrong relative to the input you fetched |
+| an image URL is one **`flows media upload` printed in this session** | a plausible `public-media.adapty.io` path is indistinguishable from a real one |
+| `_meta.icons[].raw` is **real** SVG, not fabricated markup | presence is checkable, authenticity is not |
+| **every price variable's field agrees with its product's period** | needs the catalog, not the config |
+
+That last one is a **hard stop, not a disclosure**: if the catalog has no product with the period
+the design needs, stop before the write.
+
+**Publish blockers** ([Common issues](https://adapty.io/docs/flow-common-issues.md)): a screen with
+zero elements, a product element with no product, an incomplete interaction. `validate` reports one
+per run. **Never treat a publish blocker as protection for a defect you left in** — the user clears
+blockers, and clearing one often activates whatever it was masking
 ([products.md](references/products.md)).
 
-**Publishing runs a transform service that refuses configs `config update` accepted** — HTTP 422, a
-fatal `error`, and an `issues` array whose `severity` separates fatal from advisory
-([flow-schema.md](references/flow-schema.md)). If the user shows you its output, read the `path`
-fields: they name the offending element, not just the screen.
+**Warnings — report, never "fix":** an unreferenced component; a declared but unreferenced entry in
+`variables[]` or `theme`; an inert `conditional` whose branches all resolve to `nothing`. Real
+configs contain all of these.
 
-**Warnings — report, never "fix":** a component defined but unreferenced; a declared but
-unreferenced entry in `variables[]` or `theme`; an inert `conditional` whose branches all resolve
-to `nothing`. Real configs contain all of these.
-
-**One warning splits by authorship: a locale value under a code `locales[]` does not declare.** It
-renders nowhere. If **you** wrote it this run it is your defect — add the code to `locales[]`
-(`flowkit.config` refuses to emit the stray at all) and make the parity pass over the whole config
-that adding a locale implies. Where the stray came **with the config you fetched** it is
-report-never-fix like the others: it is usually half a locale run someone started, and completing
-or deleting their work is not your call. Name the two exits and ask.
+**One warning splits by authorship: a locale value under a code `locales[]` does not declare.** If
+**you** wrote it this run it is your defect — add the code and make the parity pass that adding a
+locale implies. If it came **with the config you fetched**, it is report-never-fix like the others:
+it is usually half a locale run someone started, and finishing or deleting their work is not your
+call. Name the two exits and ask.
 
 ## References
 
-Each file **owns** its facts; link to it rather than restating, or the two copies drift. Sections
-are named so you can jump straight in without reading the file whole.
+Each file **owns** its facts; link rather than restate, or the copies drift.
 
-| File | Owns — sections | Read it when |
-| :--- | :--- | :--- |
-| [flow-schema.md](references/flow-schema.md) | `## The envelope`, `## Browser export versus CLI config`, `## Invariants`, `## Shape traps`, `## Vocabulary` — including the map from what a user *asks for* to what the JSON calls it | **Before any edit.** Trap 10 is why phase 4 exists |
-| [validate.md](references/validate.md) | `## What it catches` and what it passes, the three message families, the envelope trap | `validate` says no, or you want to know what a green run does *not* prove |
-| [preview.md](references/preview.md) | `## What a render cannot show you`, `## Four surfaces, and they do not agree`, `## When the render fails: the file input, not a smaller config` | A render surprises you — it is the evidence behind phase 4 |
-| [media.md](references/media.md) | `## The call`, `## Getting the file: the upload needs a PATH, not a picture`, `## What it accepts`, `## When a graphic cannot be an element, draw it and upload it`, `## Binding the URL: two different shapes`, `## Geometry: what changes when the asset lands` | The screen has an image. It owns the upload's limits and failures, the element-versus-`fill` shapes, and why an image is checked in the render and nowhere else |
-| [products.md](references/products.md) | `## Where product ids come from`, `## The builder owns product binding`, `## Creating a product` | Before touching a `product` element — `products create` writes to a live dashboard |
-| [transforms.md](references/transforms.md) | `## Risk table`, `## Decisions you must disclose` | You hit one of the points where two answers are both defensible and silence is the only wrong one |
-| [patterns.md](references/patterns.md) | `## Where to source a pattern, in order`, `## What is safe to lift, and what breaks`, `## Skeletons` | You need a composite you cannot guess: tabs, progress bars, toggles, countdowns, plan cards |
-| the **`paywall-teardown`** skill | every conversion claim and impact number — a pattern library with cross-checks, impact tiers and category playbooks | **Phase 2** when *you* are choosing the design (read forwards), and **phase 4** to grade the render you built (read backwards). This skill owns the JSON; that one owns whether the screen sells |
+| File | Read it when |
+| :--- | :--- |
+| [flow-schema.md](references/flow-schema.md) | **Before any edit.** The envelope, `## Invariants`, `## Shape traps`, and `## Vocabulary` — the map from what a user asks for to what the JSON calls it |
+| [validate.md](references/validate.md) | `validate` says no, or you want to know what a green run does *not* prove |
+| [preview.md](references/preview.md) | A render surprises you: what it cannot show, what it costs, the four disagreeing surfaces, and what to do when it fails |
+| [fidelity.md](references/fidelity.md) | A reference image was given — the per-element inventory, the gap-closing ladder, and what becomes a user ask |
+| [media.md](references/media.md) | The screen has an image: the upload's limits, element-versus-`fill` shapes, geometry, and when to rasterize |
+| [products.md](references/products.md) | Before touching a `product` element — `products create` writes to a live dashboard |
+| [transforms.md](references/transforms.md) | You hit a point where two answers are defensible and silence is the only wrong one |
+| [patterns.md](references/patterns.md) | You need a composite you cannot guess: tabs, progress bars, toggles, countdowns, plan cards |
+| the **`paywall-teardown`** skill | **Phase 2** when *you* choose the design, **phase 4** to grade what you built. It owns whether the screen sells; this skill owns the JSON |
+
+Executable, all under `references/`: `flowkit.py` (authoring), `verify-config.py` (phase 3),
+`validate-with-schema.mjs` (phase 3), `montage.py` and `render-measure.py` (phase 4),
+`preview-with-playwright.mjs` (when a render fails).

@@ -97,7 +97,7 @@ the one invariant on this list that a real multi-locale export has never exercis
 | :-- | :--- | :--- | :--- |
 | 1 | Every key in `elements.map` equals that element's own `id` | copying or duplicating an element | The Flow Builder resolves elements by map key; a mismatch makes the element unaddressable. |
 | 2 | On a **screen**, `hierarchy` references only ids present in `map`, and every id in `map` appears exactly once in `hierarchy` | adding or removing an element | A hierarchy id absent from `map` renders nothing. **Two hierarchy ids legitimately have no `map` entry, and both must be excluded before you check anything:** `root`, the mandatory wrapper node, on every screen and every component; and any `{"id": "pb_…", "type": "global"}` node, which points into `components` instead. Counting either as a violation reports false corruption — `root` on all 9 screens, `global` once in the corpus. The bijection itself holds for every screen but **not inside `components`**: `timer`'s component has a `progress-bar-loader` in its `map` that no hierarchy node references. A `map` entry the hierarchy never reaches is therefore not proof of corruption and is not yours to prune. |
-| 3 | Every `navigate` action's `payload.screen` names an existing screen | **screen deletion** | **Publish blocker.** A Navigate action with a destination that no longer exists is an incomplete interaction, and [Common issues](https://adapty.io/docs/flow-common-issues.md) names it explicitly: it "also occurs when the destination screen is deleted after the action is set up." The flow will neither preview nor publish. |
+| 3 | Every `navigate` action's `payload.screen` names an existing screen — **including targets nested inside a `conditional`'s `cases` and `default`**, which is where a dangling one hides, since the branch that reaches it may never be the one you looked at | **screen deletion** | **Publish blocker.** A Navigate action with a destination that no longer exists is an incomplete interaction, and [Common issues](https://adapty.io/docs/flow-common-issues.md) names it explicitly: it "also occurs when the destination screen is deleted after the action is set up." The flow will neither preview nor publish. |
 | 4 | Every `product` element's `props.product.id` is declared in `_meta.screens.<thatScreenId>.products[]` | moving a product element to another screen | **Publish blocker** — a product element with no product attached. Declaration is per screen, so a moved element arrives **unattached on its new screen**, and no edit you can make to the JSON clears that. There is no re-keying fix: see [`transforms.md`](transforms.md#decisions-you-must-disclose) decision 2 for the exits, and [`products.md`](products.md) for why binding is not yours to write. |
 | 5 | A price variable resolves by **one of two forms**, and which one decides what it must name. Product-relative — `<productUUID>.prod_price_per_*`, head is a product id declared in `_meta.screens` (in the corpus, always on the same screen that reads it). Group-relative — `<groupId>.selectedProduct.<field>`, head is a `product`-typed `selectableGroups` id, **not** a product id | copy rewrite, moving a screen or element | The price renders empty. Nothing fails loudly. **Validate the head against the form, or you generate a false positive:** checking the first segment of a group-relative variable against the product list rejects a valid file and invites an agent to "repair" correct work. Provenance, precisely: the product-relative form is the only one in the corpus. The **field names are documented** — [Element variables](https://adapty.io/docs/onboarding-variables.md) lists `prod_price` alongside `prod_price_per_{day,week,month,year}`. What is unverified is the group-relative **reference syntax** `<groupId>.selectedProduct.<field>`: it appears in no export and on no docs page, only in a live Flow Builder screen. **That syntax is now device-verified and safe to author:** on a real device a root-level line reading `<groupId>.selectedProduct.prod_price` resolved to a real price and **changed as each card was tapped**, so it tracks the live selection rather than resolving once. `prod_price_per_month` on an **annual** product likewise resolved to a real derived figure, so a per-month field does not require a monthly product. Preserve it verbatim where you find it, and authoring it is fine. [`products.md`](products.md) owns the handling rules. |
 | 6 | Every `selectableGroups[].id` has at least one member element carrying that `groupId`, and every `groupId` in use has a declared group | branching edits | A group with no members and a member with no group are both broken selection state. Groups are per screen and typed (`single_choice`, `product`). Two team-stated naming rules: a `groupId` must **not start with a digit** (`1a` generated invalid JavaScript and blocked publish), and should be **unique across the flow**, not merely its screen — two screens sharing `"products"` broke selection rendering. |
@@ -424,6 +424,30 @@ only, at `root`, no vertical offset — occurs nowhere in the corpus.
 bottom-docked CTA uses; the three `fixed` uses all sit at `root` with all three of
 `left`/`right`/`bottom`. Do not substitute one for the other to make an offset resolve.
 
+**A fourth form exists, outside this corpus: both vertical offsets plus `height: {"type":
+"auto"}`, which stretches the element between its anchors.** Provenance is one real builder export
+(2 uses, both timeline rails) plus a render of it here, kept as `tests/fixtures/timeline-anchored.json`
+— none of the four census exports carries the form, so it sits below the three patterns above but
+above anything inferred. It is the only shape that follows a parent whose
+height the *content* decides, and a **negative** `bottom` overshoots past the parent's edge, which
+is how a rail reaches into the next row rather than stopping at its own.
+
+All three parts are load-bearing, each isolated by removing it from one rendered row:
+
+| Shape | Drawn |
+| :--- | :--- |
+| `{top: 10, bottom: -18, zIndex: -10}` + `height: auto` | stretches with the row, overshoots under the next element |
+| the same, minus `bottom` | **collapses to nothing** — 108px of white where the element was |
+| the same, with `height: fill` | stretches but stops **2px short** of its anchor |
+| the same, minus `zIndex` | correct geometry, but paints **over** its siblings instead of behind |
+
+`height: auto` therefore means nothing on its own — it is half of a pair, and the other half is the
+anchors. `zIndex` lives *inside* `position`, not at the top level of props, and negative values
+work. (An earlier note here said `zIndex` appeared in no real export; that export now exists.)
+`flowkit.absolute()` emits the position object and raises on either broken pairing, and
+`verify-config.py` warns on both, since neither the schema nor `validate` has any opinion on
+layout and both misreadings render as "the line is too short".
+
 Two further facts about the key itself: 4 `relative` positions in `timer` carry `left`/`top`
 offsets, so an offset is not evidence of `absolute` (trap 6); and 3 elements — all inside
 `components` — carry no `position` key at all, so its absence is not corruption either.
@@ -534,8 +558,13 @@ asserting **zero gaps** — never by looking.
 roughly zero rather than expanding to the sibling content's height. Measured on the same timeline:
 switching a connector from `fixed` to `fill` — to make it stretch to whatever the row needed —
 shrank it from 62 to a ~16px stub and crushed the row spacing. Inside a hug-height row, a stretch
-has to be an explicit number; the row then takes its height from `chip + rail` whenever that exceeds
-the text, which is what makes the ends meet.
+has to be an explicit number.
+
+**The better exit is to leave the flow entirely.** An `absolute` child of that row, anchored `top`
+**and** `bottom` with `height: {"type": "auto"}`, stretches to the row's own height without any
+number at all — trap 9's fourth form. That is what a timeline rail should be, and it is why
+`patterns.md` no longer sizes one by arithmetic. `fill` is still wrong there: with both anchors
+present it stretches but stops 2px short.
 
 ### 14. `visibility: hidden` collapses the space, it does not reserve it
 
@@ -785,6 +814,53 @@ documented by its own publishers:
   accepts a config without it. **Never add a field just because the schema calls it required** —
   match the config you fetched. (Omitting `status` and `id` is separately safe: measured across many
   writes, not inferred from `required`.)
+### Typography metrics: `lineHeight` and `letterSpacing` exist
+
+`IFont` carries **`lineHeight`** and **`letterSpacing`** alongside `family`, `preset`, `size` and
+`weight`. Both are absent from every real export and from all 36 catalog templates, so they are a
+*grep-zero* shape — declare them knowing the device may ignore them, and note that they **fail
+safe**: an ignored `lineHeight` gives looser leading, not a broken screen.
+
+Worth stating because two agents in the same GREEN arm disagreed about whether `lineHeight`
+exists, and the one who believed it did not **left a reachable fidelity gap** — shipping 52 pt
+headline leading against a reference's 41 pt and filing it as unreachable. Line spacing is one of
+the few reference properties that is otherwise genuinely out of reach, so getting this wrong turns
+a fixable gap into an ask.
+
+**Gradients cannot carry an appearance variant.** Gradient stops are literal hex in every real
+export — there is no `color-style` reference and so no light/dark pair. On a screen whose
+`theme.colors` all declare dark variants, the gradients stay light while everything around them
+flips. Bake the appearance you want, or use a flat themed colour where the theme has to win.
+
+### Before authoring a shape you have not seen produced: grep for it
+
+**The schema tells you what is permitted; a real export tells you what is produced; only the
+second predicts the device.** Three defects shipped from that gap — a two-layer fill, an id reused
+across the two `theme` lists, and a predicate on a `toggle` group — and every local gate was green
+for two of them. In both of those the disproof was already on disk and cost seconds to find.
+
+So when you are about to author a construct you have not seen in a real document, **count it
+first** in the two sources a run always has:
+
+```bash
+# 1. the config you fetched — the most authoritative thing you hold
+jq '[.. | objects | select(has("fill")) | .fill | select(type=="array") | length] | group_by(.) |
+    map({layers: .[0], n: length})' flow.working.json
+
+# 2. component-catalog.json — 36 builder-authored templates, and it SHIPS with this skill
+jq '[.. | objects | select(has("fill")) | .fill | select(type=="array") | length] | unique' \
+   references/component-catalog.json      # -> [1].  105 fills, none with 2 layers
+```
+
+**A count of zero is a finding, not an absence.** Nothing produced the shape, so nothing
+downstream is obliged to understand it — say so out loud and treat the device check as
+load-bearing rather than ceremonial.
+
+Know what each source cannot answer. The catalog carries elements and fills but **no `theme`
+block at all**, so it can settle "does the builder emit multi-layer fills" and not "may a colour
+and a preset share an id" — that one is `verify-config.py`'s job. And `tests/fixtures/` is
+repo-only: it does not exist on an installed skill, so never write a check that depends on it.
+
 - **Where the schema and `validate` disagree, `validate` wins** — in both directions. And a clean
   `validate` is still not proof: it passes plenty of malformed props without complaint.
 - **It has at least one unsatisfiable definition, so some findings can never be cleared.**

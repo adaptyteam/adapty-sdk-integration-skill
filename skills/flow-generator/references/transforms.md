@@ -19,6 +19,45 @@ authority on both. Do not re-derive any of it here.
 | **Add / remove / reorder screens** | Invariants 3 and 12, which break in **opposite directions**. Invariant 3: the target dies and the reference survives. Invariant 12: **the consumer survives and the producer dies** — deleting a screen can strand a variable consumer on a screen you never opened. Verified in `quiz`: the `text-input` with `customId: "name"` lives on **Quiz**, and `name.value` is read on **Rock**, **Hip hop** and **Paywall After**. Delete Quiz and all three references stay intact with nothing to resolve against, so nothing on the edited screen looks wrong and three untouched screens render an empty name. Also: `screens[0]` is the entry screen, so a reorder silently moves where the flow starts; and `_meta.screens` is keyed by screen id, so a deleted screen's product declarations leave with it (invariant 4). | Three, all on the [Common issues](https://adapty.io/docs/flow-common-issues.md) list: a dangling `navigate` (invariant 3), a screen with no elements, and — on any screen you add that carries a `product` element — a product element with no product attached, which no edit of yours can clear (see [`products.md`](products.md)). A stranded variable consumer is **not** a blocker; it publishes and renders empty. | Every `<inputCustomId>.value`, `<groupId>.selectedOptionId` and `<productUUID>.prod_*` reference still has a producer. Search `screens` **and** `components`: no component in the corpus holds a reference, but a component is a screen-shaped `{map, hierarchy}` that can, so it is inside the search space. A new screen matches `flow-schema.md`'s `root`-wrapper and `scr_`-id rules. `screens[0]` is still the screen you mean. Orphans and widenings are in your report (decisions 2 and 3). |
 | **Branching and conditions** | Also: **conditions cannot compare numbers.** `<` and `>` are in the schema's `ExpressionType` and are not honoured at runtime, so a threshold must be enumerated as `==` cases against **strings** — see [flow-schema.md](flow-schema.md). Invariants 6 and 7. Renaming a selectable option changes its `customId`; every `const` compared against `<groupId>.selectedOptionId` must change with it, or the case stops matching and **every user takes the `default` branch** — routing changes with nothing failing. | A `conditional` with no operator or value. A `const` that matches nothing is not a blocker; it silently reroutes everyone. | For each predicate `const`, a member of that group carries that `customId`. Each `selectableGroups[]` entry has at least one member, and each `groupId` in use is declared. You know where `default` sends users, because a mismatch sends everyone there. Read `default` as a live route, not a fallback: in `quiz` the switch has one case (`rock`) and `hiphop` is routed **only** by `default`. And a group member may legitimately carry no `customId` at all — `quiz`'s continue button is a `quiz` member and holds the conditional itself — so an absent `customId` is not a gap to fill. |
 
+## Editing ONE screen of a many-screen flow: patch in place, never extract
+
+The instinct is to slice the screen out, iterate on something small, and stitch it back. **Do not.**
+Measured on a real 7-screen, 187 KB flow:
+
+| | |
+|---|---|
+| Extracting one screen (+ all flow-level keys) | 187 KB → 27 KB, **14%** |
+| `flows config validate`, full 187 KB | 9.6 s |
+| `flows config validate`, 27 KB extract | 8.5 s — **not size-bound**, that is network latency |
+| `flows config validate`, mid-flow extract | **`valid: false`** — `Navigate action targets unknown screen "scr_experience"` |
+| `flows config preview` | 0.08 s either way; the screenshot is Chrome cold start |
+| In-place patch of the 187 KB file with a script | **0.01 s** |
+
+Three conclusions, and they all point the same way:
+
+- **Isolation buys nothing on the gates.** Validate is latency-bound, not payload-bound, and preview
+  already isolates rendering with `--screen`. There is no speed to win here.
+- **An isolated mid-flow screen cannot pass the publish gate at all.** Any screen that navigates out
+  now dangles, and `validate` refuses it — correctly. Only a terminal screen (a paywall with no
+  outbound `navigate`) extracts cleanly, which is the minority case.
+- **Patching in place is already surgical.** One script edit changed the target screen and left
+  `theme`, `_meta`, `components`, `variables`, `locales` and all six other screens **byte-identical**
+  (md5 per key). There is nothing to stitch because nothing was ever split — which also avoids
+  silently reverting a flow-level normalisation the builder made, such as the `_meta.icons`
+  re-ordering it applies on save.
+
+**So the recipe for a big flow is:** keep the fetched config as the single working document; reach
+the screen programmatically (`jq`, or a short Python patch) rather than reading the whole file into
+context; render just that screen with `--screen`; run the gates over the whole document. The win
+that *is* real is context and blast radius — you never hold 187 KB to change one headline, and an
+edit scoped by a script cannot wander into a screen you were not asked to touch.
+
+**Everything shared stays shared, and that is the point.** Product ids, `_meta.screens`
+declarations, price variables, `theme` colours and typography presets, `_meta.icons`, `components`
+and `variables` are all flow-level. Patching in place means the screen you edit keeps resolving
+against the real ones; an extract would have to carry copies and a splice would have to prove it
+put them back unchanged.
+
 ## Decisions you must disclose
 
 Six of the seven items below are points where two answers are both defensible and Adapty has
