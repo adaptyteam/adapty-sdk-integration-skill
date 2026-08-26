@@ -44,11 +44,12 @@ A reference with a device frame needs its screen bounds located before any measu
 - **Size and spacing** — match the reference's *proportions* with relative layout
   (`fill`/`hug`/`relative`). Never hardcode fixed container widths or heights to match image
   pixels; fixed geometry breaks across devices (ADP-7117).
-- **Layout** — reach for the layout props before padding or docking. `distribution` has four modes,
-  and `space-between` on the screen root is what puts a footer at the bottom
-  ([flow-schema.md trap 10b](flow-schema.md)). A screen assembled from gaps plus reserved padding
-  is the shape that reads as "broken everywhere": a dead void under the content on a tall device,
-  or a footer sitting on top of it.
+- **Layout** — reach for the layout props before padding or docking. A bar the content scrolls
+  past is the `footer` element, not something you position ([patterns.md](patterns.md));
+  `distribution` has four modes, and `space-between` on the screen root spreads a short screen's
+  content away from its bar ([flow-schema.md trap 10b](flow-schema.md)). A screen assembled from
+  gaps plus reserved padding is the shape that reads as "broken everywhere": a dead void under the
+  content on a tall device, or a bar sitting on top of it.
 - **Glyphs**, in this order: author a **monochrome SVG** icon and render-verify it
   ([patterns.md](patterns.md)); if the graphic is **multicolour, gradient or illustrative** and no
   element can express it, **draw it, rasterize it on a transparent background, upload it, and say

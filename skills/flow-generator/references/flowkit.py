@@ -320,6 +320,46 @@ def stack(children=(), *, width='fill', height='hug', fixed_w=None, fixed_h=None
     return _node('stack', props, children=list(children), **kw)
 
 
+def footer(children=(), *, fill_=None, padding=None, gap=16, direction='vertical',
+           align_h='center', align_v='end', height='hug', **kw):
+    """The screen's pinned bottom bar. NOT a stack you position yourself.
+
+    A `footer` is lifted out of the layout flow and pinned to the bottom of the viewport while
+    the content scrolls past it. **It requires the screen to be `scrollable`** -- device-confirmed,
+    with the scroll off it does not render at all, and the preview cannot show you that
+    (`screen()` refuses the pair). Measured 2026-08-26, one variable at a time: the same props under
+    `type: "stack"` put the bar below the fold; the pinned band is identical whether the screen is
+    `scrollable` or not, and whether the footer is declared first or last.
+
+    Three measured constraints are enforced here rather than left to the caller, because each one
+    produced a real defect:
+
+    * `fill_` is REQUIRED. The footer overlays the scrolling content, so without an opaque fill
+      the content passes visibly behind the CTA — which is the symptom that gets misread as
+      "docking is broken" and answered with an invented backing plate.
+    * a `position` cannot be passed. Docking a footer is the fake-footer shape; the pinning is
+      the element's own behaviour.
+    * one per screen. A second `footer` drew ZERO pixels, so `screen()` refuses two.
+
+    Take the geometry from the builder's own template rather than inventing it:
+    `jq '.components[]|select(.id=="footer")|.template' component-catalog.json`.
+    """
+    if fill_ is None:
+        raise ValueError(
+            'footer(fill_=...) is required: a footer overlays the scrolling content, so without '
+            'an opaque fill the content shows through the bar. Pass fill_=fill("surface") (or a '
+            'hex). If you genuinely want content visible behind it, say so and use a stack.')
+    if 'position' in kw:
+        raise ValueError(
+            'a footer is already pinned — do not give it a position. An empty fixed stack with a '
+            'fill behind separately docked elements is the FAKE FOOTER this helper exists to '
+            'replace; use footer(children=[...]) and put the CTA inside it.')
+    node = stack(children, height=height, fill_=fill_, padding=padding, gap=gap,
+                 direction=direction, align_h=align_h, align_v=align_v, **kw)
+    node['type'] = 'footer'
+    return node
+
+
 def text(content, *, preset='body', color_id=None, align='left', width='fill',
          margin=None, position=None, **kw):
     props = {'font': {'preset': preset}, 'align': align,
@@ -551,10 +591,28 @@ def screen(screen_id, nodes, *, caption=None, fill_=None, padding=None,
            distribution=None, scrollable=True, status_bar=False,
            status_bar_theme='light', safe_area=False, selectable_groups=(),
            progress_bar=False):
-    """`distribution='space-between'` with `scrollable=False` is the bottom-pinned
-    footer: pass two children, content and footer. See `layout()` for why a spread
-    mode needs `scrollable=False` to have any effect."""
+    """A bar that must stay put while content scrolls past it is `footer()`, not a
+    distribution — the pinning is that element's own behaviour.
+
+    `distribution='space-between'` with `scrollable=False` is the different job: a SHORT
+    screen whose content should spread to fill the height, with the bar as the second of two
+    children. It does not pin anything, and `scrollable=False` clips content taller than the
+    viewport. See `layout()` for why a spread needs it anyway."""
     node_map, hierarchy = flatten(list(nodes))
+    feet = [k for k, v in node_map.items() if v.get('type') == 'footer']
+    if feet and not scrollable:
+        raise ValueError(
+            f'screen {screen_id!r} pairs a footer ({feet[0]}) with scrollable=False. '
+            'DEVICE-CONFIRMED: with the scroll off the footer does not render at all, and every '
+            'child goes with it -- a CTA in the footer takes the screen\'s navigation with it. '
+            'The preview draws it in both modes, so no local check can see this. Either '
+            'scrollable=True, or drop the footer and put the bar at the bottom with '
+            "distribution='space-between'.")
+    if len(feet) > 1:
+        raise ValueError(
+            f'{len(feet)} footer elements on screen {screen_id!r} ({", ".join(sorted(feet))}) — '
+            'measured, a second footer draws ZERO pixels. Put the CTA and the legal row inside '
+            'ONE footer as children.')
     props = {
         'layout': layout(direction, gap, align_h, align_v, distribution),
         'safeArea': safe_area, 'statusBar': status_bar, 'scrollable': scrollable,

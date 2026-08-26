@@ -688,6 +688,85 @@ def check(path):
                     f"'%name%'). Timer tokens carry a timer_ prefix — one of "
                     f"{sorted(valid_timer_tokens)}. If you lifted a timer from "
                     f"component-catalog.json, add the prefix; flowkit.timer_digits() emits it")
+    # `footer` is the pinned bottom bar, and all three of these were measured 2026-08-26 by
+    # rendering one screen eight ways. The element is lifted out of the flow and pinned to the
+    # viewport bottom; the same props under `type: "stack"` land below the fold.
+    for s in d.get('screens', []):
+        m = s['elements']['map']
+        feet = [k for k, e in m.items() if e.get('type') == 'footer']
+        # DEVICE-CONFIRMED 2026-08-26: a footer on a non-scrollable screen does not render at
+        # all, and its children go with it — so a CTA inside it takes the screen's only
+        # navigation. Invisible to every local gate (preview draws it in both modes, and both
+        # the schema check and `flows config validate` pass it), which is exactly why it is
+        # mechanical here. Error, not warning: the bar is simply gone on a device.
+        if feet and s['props'].get('scrollable') is False:
+            bad.append(f'screen {s["id"]}: footer {feet[0]} on a NON-SCROLLABLE screen — '
+                       f'device-confirmed to not render at all, taking any CTA inside it with '
+                       f'it. Set scrollable true, or drop the footer and use the root\'s '
+                       f'distribution: space-between for a bottom bar.')
+        # A SECOND footer drew zero pixels — not misplaced, absent. Certainly broken, so an error.
+        if len(feet) > 1:
+            bad.append(f'screen {s["id"]}: {len(feet)} footer elements ({sorted(feet)}) — a '
+                       f'second footer draws NOTHING. Put the CTA and the legal row inside one '
+                       f'footer as children.')
+        # A footer overlays the scrolling content, so with no fill the content passes visibly
+        # behind the CTA. Legal (and fine on a short screen over a matching background), hence a
+        # warning — but on a scrollable screen it is the defect that gets misread as a docking bug.
+        for k in feet:
+            if not (m[k].get('props') or {}).get('fill'):
+                warn.append(f'screen {s["id"]}: footer {k} has no fill, and a footer overlays the '
+                            f'scrolling content — the content will show through the bar')
+            pos = ((m[k].get('props') or {}).get('position') or {}).get('type')
+            if pos and pos != 'relative':
+                warn.append(f'screen {s["id"]}: footer {k} is positioned {pos!r} — a footer is '
+                            f'already pinned, and positioning one is the fake-footer shape')
+        # The FAKE FOOTER: an empty `fixed` stack carrying a fill, parked behind separately
+        # docked elements to fake an opaque bar. It reproduces the fill and the position and none
+        # of the pinning, and every other gate here passes it. Warning, because an empty fixed
+        # filled stack is legal (a divider, a scrim) — but on a screen with no footer and other
+        # docked siblings it is almost always this.
+        kids = set()
+        def _kids(n, _k=kids):
+            for c in n.get('children') or []:
+                _k.add(c['id'])
+                _kids(c)
+        _kids(s['elements']['hierarchy'])
+        for k, e in m.items():
+            props = e.get('props') or {}
+            if (e.get('type') == 'stack' and not feet
+                    and (props.get('position') or {}).get('type') == 'fixed'
+                    and props.get('fill') and not e.get('interactions')):
+                # childless in the hierarchy = a backing plate rather than a real container
+                def _has_children(nid, node=s['elements']['hierarchy']):
+                    found = []
+                    def w(n):
+                        if n.get('id') == nid:
+                            found.append(bool(n.get('children')))
+                        for c in n.get('children') or []:
+                            w(c)
+                    w(node)
+                    return any(found)
+                if not _has_children(k):
+                    warn.append(
+                        f'screen {s["id"]}: {k} is an empty `fixed` stack with a fill and no '
+                        f'interaction, and this screen has no footer — that is the "fake footer" '
+                        f'shape (a backing plate behind docked elements). The pinned opaque bar '
+                        f'is a `footer` element; see patterns.md')
+                else:
+                    # The commoner fake footer, and the one BOTH control arms of the GREEN round
+                    # produced: not an empty plate but a full-bleed `fixed` container with a fill
+                    # and no action of its own, holding the legal links. Keyed on full-bleed
+                    # (left+right+bottom all 0) so a real docked CTA at {left:24,right:24,bottom:N}
+                    # -- the shape three real exports carry -- does not trip it.
+                    pos = props.get('position') or {}
+                    if all(pos.get(x) == 0 for x in ('left', 'right', 'bottom')):
+                        warn.append(
+                            f'screen {s["id"]}: {k} is a full-bleed `fixed` bar with a fill and no '
+                            f'action of its own, on a screen with no footer — that is a hand-built '
+                            f'footer. A `footer` element pins itself, needs no offsets, and needs '
+                            f'no `padding.bottom` reservation (authoring one adds dead space at '
+                            f'full scroll); see patterns.md')
+
     return bad, warn
 
 rc = 0

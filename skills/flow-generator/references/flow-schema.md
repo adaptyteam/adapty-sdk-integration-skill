@@ -488,15 +488,17 @@ the shape, it is the vocabulary:
 | `direction` | `vertical`, `horizontal`, **`free`** |
 | `clipContent`, `rtl` | booleans, optional |
 
-**`space-between` on a screen root is how a footer reaches the bottom of the screen.** Give the
-root two children — a content stack and a footer stack — and the free space lands between them.
-Knowing only the `gap` form is what makes an author reach for the two workarounds instead, and
-both have failure modes this project shipped: a **docked** (`fixed`) footer needs the screen's
-`padding.bottom` to reserve its exact height, and getting that arithmetic wrong put a footnote
-underneath a CTA; leaving the footer **in flow** on a tall device leaves a dead void below it,
-which is what a user sees as "the layout is broken everywhere". Measured 2026-08-24 across four
-screens: replacing dock-plus-padding with one `space-between` root removed both defects and
-deleted the padding arithmetic entirely.
+**`space-between` on a screen root spreads a SHORT screen's content away from its bottom bar** —
+give the root two children and the free space lands between them. It does **not** pin anything: a
+bar that has to stay at the bottom while content scrolls past it is the `footer` element, whose
+pinning is its own behaviour (measured 2026-08-26; the same props as a `stack` land below the
+fold — [patterns.md](patterns.md)). Knowing only the `gap` form is what makes an author reach for
+the workarounds instead, and both have failure modes this project shipped: a **docked** (`fixed`)
+bar needs the screen's `padding.bottom` to reserve its exact height, and getting that arithmetic
+wrong put a footnote underneath a CTA; leaving the bar **in flow** on a tall device leaves a dead
+void below it, which is what a user sees as "the layout is broken everywhere". Measured 2026-08-24
+across four screens: replacing dock-plus-padding with one `space-between` root removed both
+defects and deleted the padding arithmetic entirely.
 
 **A spread mode needs free space, so the container must have a definite height.** On a screen that
 means `props.scrollable: false`; a scrollable screen's root is content-height, and a spread there
@@ -1027,7 +1029,9 @@ nothing more; for anything about whether users see it, that surface does not qua
 ### What the schema settles
 
 - **34 element types**, not the handful these exports use: `bottom-sheet`, `carousel`,
-  `date-picker`, `date-time-picker`, `divider`, `email-input`, `footer`, `header`, `icon`, `image`,
+  `date-picker`, `date-time-picker`, `divider`, `email-input`, `footer` (**pinned** — see
+  [patterns.md](patterns.md); its props are the plain container set, so the schema cannot tell you
+  it behaves differently from a `stack`), `header`, `icon`, `image`,
   `loader`, `number-input`, `old-price`, `password-input`, `phone-input`, `product`, `progress-bar`,
   `progress-bar-loader`, `progress-bar-segment`, `selectable`, `spinner`, `stack`, `tab-bar`,
   `tab-content`, `tab-content-wrapper`, `tab-item`, `tabs`, `text`, `text-input`, `time-picker`,
