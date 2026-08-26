@@ -109,7 +109,7 @@ comparing pixel positions rather than eyeballing.
 
 ## What a render cannot show you
 
-Six things to know before a screenshot becomes an overclaim — five it cannot show you, and
+What to know before a screenshot becomes an overclaim — mostly things it cannot show you, and
 one it shows that is not there:
 
 - **A stranded variable.** The render prints an unresolved reference as its literal token, so a
@@ -156,6 +156,14 @@ one it shows that is not there:
   the config and move on; "fixing" a correct config here is the trap. A switch, a checkbox and a
   pre-ticked consent row always draw in their off state, and neither their `propsByState` nor
   their default can be checked visually. Send the user to the Adapty app for those.
+- **A `spinner`, layout-dependently.** Measured 2026-08-26: the same `spinner` element drew in an
+  isolated probe and drew **nothing** inside a centred loading screen, while `validate` returned
+  `valid: true` and the device drew the screen's other elements fine. Which layouts suppress it is
+  **not isolated**, so a blank where a spinner should be is *unproven, not broken* — and the
+  rotation is a device check either way, since a still PNG could not show it even if the glyph
+  drew. What this blindness must never license is a repair: swapping the `spinner` for a static
+  ring `icon` makes the screenshot look complete and ships something that does not animate
+  ([patterns.md → a loading screen](patterns.md#a-loading-screen--fill-the-loader-spinner-label-template-never-fake-the-spinner)).
 - **Any locale but the one it draws.** The render ignores `defaultLocale` and the order of
   `locales[]` — measured: forcing `defaultLocale: "de"`, and putting `de` first, both produced
   byte-identical screenshots to the untouched file. **A locale transform therefore cannot be
