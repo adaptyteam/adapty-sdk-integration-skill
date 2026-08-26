@@ -220,12 +220,10 @@ the spinner that are not guessable:
 - the invisible auto-advance **`timer`** below — that is what actually moves the flow on; the
   spinner is decoration and has no completion trigger.
 
-**The `spinner` element does not render in `config preview` in some layouts.** Measured 2026-08-26:
-it drew in an isolated probe but drew *nothing* inside a centred loading screen, while `validate`
-returned `valid: true` and the device (Adapty app / ub-lab PaywallHost) rendered the rest of the flow
-fine. **A blank spinner in the preview is a preview blindness, not a broken element** — the same
-class as a toggle's `selected` state or a `video` ([preview.md](preview.md)). Verify the spinner on a
-device; do not judge it by the screenshot.
+**A blank where the spinner should be is a preview blindness, not a broken element** — the same
+class as a toggle's `selected` state, and measured on the same day; the finding lives with the rest
+of the list in [preview.md → What a render cannot show you](preview.md#what-a-render-cannot-show-you).
+Verify the spinner on a device, and never judge it by the screenshot.
 
 **Never swap the spinner for a static `icon` to make the preview look complete.** A ring `icon`
 renders in the preview and reads as a spinner in a screenshot, but it does **not animate** on device
