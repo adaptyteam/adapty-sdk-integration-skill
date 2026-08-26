@@ -364,6 +364,17 @@ run the *wrong* way: the render draws things a device will not. Two you act on h
 notch and no home indicator, so author `safeArea: true` and hand short-device clipping over as a
 device check.
 
+**Never downgrade a correct element to a preview-visible lookalike to make the screenshot look
+complete.** When an element is preview-blind — a `spinner` that draws nothing on this screen, a
+`video`, a toggle's `selected` state, a progress bar's advance — the answer is to keep the real
+element, say the preview cannot show it, and hand it to the device check; not to swap in something
+the render *can* draw. Standing a static `icon` in for a `spinner` (or any impostor for the element
+it mimics) ships a thing that passes the screenshot and does nothing on the device — the
+[fake-footer](references/patterns.md#a-bar-that-stays-at-the-bottom-use-footer) mistake in a new
+place, and no local gate catches it. A blank in the render is a reason to reach for a device (the
+Adapty app, or `/ub-lab` if you have it), never a reason to author a fake. The loading-screen shape
+and the `spinner`'s two non-guessable facts are in [patterns.md](references/patterns.md).
+
 **If you built a screen that advances itself, ship the diagnostic with the first ask.** The page
 never navigates, so a working auto-advance and a broken one look identical here and only the user's
 device can tell them apart — at a real cycle per attempt. Give the `timer` a child `text` carrying

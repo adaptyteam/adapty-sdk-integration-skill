@@ -205,6 +205,36 @@ fires nothing, on every surface. The field reads exactly like a delay — a user
 `duration: 1000` reasonably asked why the screen never advanced after a second — so when a
 spinner and a Countdown share a screen, say in the handoff which one moves the flow.
 
+### A loading screen — fill the `loader-spinner-label` template; never fake the spinner
+
+"A loading screen with a spinner and a label" has a **ready catalog component**,
+`loader-spinner-label` (`agent_allowed`) — fill its slots rather than assembling one by hand; the
+template's internal wiring is already correct. The primitives underneath it, and the two facts about
+the spinner that are not guessable:
+
+- **`spinner`** — a rotating icon. Its `props.icon.type` **must be `"custom"`**, not `"phosphor"`:
+  the publish gate rejects a phosphor spinner with a 422 (`Spinner element only supports custom
+  icons`). Point the custom icon at a `_meta.icons` entry you authored.
+- **`loader`** — a determinate progress bar (`duration`, `easing`), when the affordance is a bar
+  rather than a spinner.
+- the invisible auto-advance **`timer`** below — that is what actually moves the flow on; the
+  spinner is decoration and has no completion trigger.
+
+**The `spinner` element does not render in `config preview` in some layouts.** Measured 2026-08-26:
+it drew in an isolated probe but drew *nothing* inside a centred loading screen, while `validate`
+returned `valid: true` and the device (Adapty app / ub-lab PaywallHost) rendered the rest of the flow
+fine. **A blank spinner in the preview is a preview blindness, not a broken element** — the same
+class as a toggle's `selected` state or a `video` ([preview.md](preview.md)). Verify the spinner on a
+device; do not judge it by the screenshot.
+
+**Never swap the spinner for a static `icon` to make the preview look complete.** A ring `icon`
+renders in the preview and reads as a spinner in a screenshot, but it does **not animate** on device
+and it is not the `spinner` element — you would ship a lookalike that no longer does the job. This is
+the [fake-footer](#a-bar-that-stays-at-the-bottom-use-footer) mistake wearing a loader: a
+preview-visible impostor standing in for a real element to satisfy a screenshot. Keep the
+`spinner` / `loader-spinner-label`, disclose that the preview cannot show it, and hand the animation
+to the device check. `verify-config.py` cannot see this, so it is on you.
+
 ### DEVICE-VERIFIED: the JSON an auto-advancing screen actually needs
 
 The recipe above is written in the builder's vocabulary, and translating it to JSON left three
