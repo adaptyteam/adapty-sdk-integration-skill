@@ -359,6 +359,30 @@ def main():
         check('TIMER_UNITS matches the schema ETimerToken enum',
               sorted(enum) == sorted(f'timer_{u}' for u in fk.TIMER_UNITS), str(enum))
 
+    # footer() — the pinned bottom bar. Before this existed, an author reaching for a bar that
+    # stays put found only docked(), and the documented steer was AWAY from the native element;
+    # the result was a "fake footer" (an empty fixed stack with a fill behind docked children)
+    # that passed every local gate. Each guard below stands for one measured render.
+    f = fk.footer([fk.text(fk.localized('CONTINUE'))], fill_=fk.fill('surface'))
+    check('footer() emits type footer', f['type'] == 'footer', f['type'])
+    check('footer() is relative, not positioned — the pinning is the element\'s own',
+          f['props']['position']['type'] == 'relative', str(f['props']['position']))
+    check('footer() carries the opaque fill it was given', 'fill' in f['props'])
+    check('a footer with no fill raises (content would scroll through it)',
+          raises(lambda: fk.footer([fk.text(fk.localized('X'))])))
+    check('a positioned footer raises (that is the fake-footer shape)',
+          raises(lambda: fk.footer([], fill_=fk.fill('surface'),
+                                   position=fk.docked(bottom=24))))
+    check('two footers on one screen raise (a second one draws zero pixels)',
+          raises(lambda: fk.screen('scr_x', [fk.footer([], fill_=fk.fill('surface')),
+                                             fk.footer([], fill_=fk.fill('surface'))])))
+    check('a footer on a non-scrollable screen raises (device-confirmed: it does not render)',
+          raises(lambda: fk.screen('scr_ns', [fk.footer([], fill_=fk.fill('surface'))],
+                                   scrollable=False)))
+    check('one footer per screen is fine',
+          fk.screen('scr_y', [fk.stack([]), fk.footer([], fill_=fk.fill('surface'))])
+            is not None)
+
     print()
     if FAILURES:
         print(f'{len(FAILURES)} failure(s): ' + ', '.join(FAILURES))

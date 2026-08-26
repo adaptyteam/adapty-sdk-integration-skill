@@ -304,9 +304,19 @@ to the tallest slide or cut the copy.
 - **After restructuring a screen, hunt for orphaned fixed buttons**: two stacked CTAs render as
   one, and the SDK taps the topmost — a footer added late left an old Continue underneath it,
   team-diagnosed.
-- **Prefer a pinned container over the native `footer` element**: with `Scrollable = off` a Footer
-  never reaches the device at all, and Android computes its height separately, leaving a void.
-  A bottom-docked stack (this file, below) has neither behaviour.
+- **`Scrollable = off` + `footer` = no footer on the device. CONFIRMED 2026-08-26, not a dated
+  report** — it is a hard constraint and it is
+  [rule 0](#a-bar-that-stays-at-the-bottom-use-footer). The channel reported it, a preview
+  measurement appeared to contradict it, and the device settled it: the preview draws the footer
+  in both scroll modes, so believing the render is what made this look retired.
+- **The Android height/void report is HISTORICAL — device-tested 2026-08-26 and it did not
+  reproduce** (channel, to 2026-08-22: Android computed the footer's height separately, leaving a
+  void). Retired against a **device** result, which is the standard ADP-6828 set and the standard
+  a render does not meet. A footer on a short scrollable screen sat flush to the physical bottom
+  with the gap above it, as designed. If a void ever comes back, this is what it is, and docking
+  is the fallback. The pre-2026-08-26 version of this bullet said "prefer a pinned container over
+  the native `footer`" — that steer is what talked an agent into building
+  [a fake footer](#a-bar-that-stays-at-the-bottom-use-footer) out of `fixed` stacks.
 
 ### A tappable button
 
@@ -329,11 +339,102 @@ current export carries `9`. The element and group vocabulary matches, which is w
 here — but do not import a fixture's envelope, and do not change the input's `schemaVersion`
 to match one. Carry the input's own value through untouched.
 
-### Putting a footer at the bottom: prefer the screen's own distribution
+### A bar that stays at the bottom: use `footer`
 
-Before reaching for the docked pattern below, check whether the screen just wants
-`space-between`. Give the screen root exactly two children — a content stack and a footer stack
-(CTA, legal row, footnote) — and set:
+`footer` is a real element type, and it is the one thing on this page you do **not** build out of
+`fixed` stacks. It is lifted out of the layout flow and pinned to the bottom of the viewport while
+the content scrolls past it — which is exactly what a CTA bar, a legal row or a plan-picker dock
+is for.
+
+Take the shape from the builder's own template rather than authoring it:
+
+```bash
+jq '.components[]|select(.id=="footer")|.template' references/component-catalog.json
+```
+
+It is the only component in that catalog carrying an `insertion_policy` (`screen_footer`), and its
+props are the plain container set — `position: relative`, `width: fill`, `height: hug`, padding,
+and **an opaque `fill`**. `flowkit.footer([...])` emits it.
+
+**Measured 2026-08-26** on one screen rendered eight ways, changing a single thing at a time
+(content 14x80pt against a 900px viewport, so an in-flow bar sits below the fold):
+
+| The bar | Where it drew |
+|---|---|
+| `type: "footer"`, `scrollable: true` | pinned at the viewport bottom, at its authored 88pt |
+| identical props, `type: "stack"` | **nowhere** — below the fold |
+| `type: "footer"`, `scrollable: false` | same pinned band in the preview — **and NO FOOTER AT ALL on device** (see the rule below; this row is why a local render is not a device) |
+| `footer` declared **first** in `hierarchy` | same pinned band — declaration order is irrelevant |
+| a **second** `footer` on the screen | drew **nothing at all**, zero pixels |
+| `footer` with **short** content above it | same pinned band, void *above* it |
+| `stack` with short content above it | in flow directly under the content, void *below* it |
+| `footer` with **no `fill`** | content visibly scrolls **through** it |
+
+**Reserve nothing yourself: the scroll extent already accounts for the footer.** Measured by
+scrolling the live preview page to the end rather than screenshotting it (iPhone 14, viewport 844),
+and then **confirmed on a device** — the last row clears the bar at full scroll with no authored
+reservation. Both halves were worth having: `scrollable` proved the two renderers can disagree, so
+a scroll claim from the preview is a hypothesis until hardware agrees.
+With no authored `padding.bottom`: `scrollHeight` 1424 = 1300 of content **+ the footer's own 124**,
+max scroll 580, and at full scroll the last row ends at 682 against a footer band of 721-844 — it
+clears by 39px, so nothing is ever stranded behind the bar. Author `padding.bottom: 124` "to make
+room" and every number moves by exactly that: `scrollHeight` 1548, max scroll 704, and the gap
+above the bar grows from 39px to **163px of dead space**. The reservation is already made; yours is
+added on top of it.
+
+So the mechanism, which accounts for every row of the table above: **a footer contributes its
+height at the END of the scroll extent — wherever in the hierarchy it is declared — and is painted
+pinned to the viewport bottom.** The contributed height is why content clears at full scroll and
+why the identical props on a `stack` fall below the fold; the pinned painting is why the fill has
+to be opaque. A docked `fixed` bar contributes nothing, which is exactly why *that* pattern needs
+`padding.bottom` to equal the bar's height, and why getting the arithmetic wrong put a footnote
+under a CTA.
+
+**Device-confirmed 2026-08-26** (Adapty mobile app, Android): the footer pins to the bottom while
+content scrolls **behind** it, the last row clears it at full scroll with no authored reservation,
+and on a short screen it sits flush to the physical bottom. What the device *changed* versus the
+preview is exactly one thing, and it is rule 0.
+
+Five rules follow. The first is a hard requirement and the local render cannot see it:
+
+0. **A `footer` requires `scrollable: true`. Never pair one with `scrollable: false`.**
+   Device-confirmed 2026-08-26 (Adapty mobile app): with the scroll off the footer **does not
+   render at all** — not misplaced, absent, and every child inside it goes with it, so a CTA
+   living in the footer takes the screen's only navigation with it. The preview draws it
+   identically in both modes, so this is invisible to `config preview`, to the schema check and
+   to `flows config validate`. `flowkit.screen()` now refuses the pair and `verify-config.py`
+   errors on it. If a screen must not scroll, it cannot have a footer — use the root's own
+   [`space-between`](#putting-a-short-screens-content-and-bar-apart-the-roots-own-distribution)
+   instead. That gives a clean split with no judgement in it: **`scrollable: true` -> `footer`;
+   `scrollable: false` -> a spread distribution.**
+
+1. **One `footer` per screen.** A second one is silently dropped, so a CTA and a legal row go
+   inside the *same* footer as children, never as two footers.
+2. **Put it anywhere in the hierarchy** — last child is the readable choice, but position carries
+   no meaning.
+   **Set no `padding.bottom` to reserve it, and no offsets.** Both are docking habits; here they
+   only add dead space.
+3. **Give it an opaque `fill`.** The footer overlays scrolling content, so without a fill the
+   content passes visibly behind the CTA. This is the defect that gets misread as "the docked
+   pattern is broken", and it is a property of the footer, not a reason for a backing plate.
+4. **Never build a lookalike.** An empty `fixed` stack with a `fill`, sitting behind separately
+   docked elements, is a *fake footer*: it reproduces the fill and the position and none of the
+   pinning, and every local gate passes it. `verify-config.py` now warns on that shape.
+
+**No gate but `verify-config.py` sees any of this.** Measured the same day: `flows config
+validate` returned `valid: true, issues: []` for the correct footer *and* for two footers, for the
+fake footer, and for the unfilled footer whose content shows through — and the shipped schema check
+passes them too, because `IFooterElementProps` is the **same property set** as
+`IStackElementProps`. So the schema cannot tell you a footer behaves differently from a stack, and
+the publish gate will not tell you that you should have used one. Read the catalog template and
+look at the render.
+
+### Putting a *short* screen's content and bar apart: the root's own distribution
+
+Different job, and still the right tool for it. A `footer` pins the bar and leaves the void
+**above** it; when a short screen should instead spread its content out to fill the height, that
+is the root's `distribution`. Give the screen root exactly two children — a content stack and a
+bar stack — and set:
 
 ```json
 "props": {"scrollable": false,
@@ -341,23 +442,26 @@ Before reaching for the docked pattern below, check whether the screen just want
                      "distribution": {"type": "space-between"}}}
 ```
 
-The free space lands between the two, so the footer is at the bottom with **no** `fixed`
-positioning, no `padding.bottom` reservation, and no arithmetic to get wrong. Measured across
-four screens (2026-08-24) this removed both of the failure modes the alternatives carry: a
-footnote that had slid under a docked CTA, and the dead void an in-flow footer leaves on a tall
-device. `flowkit.screen(..., distribution='space-between', scrollable=False)`.
+The free space lands between the two, with **no** `fixed` positioning, no `padding.bottom`
+reservation, and no arithmetic to get wrong. Measured across four screens (2026-08-24) this
+removed both of the failure modes the `fixed` alternatives carry: a footnote that had slid under a
+docked CTA, and the dead void an in-flow bar leaves on a tall device.
+`flowkit.screen(..., distribution='space-between', scrollable=False)`.
 
 **Choose per screen, because the cost is real:** a spread mode needs a definite-height container,
-so it wants `scrollable: false`, and that **clips** content taller than the viewport. Short
-screens spread; tall screens stay `scrollable: true` (where a spread is inert and the footer
-simply follows the content) or use the docked pattern below. See
+so it wants `scrollable: false`, and that **clips** content taller than the viewport. So: a bar
+that content must scroll past is a `footer`; a short screen whose content should breathe is a
+spread; a screen that needs both is a `footer` plus a spread on the content above it. See
 [flow-schema.md trap 10b](flow-schema.md) for the vocabulary and
 [preview.md](preview.md) for why you cannot check the clipping locally.
 
-Docking is still right when content must scroll **under** a CTA that stays put — a long paywall,
-a scrolling comparison table.
-
 ### A bottom-docked button
+
+**Reach for this only once `footer` is ruled out.** Docking a bar was the old answer to "keep it
+at the bottom while content scrolls", and `footer` does that natively, opaquely, and with no
+offsets to compute. What is left for `fixed` is a single overlay that is *not* a bar — a floating
+close button, a corner badge — and the fallback if a device shows one of the two
+[dated `footer` reports](#layout-discipline-the-support-channel-keeps-re-learning).
 
 `fixed` with `left`/`right`/`bottom` plus `width: auto` is the docked-CTA pattern (trap 9).
 
@@ -704,12 +808,17 @@ Two more things that follow from the sheet being an ordinary part of the documen
   the page furniture hidden, which is the state the actions produce. That verifies both layouts and
   proves nothing about the tap: whether `showElement` actually fires is an Adapty-app check.
 
-### A side-by-side docked footer
+### A side-by-side pair of docked buttons
 
-Two buttons on one row at the bottom, each with its own action. The trap is treating it as one
-fixed container holding two relative children: the container swallows the taps (same failure as
-[a bottom-docked button](#a-bottom-docked-button)). Each button is **its own `fixed` element**,
-one anchored left and one right, and their widths have to add up:
+Two buttons on one row at the bottom, each with its own action. **If the row should stay put while
+content scrolls, put both buttons inside one
+[`footer`](#a-bar-that-stays-at-the-bottom-use-footer) as a horizontal stack and skip the
+arithmetic below entirely** — that is the case this section used to be written for, under the
+title "a side-by-side docked footer". What follows is for genuinely free-floating buttons.
+
+The trap is treating them as one fixed container holding two relative children: the container
+swallows the taps (same failure as [a bottom-docked button](#a-bottom-docked-button)). Each button
+is **its own `fixed` element**, one anchored left and one right, and their widths have to add up:
 
 ```json
 "props": {"position": {"type": "fixed", "left": 11, "bottom": 18},
@@ -737,8 +846,9 @@ measure it rather than assuming, with
  "interactions": [{"id":"int_…","trigger":"tap","actions":[{"id":"act_…","type":"navigateBack"}]}]}
 ```
 
-There is no `header` shortcut for this: `header` and `footer` are plain containers with a stack's
-props and no built-in navigation.
+There is no `header` shortcut for this: `header` is a plain container with a stack's props and no
+built-in navigation. (`footer` shares that prop set but **not** that inertness — it is pinned out
+of the flow; see [`footer`](#a-bar-that-stays-at-the-bottom-use-footer).)
 
 **If the arrow glyph is not in `_meta.icons`, you have three options in this order.** A text
 affordance ("Back", "Not now") always works and needs nothing. Copying an icon from another flow in

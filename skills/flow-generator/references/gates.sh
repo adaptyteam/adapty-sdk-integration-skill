@@ -16,6 +16,13 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CFG="${1:?usage: gates.sh <config.json> [APP_UUID FLOW_ID]}"
 APP="${2:-}"; FLOW="${3:-}"
 [ -f "$CFG" ] || { echo "gates: no such file: $CFG" >&2; exit 2; }
+# Absolutise both paths NOW. The schema step runs inside `cd "$AJV_DIR"`, so a relative path
+# resolves against the ajv cache dir, the node call cannot find the file, and because that step is
+# wrapped in `|| true` the gate is SILENTLY SKIPPED while the run still reports a pass. The -f
+# guard above does not catch it: it runs in the original cwd, where the relative path is fine.
+CFG="$(cd "$(dirname "$CFG")" && pwd)/$(basename "$CFG")"
+[ -n "${BASELINE:-}" ] && [ -f "$BASELINE" ] && \
+  BASELINE="$(cd "$(dirname "$BASELINE")" && pwd)/$(basename "$BASELINE")"
 
 ADAPTY_BIN=${ADAPTY:-}
 if [ -z "$ADAPTY_BIN" ]; then
