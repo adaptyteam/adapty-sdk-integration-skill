@@ -89,8 +89,23 @@ for s in $SCREENS; do
     shoot_one "$url" "$png" 60000 "${WATCHDOG_RETRY:-300}"
   fi
   if [ -s "$png" ]; then
-    echo "   rendered $s -> $(basename "$png")"
-    shots="$shots $png"; n=$((n+1))
+    # A non-empty PNG is NOT a render. Chrome screenshots its own error page perfectly, so an
+    # unreachable render host used to print "rendered" and exit 0 — measured on 6/6 agents in a
+    # GREEN round, each handed a valid 430x900 screenshot of DNS_PROBE_FINISHED_NXDOMAIN. Every
+    # one of them caught it by LOOKING at the file, which is luck, not a check: the same page
+    # false-passed `render-check.py` on its 216 antialiasing colours until a dominant-share
+    # guard was added. Same guard, same threshold, now on the path the skill actually runs.
+    if python3 "$HERE/render-measure.py" --sanity "$png" >/dev/null 2>&1; then
+      echo "   rendered $s -> $(basename "$png")"
+      shots="$shots $png"; n=$((n+1))
+    else
+      bad="$OUT/NOT-A-RENDER-$(basename "$png")"
+      mv "$png" "$bad"
+      echo "   NOT A RENDER  $s — the PNG is a flat page, almost certainly an error screen:" >&2
+      python3 "$HERE/render-measure.py" --sanity "$bad" >&2
+      echo "           Renamed so it cannot be mistaken for evidence. Load the preview URL in a" >&2
+      echo "           real browser: this is a host/network problem far more often than a config one." >&2
+    fi
   else
     echo "   FAILED  $s — no file even at 60s. Load the URL in a REAL browser before blaming the" >&2
     echo "           config: the page can render there while headless yields nothing." >&2
