@@ -242,7 +242,12 @@ spacing bug rather than as an image, so prefer `cover` unless the whole asset mu
 ## Still out of reach
 
 - **SVG upload** — `http_500` (above). Icons stay authored inline in `_meta.icons`.
-- **Video.** No CLI path.
+- **Video.** No CLI path for the *source* — but the element is not out of reach. Place a real
+  `video` element with `customMediaID`/`video` unset: it renders a styled **"Upload Video"**
+  placeholder (like an empty `image`), publishes clean (`validate` → `valid: true`, measured
+  2026-08-26), and the user binds the clip in the builder. Style it (`loop`, `objectFit`,
+  `borderRadius`, fixed height) and report it as an upload ask. **Never** substitute a `stack` with
+  a Play icon — that ships a lookalike of a different element type (flow-schema.md trap 5).
 - **Fonts.** Still a manual Flow Builder upload; a typeface the account lacks is a named ask, not a
   silent substitution.
 - **Deleting or listing uploaded media.** `flows media` has only `upload`, so an upload cannot be

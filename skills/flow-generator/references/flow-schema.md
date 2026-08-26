@@ -319,6 +319,22 @@ The same holds for the asset `id` — omit the whole entry rather than inventing
 Report every element left with an empty `values` map in your handover, so the user knows
 exactly what to upload.
 
+**A video is the same story one element type over — a real `video` element with its source unset,
+NEVER a stack that looks like one.** `flows media upload` has no video path
+([media.md](media.md)), so you cannot bind a source — but the element itself is yours to place. A
+`video` with no `customMediaID`/`video` renders a styled **"Upload Video"** placeholder in the
+builder and in `config preview` (measured 2026-08-26), and it **publishes clean** (`validate` →
+`valid: true`) — exactly the empty-`image` case, one type over. Author it fully styled — `loop:
+true`, `objectFit`, `borderRadius`, a fixed height — so the box the user drops a clip into is
+already the right shape, and report it as an upload ask like any empty image. Do **not** stand a
+`stack` with a Play icon in for it: that is a lookalike of a *different element type* (the same
+mistake as the [fake footer](patterns.md#a-bar-that-stays-at-the-bottom-use-footer) and the fake
+spinner), it forces the user to delete-and-recreate instead of just binding a file, and no gate
+flags it. The rule generalises past these two: **when you cannot fully provide an element — no
+asset, no CLI path, or it is preview-blind — place the REAL element in its unset/placeholder state
+and hand the gap to the user; never substitute an element type that merely looks right** (the
+phase-4 rule in `SKILL.md`).
+
 **A styled placeholder beats a lookalike substitute — never stand an emoji in for a designed
 glyph.** When the reference uses icons you cannot author faithfully, the ladder is: author a
 monochrome SVG and render-verify it ([patterns.md](patterns.md)); if the glyph is **multicolour or
@@ -1315,6 +1331,7 @@ style error: you will search for an element type that does not exist, or invent 
 | a price | Never literal text. A rich-text `variable` node — see invariant 5 for the two forms. |
 | a close button, "dismiss" | A tappable `stack` whose action is `{"type": "closeFlow"}` (no payload). |
 | an image, a background | An `image` element for content; `props.fill` with `{"type": "image"}` for a screen or element background. **Different shapes** — see trap 1. |
+| a video, a looping banner | A `video` element (`loop`, `objectFit`). No CLI upload for the source, so leave `customMediaID`/`video` unset — it renders a styled **"Upload Video"** placeholder and publishes clean; style it (`borderRadius`, fixed height) and hand the upload to the user. **Never** fake it with a `stack` + Play icon — trap 5. |
 
 Two rules that follow from the whole table: **the user's noun is rarely the element `type`**,
 so resolve the request through this map before searching the file — and when a request maps to
