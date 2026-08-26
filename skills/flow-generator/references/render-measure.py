@@ -24,7 +24,14 @@ Stdlib only (no Pillow): 8-bit non-interlaced PNG, which is what headless Chrome
 "connected" means. `--row` reports painted horizontal runs, i.e. widths. Both decide "painted"
 by distance from a sampled background pixel, so pick `--bg` inside the page, not on a card.
 """
-import argparse, struct, sys, zlib
+import argparse, collections, struct, sys, zlib
+
+# Share of one colour above which a PNG is not a render. Reused verbatim from
+# `tests/render-check.py`, where it was calibrated against real paywall renders; the page it
+# exists to reject is Chrome's own error screen, which measured 99.7% there. Re-measured
+# 2026-08-26 on five DNS-error screenshots from a GREEN round: 97.7-98.0% one colour with
+# 217-228 distinct colours -- so a colour COUNT cannot catch this and the share can.
+MAX_DOMINANT_SHARE = 0.92
 
 
 def read_png(path):
@@ -86,6 +93,9 @@ def runs_of(on):
 def main():
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument('png')
+    ap.add_argument('--sanity', action='store_true',
+                    help='is this a render at all? exits 1 on a flat page (a Chrome error '
+                         'screen screenshots perfectly and is mostly one colour)')
     ap.add_argument('--column', metavar='X0:X1', help='strip to scan downward, for continuity')
     ap.add_argument('--row', type=int, metavar='Y', help='scanline to measure widths on')
     ap.add_argument('--rows', metavar='Y0:Y1', help='limit --column to these rows')
@@ -96,10 +106,30 @@ def main():
     ap.add_argument('--scale', metavar='IMGW:PTS',
                     help='also print points, dividing by (image width / device points)')
     a = ap.parse_args()
-    if (a.column is None) == (a.row is None):
+    if a.sanity:
+        if a.column or a.row:
+            ap.error('--sanity takes no other measurement')
+    elif (a.column is None) == (a.row is None):
         ap.error('pass exactly one of --column or --row')
 
     w, h, chans, buf = read_png(a.png)
+    if a.sanity:
+        # Every 3rd pixel: 20x cheaper and the share does not move meaningfully.
+        counts = collections.Counter()
+        for y in range(0, h, 3):
+            row = y * w * chans
+            for x in range(0, w, 3):
+                i = row + x * chans
+                counts[buf[i:i + 3]] += 1
+        total = sum(counts.values()) or 1
+        dom = counts.most_common(1)[0][1] / total
+        verdict = 'FLAT — this is not a render' if dom > MAX_DOMINANT_SHARE else 'looks drawn'
+        print(f'{a.png}  {w}x{h}  {len(counts)} colours, {dom:.1%} one colour — {verdict}')
+        if dom > MAX_DOMINANT_SHARE:
+            print('  A screenshot of an error page is a valid PNG. Open the URL in a real '
+                  'browser before blaming the config.')
+            return 1
+        return 0
     px = lambda x, y: tuple(buf[(y * w + x) * chans:(y * w + x) * chans + 3])
     span = lambda s, hi: (lambda p: (max(0, int(p[0])), min(hi, int(p[1]))))(s.split(':'))
 
@@ -138,4 +168,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main() or 0)

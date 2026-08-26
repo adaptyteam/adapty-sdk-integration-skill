@@ -52,16 +52,21 @@ crash, so it is evidence rather than just coverage. Sanitizing it does **not** c
 ```bash
 python3 tests/sanitize-fixture.py fixtures-raw/x.json fixtures/x.json   # regenerate a fixture
 python3 skills/flow-generator/references/verify-config.py tests/fixtures/*.json                   # structural checks
+python3 skills/flow-generator/references/diff-config.py old.json new.json                           # what the newer one destroys
 python3 tests/render-check.py                                           # does it draw?
 python3 tests/render-check.py --baseline                                # record references
 python3 tests/render-check.py --keep                                    # keep PNGs to look at
 python3 skills/flow-generator/references/render-measure.py shot.png --column 23:68                 # is a column continuous?
 python3 skills/flow-generator/references/render-measure.py shot.png --row 343                       # how wide is it, really?
 python3 tests/test-flowkit.py                                            # the authoring helpers
+python3 tests/test-diff-config.py                                        # the diff's two directions
 ```
 
 Exit codes match the repo's lint convention: `0` clean, `1` findings, `2` infrastructure
-problem (CLI or Chrome missing — fix the tooling, not the fixture).
+problem (CLI or Chrome missing — fix the tooling, not the fixture). `diff-config.py` is the one
+whose `1` is not a finding about the document: it means *this write removes something*, which may
+be exactly what was asked for. Its calibration table lives in
+[merge.md](../skills/flow-generator/references/merge.md).
 
 `render-check.py` needs `adapty@beta` (for `flows config preview`, which is local-only and needs
 no auth) and Chrome or Chromium.

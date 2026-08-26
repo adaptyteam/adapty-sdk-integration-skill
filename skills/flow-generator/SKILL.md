@@ -150,6 +150,15 @@ $ADAPTY flows config get --app $APP $FLOW --json > flow.working.json
 cp flow.working.json flow.backup.json
 ```
 
+**Patch what you just fetched.** A build script or a `draft.json` from an earlier run predates
+whatever was done in the builder since, and `config update` replaces everything
+([merge.md](references/merge.md)). If such a copy is lying around, diff it against live, report
+the `ADDS`/`CHANGES` as the human's edits, and move it out of the way:
+
+```bash
+python3 references/diff-config.py <the-old-local-copy>.json flow.working.json
+```
+
 **New flow** — `flows create`, then seed its config from one the user already has
 (`flows list` → `config get`) so theme, fonts, locales and products are real. Its first
 `config update` omits `--expected-updated-at`. **A new flow is the safe default for anything the
@@ -399,7 +408,23 @@ empty document. Report what you wrote afterwards.
 the document you are replacing exists in exactly one other place — the phase-2 backup. Put all of
 this in front of the user in one message and wait:
 
-**Show them the change first — an approval on a description is not an approval on the screen.**
+**First, compute what the write destroys — never describe it from memory.** Run this on the bytes
+you are about to write, after the last edit:
+
+```bash
+python3 references/diff-config.py flow.backup.json draft.json      # REMOVES = what you destroy
+```
+
+The **backup** is the baseline, not your working file: it is the one copy nothing in the run has
+touched, so it is the only honest answer to "what was there before me". (An edit that landed after
+you fetched is the lock's job, not this one's.)
+
+Every `REMOVES` line goes in the ask below, traced to the request that asked for it, and **one you
+cannot trace is someone else's work**: name it and ask, never write past it. Exit 1 says the list
+is non-empty, not that anything is wrong — deleting a screen is a supported transform, doing it
+silently is not ([merge.md](references/merge.md)).
+
+**Then show them the change — an approval on a description is not an approval on the screen.**
 Split it in two, because the two halves need different things from the reader.
 
 **Screens that changed — one row each, so "there are four of these" is visible at a glance.**
@@ -442,6 +467,7 @@ show. **Identical screenshots do not mean an identical config**
 > <the two lists above>
 >
 > - Element count: <before> → <after>
+> - Removes: <the `REMOVES` lines, each traced to the request that asked for it — or "nothing">
 > - Restore: `flow.backup.json`, taken before this edit.
 >
 > Write it?
@@ -495,9 +521,10 @@ nothing was written: re-`get`, re-apply your change **to their config**, write a
 past it and never re-send your local copy — that is the content that would erase their work. If
 their version differs in ways you did not author, ask rather than restore.
 
-**If you rebuilt the config from a script rather than patching the fetched one**, merge the live
-`_meta.screens` back in first — `config update` replaces everything, and an empty one wipes product
-attachments the builder made ([products.md](references/products.md)).
+**If you rebuilt the config from a script rather than patching the fetched one, you have the wrong
+document** — a rebuild replaces the live flow, taking `_meta.screens`
+([products.md](references/products.md)) and every manual edit with it. Patch the fetched config;
+[merge.md](references/merge.md) names the only two cases where a rebuild is right.
 
 #### The file deliverable
 
@@ -534,6 +561,11 @@ shipped to a user came through a gap this slot exists to hand over
 clobbering, so this is a real guarantee rather than a warning. Read it from `config get`
 immediately before you write. Omitting it is last-write-wins and will silently overwrite an edit
 someone else made in between.
+
+**The lock is not a merge.** It guards the *timing* of a write and says nothing about its
+*content*: a document that was never based on the live config — regenerated, or patched from a
+stale local file — passes the lock and overwrites the flow anyway. So patch what you fetched, and
+diff before you write ([merge.md](references/merge.md)).
 
 **Never write to a flow the user did not name.** `flows list` is for finding the right one and
 confirming it back to them, not for picking one yourself.
@@ -602,10 +634,11 @@ Each file **owns** its facts; link rather than restate, or the copies drift.
 | [fidelity.md](references/fidelity.md) | A reference image was given — the per-element inventory, the gap-closing ladder, and what becomes a user ask |
 | [media.md](references/media.md) | The screen has an image: the upload's limits, element-versus-`fill` shapes, geometry, and when to rasterize |
 | [products.md](references/products.md) | Before touching a `product` element — `products create` writes to a live dashboard |
+| [merge.md](references/merge.md) | The flow has been edited by a human since it was generated, or you are tempted to re-run a build script over an existing flow |
 | [transforms.md](references/transforms.md) | You hit a point where two answers are defensible and silence is the only wrong one |
 | [patterns.md](references/patterns.md) | You need a composite you cannot guess: tabs, progress bars, toggles, countdowns, plan cards |
 | the **`paywall-teardown`** skill | **Phase 2** when *you* choose the design, **phase 4** to grade what you built. It owns whether the screen sells; this skill owns the JSON |
 
 Executable, all under `references/`: `flowkit.py` (authoring), `verify-config.py` (phase 3),
-`validate-with-schema.mjs` (phase 3), `montage.py` and `render-measure.py` (phase 4),
-`preview-with-playwright.mjs` (when a render fails).
+`validate-with-schema.mjs` (phase 3), `diff-config.py` (phase 2 and phase 5), `montage.py` and
+`render-measure.py` (phase 4), `preview-with-playwright.mjs` (when a render fails).
