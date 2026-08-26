@@ -60,6 +60,7 @@ python3 skills/flow-generator/references/render-measure.py shot.png --column 23:
 python3 skills/flow-generator/references/render-measure.py shot.png --row 343                       # how wide is it, really?
 python3 tests/test-flowkit.py                                            # the authoring helpers
 python3 tests/test-diff-config.py                                        # the diff's two directions
+python3 tests/test-audit-flow.py                                         # the audit's checks, both directions
 ```
 
 Exit codes match the repo's lint convention: `0` clean, `1` findings, `2` infrastructure
@@ -129,6 +130,26 @@ property is what makes it useful — it is how a connector fading out onto the p
 Stdlib only, 8-bit non-interlaced PNG — what headless Chrome writes. It reads any PNG, so point it
 at the user's reference screenshot as readily as at your own render, and compare the two.
 
+
+## `test-audit-flow.py` — the calibration suite for `flow-audit`
+
+Runs `skills/flow-audit/references/audit-flow.py` as a **subprocess**, never as an import, so
+nothing writes a `__pycache__` into `references/` — the copy-install path would ship it.
+
+Every case asserts a direction, because a check that only ever stays quiet is not a check:
+
+    FIRES   — an injected defect must be reported, at the stated severity
+    SILENT  — a real shipped export must produce nothing for that check
+
+The corpus is the six flow configs in `fixtures/`. `catalog-fixture.json` is the product
+catalog the audit compares them against, and it lives **beside** this README rather than in
+`fixtures/` on purpose: `fixtures/` is flow-configs only, and four separate consumers walk it
+assuming that. Putting the catalog there broke three of them.
+
+Calibration state per check — including which are proven to fire on real data and which are
+only proven silent — lives in
+[checks.md](../skills/flow-audit/references/checks.md), along with every false-positive trap
+the checks were written against.
 
 ## `test-flowkit.py` — the guardrail on the authoring helpers
 
