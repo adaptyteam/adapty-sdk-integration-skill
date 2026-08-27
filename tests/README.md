@@ -60,6 +60,7 @@ python3 skills/flow-generator/references/render-measure.py shot.png --column 23:
 python3 skills/flow-generator/references/render-measure.py shot.png --row 343                       # how wide is it, really?
 python3 tests/test-flowkit.py                                            # the authoring helpers
 python3 tests/test-diff-config.py                                        # the diff's two directions
+python3 tests/test-snippet.py                                            # extract/plan/graft
 ```
 
 Exit codes match the repo's lint convention: `0` clean, `1` findings, `2` infrastructure
@@ -153,6 +154,26 @@ Nineteen checks, in three groups:
 Then it puts the whole document through `schema-check.py`, and skips rather than fails if that
 gate is unavailable. Beyond this test, flowkit's output has been rendered through
 `flows config preview` and looked at — a schema pass is not proof that anything draws.
+
+## `test-snippet.py` — the guardrail on save/reuse
+
+`skills/flow-generator/references/snippet.py` (`extract`/`plan`/`graft`) is shipped skill
+content, same standing as `flowkit.py`. 187 cases, mostly run against the script as a
+subprocess (a few object-identity properties are unobservable across a subprocess boundary and
+are checked in-process instead, guarded the way `test-flowkit.py` guards its own import).
+
+What it calibrates: the three-way dependency resolution (reuse / adopt / carry) for colours,
+typography presets, fonts, icons and custom variables; the path-keyed-not-value-keyed rewrite
+(`tabs-paywall.json`'s group named `tabs` next to an element *typed* `tabs`); id collision
+re-minting; and all four snippet kinds. The last case in the suite is the graft's actual oracle:
+it runs a real `graft` output through `skills/flow-generator/references/verify-config.py` as a
+subprocess and asserts the result is verify-clean, or every remaining `ERROR` was already named
+in the plan's `NEEDS YOU`. Red means either a resolution rule regressed, or a graft introduced
+breakage `plan` did not predict.
+
+```bash
+python3 tests/test-snippet.py
+```
 
 ## `schema-check.py` — validating against the published schema
 
