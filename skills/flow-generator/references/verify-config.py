@@ -767,6 +767,46 @@ def check(path):
                             f'no `padding.bottom` reservation (authoring one adds dead space at '
                             f'full scroll); see patterns.md')
 
+    # The FAKE CAROUSEL: a reviews/testimonials slider faked as a static card plus a row of
+    # decorative dot `stack`s. The `carousel` element is swipeable and renders its OWN indicator
+    # dots (props.dots: {size, color, activeColor}); hand-built dots reproduce the look and none
+    # of the behaviour — one slide ever shows and the dots do nothing. Same class as the fake
+    # footer and the fake spinner, and no other gate sees it. Heuristic, hence a warning.
+    #
+    # Keyed on dot-like SIBLINGS -- >=3 tiny equal rounded leaf stacks that are direct children
+    # of ONE parent, which is the shape of an indicator row. Screen-wide counting tripped on
+    # list bullet dots (one dot per list row, each in its own parent), a real false positive
+    # measured against a live flow; requiring one shared parent drops those and still catches
+    # the indicator row, whose dots are always siblings.
+    def _dotlike(e):
+        if e.get('type') != 'stack' or e.get('children'):
+            return False
+        pr = e.get('props') or {}
+        w, h = pr.get('width') or {}, pr.get('height') or {}
+        wv, hv = w.get('value'), h.get('value')
+        return (w.get('type') == 'fixed' and h.get('type') == 'fixed'
+                and wv == hv and isinstance(wv, (int, float)) and wv <= 12
+                and bool(pr.get('borderRadius')))
+    for s in d.get('screens', []):
+        m = s['elements']['map']
+        if any(e.get('type') == 'carousel' for e in m.values()):
+            continue
+        # walk the hierarchy; at every node, look at its DIRECT children for a dot-indicator row
+        def _walk(n):
+            kids = n.get('children') or []
+            sib_dots = sorted(c['id'] for c in kids
+                              if not c.get('children') and _dotlike(m.get(c['id'], {})))
+            if len(sib_dots) >= 3:
+                warn.append(
+                    f'screen {s["id"]}: {len(sib_dots)} dot-like sibling stacks ({sib_dots}) '
+                    f'under one parent and no `carousel` element — likely a FAKE CAROUSEL (a '
+                    f'static card with decorative dots). The `carousel` element is swipeable and '
+                    f'renders its own dots via props.dots; never hand-build a '
+                    f'reviews/testimonials slider. See patterns.md')
+            for c in kids:
+                _walk(c)
+        _walk(s['elements']['hierarchy'])
+
     return bad, warn
 
 rc = 0
