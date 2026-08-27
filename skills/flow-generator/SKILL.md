@@ -556,13 +556,13 @@ point:
 >    already have it open, the builder does not notice a CLI write.
 > 2. **Preview on a real device.** **Check `<the specific things this build could not verify>`.**
 >
->    Scan this with the phone you want to test on — it opens the flow in the **Adapty mobile app**,
+>    Open this on the device you want to test on — it launches the flow in the **Adapty mobile app**,
 >    the actual SDK renderer.
 >
->    <the file:// link to the QR image>
->
->    On a phone, tap the link instead.
 >    <the preview link, bare>
+>
+>    On mobile, tap the link to preview.
+>    <the QR image line if they asked for one; otherwise the offer, or nothing>
 > 3. **Publish:** the button at the **top right of the editor**.
 >
 > Until you publish, everyone continues to see the previous version.
@@ -572,40 +572,93 @@ construction from the app id, the flow id and the config's `locales`, so
 [`mobile-preview.mjs`](references/mobile-preview.mjs) produces it with no network call and no auth:
 
 ```bash
+# The link alone — the default. No image, no window, no `qrcode` dependency.
 (cd ~/.cache/adapty-flow-qr && node <abs-path>/references/mobile-preview.mjs \
-  --app <APP_UUID> --flow <FLOW_ID> --config <abs-path>/flow.working.json --qr)
-#   drop --qr for the link alone — no image, and no `qrcode` dependency
+  --app <APP_UUID> --flow <FLOW_ID> --config <abs-path>/flow.working.json)
+
+# Add a QR as well, when it will actually be scanned:
+#   … --qr --md-base <your working directory>
 ```
+
+**The link is required in the callout. The QR is off unless the user asked for it.** `--qr` writes a
+PNG into the working tree and opens a window on their screen, so it is not a free addition.
+
+**Decide from what they actually said — nothing else is observable.** You cannot tell whether someone
+is at a laptop, holding a phone, or about to test anything, so do not build the decision on it:
+
+| What you have | What you do |
+| :--- | :--- |
+| they asked for a QR, to scan, or to test on a device | `--qr`, and keep doing it for the session |
+| they asked for the link only, or declined a QR | link only, and **do not offer again** |
+| anything else, including no signal at all | **link only, plus the one-line offer below** |
+
+The offer is what makes it discoverable without imposing it. Add to the callout, once:
+
+> On mobile, tap the link to preview. If you want a QR code to scan for device preview, just say so
+> and I'll generate one.
+
+**Frame it as two situations, not two options for one situation.** The link works when they are
+reading *on the device they want to preview on* — they tap it and the flow opens there. The QR is for
+when they are reading on a laptop and the device is a separate one they have to reach. "A QR instead
+of tapping the link" gets that wrong: it implies the two are interchangeable, when the link alone
+already covers the phone reader completely and the QR exists only for the reader whose phone is not
+the thing in front of them.
+
+That costs a line, works whatever surface they are on, and puts the choice with the person who knows
+the answer. **A default-on QR is the wrong trade**: it pops a window at everyone to save one round
+trip for the subset who wanted it.
+
+The callout degrades cleanly either way — slot 2 keeps its sentence and its link, and loses only the
+image.
 
 **Run it after the write, never before:** the app fetches the saved draft, so a link built over an
 unsaved file previews the *previous* version and looks like your edit did nothing
 ([preview.md](references/preview.md#the-mobile-app-link-and-why-it-is-not-the-render-url)). One
 link survives later writes, so it is worth handing over once rather than per change.
 
-**Give them two lines, because where they are reading decides which one they use:**
+**When you do pass `--qr`, it opens the image and prints one line to paste:**
 
-| Their situation | What they use |
-| :--- | :--- |
-| At a laptop, phone in hand | the QR — click to open the image, then scan it |
-| Reading on a phone | **the link — tapping beats scanning their own screen** |
+```
+![Scan to preview on your phone](flow-preview-qr-<flowid8>.png)
+opened /abs/path/flow-preview-qr-<flowid8>.png
+```
 
-`--qr` writes `flow-preview-qr-<flowid8>.png` **beside the config** and prints a `file://` URL for
-it. Put that URL in the callout, and attach the PNG too where the channel allows it.
+**Opening it is the point — do not replace that with something the reader has to act on.** Two
+attempts came before it and both left work for them: a `file://` URL is *not clickable in a
+terminal* (measured), and printing `open <path>` still means copy-pasting before they can scan
+anything. `flows config preview` already opens a browser on a TTY rather than handing over a URL;
+this is the same move. On a headless host, in a container or under `CI` there is nothing to open
+with, so the script prints the opener command instead and the run is still fine.
 
-**The image has to be inside the working directory or the reader cannot open it** — a viewer refuses
-a path outside it, which defeats the point of emitting a file at all. That is why `--qr` anchors to
-the config rather than to the current directory: the documented invocation runs from the `qrcode`
-cache dir, so anything relative would land there. It is a throwaway — regenerate it rather than
-keeping it, and do not commit it.
+**Paste the `![...](...)` line into your answer as well, and do not try to detect whether it will
+render.** `$TERM` describes where your *bash calls* run, not where your *answer* is displayed — a
+property of the subprocess against a property of the reader's app, and they come apart over SSH, in
+containers, and in any client driving a remote shell. The one data point in hand is a client with an
+empty `TERM` that rendered an inline image perfectly, i.e. the heuristic pointing the wrong way.
 
-**Never render the QR as characters.** Both half-block forms were tried and removed, and one is
-silently inverted on a dark terminal
-([preview.md](references/preview.md#the-qr-is-a-file-and-character-art-was-tried-and-rejected)).
+Emitting it unconditionally is safe because the costs are asymmetric: where images render, the reader
+scans without leaving your answer; where they do not, Claude Code's terminal shows
+`Scan to preview on your phone (flow-preview-qr-b49806c9.png)` — **one readable line** (measured).
+Dropping it loses the inline QR on every client that would have shown one.
 
-**Always print the bare link as well, on its own line under "On a phone, tap the link instead".** A
-QR is unusable to someone holding the only camera they have, and that is the reader who most wants
-the preview. Keep both links out of backticks: a code span is not a link, and most terminals will
-linkify a bare URL.
+`--md-base <your working directory>` is what makes the inline form work: the path has to be
+**relative and inside the directory the client resolves from**. An absolute one is refused outright
+— *"This file is outside the working directory. It can't be opened here."* The script warns if the
+image landed outside the base rather than emitting a path that silently will not render. That is
+also why `--qr` writes beside the config rather than into the current directory: the invocation
+above runs from the `qrcode` cache dir. The image is a throwaway — regenerate rather than keep it,
+and never commit it.
+
+**There is no character-art QR, and do not add one.** It was built twice and removed twice: it
+tolerates zero line gap so it dies in any rendered answer, `qrcode`'s own terminal renderer is wrong
+in two ways that only show on a dark theme, and a correct block is 31 rows x 61 cols for this link —
+too big to put in front of anyone, with no payload change that meaningfully helps
+([preview.md](references/preview.md#why-there-is-no-terminal-qr-after-two-attempts-at-one)).
+
+**The bare link goes in every callout, on its own line.** It is the only form that serves a reader on
+the device they want to preview on — a QR is unusable to someone holding the only camera they have,
+and that reader needs no second affordance. Keep it out of backticks: a code span is not a link, and
+most terminals will linkify a bare URL.
 
 **Fill that slot with the actual list, never with "check it works".** You know which of your
 choices the render could not reach — a branch that fires on tap, a toggle, a non-default locale, a
