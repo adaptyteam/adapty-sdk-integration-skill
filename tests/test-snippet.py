@@ -37,6 +37,19 @@ def run(*args):
     return r.returncode, r.stdout, r.stderr
 
 
+def run_where(home_dir, cwd=None):
+    """Like `run(\'where\')`, but with a CONTROLLED $HOME (and cwd) -- `where`\'s
+    result depends on what the machine running this suite happens to have in the
+    real home directory (an existing `~/adapty-flow-snippets/` wins per the
+    documented precedence rule), so a hermetic test drives both explicitly rather
+    than reading whatever is actually there."""
+    env = dict(os.environ)
+    env['HOME'] = home_dir
+    r = subprocess.run([sys.executable, SNIP, 'where'], capture_output=True, text=True,
+                       env=env, cwd=cwd or ROOT)
+    return r.returncode, r.stdout, r.stderr
+
+
 def case(label, got, want):
     ok = got == want
     print(f'{"pass" if ok else "FAIL"}  {label:58} {got!r}')
@@ -181,15 +194,60 @@ case('inspect: names the kind', 'screen' in run('inspect', p3)[1], True)
 case('list: finds the four files just written',
      run('list', '--dir', TMP)[1].count('.flow-snippet.json'), 4)
 
-# `where` resolves the storage folder so the agent never invents one. Run from the
-# repo root, which IS a git repo, so it must propose a path under it.
-rc, out, _e = run('where')
+# `where` resolves the storage folder so the agent never invents one. HERMETIC:
+# driven with a CONTROLLED $HOME, because the real result depends on what the
+# machine running this suite happens to have in the real home directory -- this
+# repo's own repo root has no `adapty-flow-snippets/`, but a real $HOME can (and
+# on the machine this was authored on, does: an earlier session in the same
+# workspace created one, and the ORIGINAL version of this test read the real
+# $HOME and went red for a reason invisible to the next reader). Both cases the
+# documented precedence rule describes are exercised explicitly instead.
+_home_empty = tempfile.mkdtemp(prefix='snippet-home-empty-')
+rc, out, _e = run_where(_home_empty)
 case('where: exits 0', rc, 0)
-case('where: proposes a path under the repo root',
-     out.splitlines()[0].startswith(ROOT) and
-     out.splitlines()[0].endswith('adapty-flow-snippets'), True)
-case('where: says whether the folder already exists',
-     out.splitlines()[1] in ('existing', 'proposed — ask before writing'), True)
+_where_lines = out.splitlines()
+case('where: proposes a path under the repo root when neither the repo root '
+     'nor $HOME has one yet',
+     _where_lines[0], os.path.join(ROOT, 'adapty-flow-snippets'))
+case('where: an absent folder is reported as proposed, not existing',
+     _where_lines[1], 'proposed — ask before writing')
+
+# The precedence case the real failure exposed and nothing covered: an EXISTING
+# $HOME/adapty-flow-snippets/ wins over a repo root that has none -- the
+# documented rule ("An existing folder wins: repo root, then $HOME").
+_home_existing = tempfile.mkdtemp(prefix='snippet-home-existing-')
+os.makedirs(os.path.join(_home_existing, 'adapty-flow-snippets'))
+rc2, out2, _e2 = run_where(_home_existing)
+_where_lines2 = out2.splitlines()
+case('where: an existing $HOME folder wins when the repo root has none',
+     _where_lines2[0], os.path.join(_home_existing, 'adapty-flow-snippets'))
+case('where: an existing $HOME folder is reported as existing',
+     _where_lines2[1], 'existing')
+
+# The OTHER half of the same precedence rule, and the only scenario that
+# actually exercises ordering (the two cases above each have only ONE of the
+# two folders, so a plain repo-vs-home reorder cannot change their result --
+# confirmed below by reverting the order and finding those two stay green).
+# When BOTH exist, the documented rule says repo root wins. A temp folder is
+# created directly under ROOT for this one case and removed in `finally` --
+# never left behind, and never the real $HOME directory.
+_home_also_existing = tempfile.mkdtemp(prefix='snippet-home-also-existing-')
+os.makedirs(os.path.join(_home_also_existing, 'adapty-flow-snippets'))
+_repo_snippet_dir = os.path.join(ROOT, 'adapty-flow-snippets')
+_repo_dir_preexisted = os.path.isdir(_repo_snippet_dir)
+if not _repo_dir_preexisted:
+    os.makedirs(_repo_snippet_dir)
+try:
+    rc3, out3, _e3 = run_where(_home_also_existing)
+    _where_lines3 = out3.splitlines()
+    case('where: an existing REPO ROOT folder wins over an existing $HOME one '
+         '(repo root, then $HOME)',
+         _where_lines3[0], _repo_snippet_dir)
+    case('where: the repo-root winner is reported as existing',
+         _where_lines3[1], 'existing')
+finally:
+    if not _repo_dir_preexisted:
+        os.rmdir(_repo_snippet_dir)
 
 # --- Task 4: theme resolution --------------------------------------------------
 def plan_json(config_path, snippet_path, screen, extra=()):
@@ -1370,6 +1428,471 @@ if not _f5_timed_out:
          'grp_from_f5c' in _f5_cyc_d['groups'], True)
     case('finding5: a mutual-reference cycle reports both components exactly once',
          set(_f5_cyc_d['components']), {'pb_f5c', 'pb_f5d'})
+
+# --- Task 11: placement description (Change 1) ----------------------------------
+# Synthetic, minimal config so every position (empty root, existing siblings, a
+# named parent) is exact and reproducible rather than depending on wherever a
+# fixture's own hierarchy happens to have room.
+_snip_place = {
+    'formatVersion': sn.FORMAT_VERSION, 'kind': 'element', 'name': 'Placement probe',
+    'description': '', 'savedAt': '2026-08-27',
+    'source': {'app': None, 'flowName': None, 'screenId': None, 'schemaVersion': None},
+    'intendedScope': 'same-app',
+    'payload': {'rootId': 'el_new',
+               'map': {'el_new': {'id': 'el_new', 'type': 'text', 'props': {}}},
+               'hierarchy': {'id': 'el_new', 'children': []}},
+    'dependencies': {'colors': [], 'typography': [], 'fonts': [], 'icons': [],
+                     'components': {}, 'groups': [], 'products': [], 'consumes': [],
+                     'producesInternally': [], 'navigateTargets': [], 'media': [],
+                     'variables': [], 'locales': [], 'defaultLocale': None},
+}
+_cfg_place = {
+    'screens': [
+        {'id': 'scr_empty', 'props': {},
+         'elements': {'map': {}, 'hierarchy': {'id': 'root', 'children': []}},
+         'selectableGroups': []},
+        {'id': 'scr_full', 'props': {}, 'elements': {
+            'map': {'el_card': {'id': 'el_card', 'type': 'container', 'props': {}}},
+            'hierarchy': {'id': 'root', 'children': [
+                {'id': 'el_title', 'children': []},
+                {'id': 'el_card', 'children': [{'id': 'el_sub', 'children': []}]},
+                {'id': 'el_footer', 'children': []},
+            ]}}, 'selectableGroups': []},
+    ],
+    '_meta': {'screens': {}}, 'theme': {'colors': [], 'typography': []},
+}
+
+pl_empty = sn.build_plan(_snip_place, _cfg_place, 'scr_empty', None, None, None)
+case('placement: appending to an empty root names it precisely',
+     pl_empty['placementText'], 'appended as the last child of `root`')
+
+pl_append = sn.build_plan(_snip_place, _cfg_place, 'scr_full', None, None, None)
+case('placement: appending under root with existing children still says "last child"',
+     pl_append['placementText'], 'appended as the last child of `root`')
+
+pl_first = sn.build_plan(_snip_place, _cfg_place, 'scr_full', None, 0, None)
+case('placement: index 0 under root names the sibling it displaces',
+     pl_first['placementText'], 'first child of `root`, before `el_title`')
+
+pl_mid = sn.build_plan(_snip_place, _cfg_place, 'scr_full', None, 2, None)
+case('placement: a middle index names the sibling it lands after',
+     pl_mid['placementText'], 'at index 2 under `root`, after `el_card`')
+
+pl_parent_append = sn.build_plan(_snip_place, _cfg_place, 'scr_full', 'el_card', None, None)
+case('placement: appending under a NAMED parent (not root) names that parent',
+     pl_parent_append['placementText'], 'appended as the last child of `el_card`')
+
+pl_parent_first = sn.build_plan(_snip_place, _cfg_place, 'scr_full', 'el_card', 0, None)
+case('placement: index 0 under a named parent names the child it displaces',
+     pl_parent_first['placementText'], 'first child of `el_card`, before `el_sub`')
+
+# The plan HEADER carries this line -- not just the `--json` field.
+_report_first = sn.render_plan(pl_first, _snip_place, _cfg_place, 'scr_full')
+case('placement: the plan header carries the placement line',
+     '  first child of `root`, before `el_title`' in _report_first.splitlines(), True)
+
+# `theme` and `component` are not positioned at all -- placementText must be None,
+# never an invented "screen None" placeholder.
+_rc_p4j, _out_p4j, _e = run('plan', '--config', COMP, '--snippet', p4, '--json')
+case('placement: a theme-kind plan has no placementText',
+     json.loads(_out_p4j)['placementText'], None)
+_rc_pcj, _out_pcj, _e = run('plan', '--config', COMP, '--snippet', p_comp, '--json')
+case('placement: a component-kind plan has no placementText',
+     json.loads(_out_pcj)['placementText'], None)
+
+# `screen`-kind: position is in `screens[]`, independent of any `--screen` passed
+# for identity-resolution purposes.
+_rc_pp, pl_pp_json = plan_json(QUIZ, pp, QUIZ_S0)
+case('placement: a screen-kind graft with no --index appends as the last screen',
+     pl_pp_json['placementText'], 'appended as the last screen')
+_rc_pp0, pl_pp0_json = plan_json(QUIZ, pp, QUIZ_S0, extra=('--index', '0'))
+case('placement: a screen-kind graft at index 0 names the screen it precedes',
+     pl_pp0_json['placementText'],
+     'first in `screens[]`, before screen "Welcome" (' + QUIZ_S0 + ')')
+
+# --- The APPLIED line: printed by `graft`, never by `plan` -----------------------
+_applied_el_out = os.path.join(TMP, 'applied-element.json')
+_rc_ap, out_ap, _e = run('graft', '--config', QUIZ, '--snippet', p2, '--screen', QUIZ_S0,
+                         '--out', _applied_el_out)
+_applied_el_lines = [l for l in out_ap.splitlines() if l.startswith('APPLIED')]
+case('applied: an element graft prints exactly one APPLIED line', len(_applied_el_lines), 1)
+_pl_p2_json = plan_json(QUIZ, p2, QUIZ_S0)[1]
+_p2_elcount = len(_pl_p2_json['adds']['elements'])
+case('applied: the APPLIED line names the actual element count',
+     f'{_p2_elcount} element' in _applied_el_lines[0], True)
+case('applied: the APPLIED line names the destination screen id',
+     f'`{QUIZ_S0}`' in _applied_el_lines[0], True)
+case('applied: the APPLIED line carries the same placement text the plan header showed',
+     _pl_p2_json['placementText'] in _applied_el_lines[0], True)
+case('applied: `plan` (never writing) prints no APPLIED line',
+     any(l.startswith('APPLIED') for l in
+         run('plan', '--config', QUIZ, '--snippet', p2, '--screen', QUIZ_S0)[1].splitlines()),
+     False)
+
+_applied_theme_out = os.path.join(TMP, 'applied-theme.json')
+_rc_apt, out_apt, _e = run('graft', '--config', COMP, '--snippet', p4,
+                           '--out', _applied_theme_out)
+case('applied: a theme graft names the merge target, not a screen',
+     [l for l in out_apt.splitlines() if l.startswith('APPLIED')],
+     ['APPLIED       theme merged into theme/_meta/variables'])
+
+_applied_comp_out = os.path.join(TMP, 'applied-component.json')
+_rc_apc, out_apc, _e = run('graft', '--config', COMP, '--snippet', p_comp,
+                           '--out', _applied_comp_out)
+case('applied: a component graft names the component id, not a screen',
+     [l for l in out_apc.splitlines() if l.startswith('APPLIED')],
+     ['APPLIED       component `pb_dl05vuVs` → components'])
+
+_applied_screen_out = os.path.join(TMP, 'applied-screen.json')
+_rc_aps, out_aps, _e = run('graft', '--config', QUIZ, '--snippet', pp, '--screen', QUIZ_S0,
+                           '--out', _applied_screen_out)
+_applied_screen_lines = [l for l in out_aps.splitlines() if l.startswith('APPLIED')]
+case('applied: a screen graft names the screen and its resolved position, '
+     'not an element count',
+     any(l.startswith('APPLIED       screen') and 'appended as the last screen' in l
+         for l in _applied_screen_lines), True)
+
+# --- Task 12: carried-colour contrast (Change 3) ---------------------------------
+# Direct math first -- revert-provable independent of any fixture or graft.
+case('contrast: black vs white is the WCAG reference value 21.0:1',
+     round(sn.contrast_ratio('#000000', '#FFFFFF'), 4), 21.0)
+case('contrast: a 3-digit hex expands to the same ratio as its 6-digit form',
+     sn.contrast_ratio('#abc', '#000000'), sn.contrast_ratio('#aabbcc', '#000000'))
+case('contrast: a leading # is optional', sn.contrast_ratio('000000', 'ffffff'), 21.0)
+case("contrast: mixed-case hex parses -- this repo's own comparison-paywall.json "
+     'has literal `#FFFFFf`', sn.contrast_ratio('#FFFFFf', '#FFFFFF'), 1.0)
+case('contrast: an 8-digit alpha hex is unresolvable, never guessed at',
+     sn.contrast_ratio('#FFFFFFD9', '#000000'), None)
+case('contrast: a non-hex string is unresolvable',
+     sn.contrast_ratio('not-a-color', '#000000'), None)
+case('contrast: either side unresolvable makes the whole ratio None',
+     sn.contrast_ratio('#000000', None), None)
+
+# The real failure this change encodes: a timeline grafted from a light-background
+# flow into a dark one. `muted` (#8E99B3) exists in both flows with the SAME
+# definition -> adopted/reused, never checked. `ink` (#0C1116) exists only in the
+# source -> carried in verbatim, and against the destination's #080D1C background
+# it is measured near-black-on-near-black.
+_src_contrast_cfg = {
+    'screens': [{'id': 'scr_src',
+                'props': {'fill': {'type': 'color',
+                                   'color': {'type': 'hex', 'hex': '#F5F5F5'}}},
+                'elements': {
+        'map': {
+            'el_card': {'id': 'el_card', 'type': 'container', 'props': {}},
+            'el_title': {'id': 'el_title', 'type': 'text', 'props': {'colorId': 'ink'}},
+            'el_sub': {'id': 'el_sub', 'type': 'text', 'props': {'colorId': 'muted'}},
+        },
+        'hierarchy': {'id': 'root', 'children': [{'id': 'el_card', 'children': [
+            {'id': 'el_title', 'children': []}, {'id': 'el_sub', 'children': []}]}]}},
+                'selectableGroups': []}],
+    'theme': {'colors': [
+        {'id': 'ink', 'name': 'Ink', 'light': {'hex': '#0C1116'}},
+        {'id': 'muted', 'name': 'Muted', 'light': {'hex': '#8E99B3'}}],
+             'typography': []},
+    '_meta': {'fonts': [], 'icons': [], 'screens': {}},
+    'variables': [], 'components': {}, 'locales': [], 'defaultLocale': None,
+    'schemaVersion': 10,
+}
+_dst_contrast_cfg = {
+    'screens': [{'id': 'scr_dst',
+                'props': {'fill': {'type': 'color',
+                                   'color': {'type': 'hex', 'hex': '#080D1C'}}},
+                'elements': {'map': {}, 'hierarchy': {'id': 'root', 'children': []}},
+                'selectableGroups': []}],
+    'theme': {'colors': [{'id': 'muted', 'name': 'Muted', 'light': {'hex': '#8E99B3'}}],
+             'typography': []},
+    '_meta': {'fonts': [], 'icons': [], 'screens': {}},
+    'variables': [], 'components': {}, 'locales': [], 'defaultLocale': None,
+    'schemaVersion': 10,
+}
+_snip_ink = sn.build_snippet(_src_contrast_cfg, 'element', 'el_card@scr_src',
+                             'Timeline probe', '', 'same-app', None, None)
+
+pl_ink = sn.build_plan(_snip_ink, _dst_contrast_cfg, 'scr_dst', None, None, None)
+_ink_needs = [n for n in pl_ink['needs']
+             if 'ink' in n['text'] and 'was carried in' in n['text']]
+case('contrast: `ink` is reported as CARRIED (the only colour missing in the dest)',
+     [c['id'] for c in pl_ink['carry']['colors']], ['ink'])
+case('contrast: `muted` is REUSED, not carried', pl_ink['reuse'], ['muted'])
+case('contrast: the real case FIRES -- carried `ink` (#0C1116) against a '
+     '#080D1C background', len(_ink_needs), 1)
+case('contrast: the fired need is `?`-level (advisory), never a blocker',
+     _ink_needs[0]['level'] if _ink_needs else None, '?')
+case('contrast: the fired need names the carried hex',
+     '#0C1116' in _ink_needs[0]['text'] if _ink_needs else False, True)
+case('contrast: the fired need names the destination background hex',
+     '#080D1C' in _ink_needs[0]['text'] if _ink_needs else False, True)
+_muted_contrast_needs = [n for n in pl_ink['needs'] if 'muted' in n['text']]
+case('contrast: the adopted case STAYS SILENT -- `muted` never reaches the check '
+     'at all because it was never carried', _muted_contrast_needs, [])
+
+# Background resolution: image fill, no fill, gradient (first stop), array-form
+# (v10) fill, and a colorId-referenced fill resolved against the DESTINATION theme.
+def _contrast_fires(dst_cfg):
+    pl = sn.build_plan(_snip_ink, dst_cfg, 'scr_dst', None, None, None)
+    return [n for n in pl['needs'] if 'ink' in n['text'] and 'was carried in' in n['text']]
+
+_dst_image = json.loads(json.dumps(_dst_contrast_cfg))
+_dst_image['screens'][0]['props']['fill'] = {'type': 'image', 'image': {'url': 'x'}}
+case('contrast: an image-fill background is unresolvable -- skips silently',
+     _contrast_fires(_dst_image), [])
+
+_dst_nofill = json.loads(json.dumps(_dst_contrast_cfg))
+del _dst_nofill['screens'][0]['props']['fill']
+case('contrast: no fill at all -- skips silently, never guesses',
+     _contrast_fires(_dst_nofill), [])
+
+_dst_grad = json.loads(json.dumps(_dst_contrast_cfg))
+_dst_grad['screens'][0]['props']['fill'] = {'type': 'gradient', 'stops': [
+    {'color': {'type': 'hex', 'hex': '#080D1C'}, 'position': 0},
+    {'color': {'type': 'hex', 'hex': '#FFFFFF'}, 'position': 1}]}
+case('contrast: a gradient background resolves via its FIRST stop',
+     len(_contrast_fires(_dst_grad)), 1)
+
+_dst_array = json.loads(json.dumps(_dst_contrast_cfg))
+_dst_array['screens'][0]['props']['fill'] = [{'type': 'color',
+                                              'color': {'type': 'hex', 'hex': '#080D1C'}}]
+case('contrast: an array-form (v10) single-layer fill resolves the same as v9\'s object form',
+     len(_contrast_fires(_dst_array)), 1)
+
+_dst_colorid = json.loads(json.dumps(_dst_contrast_cfg))
+_dst_colorid['theme']['colors'].append(
+    {'id': 'bg', 'name': 'Background', 'light': {'hex': '#080D1C'}})
+_dst_colorid['screens'][0]['props']['fill'] = {
+    'type': 'color', 'color': {'type': 'color-style', 'colorId': 'bg'}}
+case('contrast: a colorId-referenced fill resolves against the DESTINATION theme',
+     len(_contrast_fires(_dst_colorid)), 1)
+
+# Only an `element` snippet has an existing destination screen to compare against
+# -- a `screen` snippet brings its own background along with it, so the check is
+# out of scope for it (never a false negative on the real case: the destination
+# screen simply does not exist yet at plan time).
+_snip_ink_screen = sn.build_snippet(_src_contrast_cfg, 'screen', 'root@scr_src',
+                                    'Full screen probe', '', 'same-app', None, None)
+pl_screen_kind = sn.build_plan(_snip_ink_screen, _dst_contrast_cfg, None, None, None, None)
+case('contrast: a `screen`-kind graft is out of scope for this check',
+     [n for n in pl_screen_kind['needs'] if 'was carried in' in n['text']], [])
+
+# Corpus-wide false-positive sweep: SAME-APP reuse (the default scope, and the
+# realistic in-flow case) must never manufacture a contrast ask, because every
+# colour a same-app fragment references already exists in the destination with
+# the IDENTICAL definition -- reused, never carried. Every top-level child of
+# every screen in every tracked fixture, extracted and planned onto every OTHER
+# screen of the SAME fixture.
+_corpus_pairs, _corpus_fires = 0, []
+for _fx in (QUIZ, COMP, TABS, VPN, os.path.join(CORPUS, 'timeline-anchored.json')):
+    _fxcfg = sn.load(_fx)
+    for _s in _fxcfg['screens']:
+        for _child in (_s['elements']['hierarchy'].get('children') or []):
+            try:
+                _probe = sn.build_snippet(_fxcfg, 'element', _child['id'] + '@' + _s['id'],
+                                          'probe', '', 'same-app', None, None)
+            except SystemExit:
+                continue
+            for _s2 in _fxcfg['screens']:
+                if _s2['id'] == _s['id']:
+                    continue
+                _corpus_pairs += 1
+                _plp = sn.build_plan(_probe, _fxcfg, _s2['id'], None, None, None)
+                _corpus_fires += [n for n in _plp['needs'] if 'was carried in' in n['text']]
+case(f'contrast: zero false positives across the tracked fixture corpus '
+     f'({_corpus_pairs} same-app element-x-destination-screen pairs)',
+     len(_corpus_fires), 0)
+
+# --- Task 13: WILL SAY -- the plan lists the copy it is importing (Change 1) ----
+# Direct unit checks on the token renderer, independent of any fixture.
+case('willsay: a product-relative price variable strips its UUID head',
+     sn._readable_ref('7658234e-f95b-474e-bf5c-4b9ae634029e.prod_price_per_month'),
+     '{price_per_month}')
+case('willsay: a bare prod_price (no per-period suffix) becomes {price}',
+     sn._readable_ref('8fb58c50-7c05-42f9-a8e3-8d0fde19505a.prod_price'), '{price}')
+case('willsay: a non-UUID head is shown verbatim, unstripped',
+     sn._readable_ref('name.value'), '{name.value}')
+case('willsay: a group-relative selectedProduct reference is shown verbatim',
+     sn._readable_ref('products.selectedProduct.prod_price'),
+     '{products.selectedProduct.prod_price}')
+# The rule is keyed on the FIELD (`prod_`-prefixed), not merely "head is a
+# UUID" -- a UUID head with a non-price tail is shown verbatim too.
+case('willsay: a UUID head with a non-price tail is shown verbatim, not stripped',
+     sn._readable_ref('7658234e-f95b-474e-bf5c-4b9ae634029e.selectedProduct'),
+     '{7658234e-f95b-474e-bf5c-4b9ae634029e.selectedProduct}')
+
+case('willsay: an inline `text` node contributes its own text verbatim',
+     sn._inline_text([{'type': 'text', 'text': 'Hello '}]), 'Hello ')
+case('willsay: an inline `variable` node renders as a readable token, never dropped',
+     sn._inline_text([{'type': 'variable',
+                       'attrs': {'variableId': 'name.value'}}]), '{name.value}')
+case('willsay: an inline `token` node renders as a readable token, never dropped',
+     sn._inline_text([{'type': 'token', 'attrs': {'token': 'timer_minutes'}}]),
+     '{timer_minutes}')
+case('willsay: mixed text + variable inline nodes concatenate with no added separator',
+     sn._inline_text([{'type': 'variable', 'attrs': {'variableId': 'name.value'}},
+                      {'type': 'text', 'text': '?'}]), '{name.value}?')
+
+case('willsay: a bare string content value is returned verbatim',
+     sn._readable_value('Next'), 'Next')
+case('willsay: a paragraph-block content value concatenates blocks with NO separator',
+     sn._readable_value([
+         {'type': 'paragraph', 'content': [{'type': 'text', 'text': 'Are you ready, '}]},
+         {'type': 'paragraph', 'content': [
+             {'type': 'variable', 'attrs': {'variableId': 'name.value'}},
+             {'type': 'text', 'text': '?'}]},
+     ]), 'Are you ready, {name.value}?')
+case('willsay: an unrecognised content shape resolves to None, never guessed at',
+     sn._readable_value(42), None)
+
+# `will_say_lines`: HIERARCHY order, not map/dict order -- built so map insertion
+# order and hierarchy order actively DISAGREE, or a bug that read `emap` directly
+# would still pass.
+_ws_emap = {
+    'el_b': {'id': 'el_b', 'type': 'text', 'props': {'content': 'Second'}},
+    'el_a': {'id': 'el_a', 'type': 'text', 'props': {'content': 'First'}},
+}
+_ws_hier = {'id': 'root', 'children': [
+    {'id': 'el_a', 'children': []}, {'id': 'el_b', 'children': []}]}
+_ws_payload = {'rootId': 'root', 'map': _ws_emap, 'hierarchy': _ws_hier}
+case('willsay: lines follow HIERARCHY order, not dict/map insertion order',
+     sn.will_say_lines(_ws_payload, 'element', None), ['First', 'Second'])
+
+# A `theme` snippet has no elements at all -- `[]`, never a crash on a null payload.
+case('willsay: a theme-kind payload (None) yields no lines',
+     sn.will_say_lines(None, 'theme', None), [])
+
+# An element whose only prop is `image` (never `content`/`placeholder`) contributes
+# nothing -- WILL SAY is about copy, not assets.
+_ws_img_payload = {'rootId': 'el_img',
+                   'map': {'el_img': {'id': 'el_img', 'type': 'image',
+                                      'props': {'image': {
+                                          '_localizable': True,
+                                          'values': {'en': {'id': 'a', 'url': 'https://x'}}}}}},
+                   'hierarchy': {'id': 'el_img', 'children': []}}
+case('willsay: an image element (no content/placeholder key) contributes no line',
+     sn.will_say_lines(_ws_img_payload, 'element', None), [])
+
+# Locale fallback: no declared default -> the first locale alphabetically, the
+# same fallback `resolve_locales` itself uses.
+_ws_locale_payload = {'rootId': 'el_l', 'map': {'el_l': {'id': 'el_l', 'type': 'text',
+    'props': {'content': {'_localizable': True,
+                          'values': {'fr': 'Bonjour', 'de': 'Hallo'}}}}},
+    'hierarchy': {'id': 'el_l', 'children': []}}
+case('willsay: with no declared default locale, falls back to the first locale '
+     'ALPHABETICALLY', sn.will_say_lines(_ws_locale_payload, 'element', None), ['Hallo'])
+case("willsay: the snippet's OWN declared defaultLocale wins over alphabetical order",
+     sn.will_say_lines(_ws_locale_payload, 'element', 'fr'), ['Bonjour'])
+
+# `_truncate_line`: exact length and the unicode ellipsis this repo already uses
+# elsewhere (`p["id"][:8]…`), never a multi-char "..." substitute.
+case('willsay: a line at or under the cap is left untouched',
+     sn._truncate_line('short line'), 'short line')
+_long = 'A' * 100
+_trunc = sn._truncate_line(_long)
+case('willsay: a line over the cap is cut to exactly 72 chars including the ellipsis',
+     len(_trunc), 72)
+case('willsay: the truncated line ends in the unicode ellipsis, not "..."',
+     _trunc[-1], '…')
+case('willsay: embedded whitespace/newlines are collapsed to single spaces',
+     sn._truncate_line('a\n\n  b   c'), 'a b c')
+
+# --- End-to-end, against a real config: the quiz paywall grafted into
+# comparison. `pp`/`out2`/`pl7b` are Task 7/8's own quiz-paywall-into-comparison
+# pair -- reused rather than re-run, matching this suite's own convention.
+case('willsay: WILL SAY heading appears in the human report', 'WILL SAY' in out2, True)
+_ws_report_lines = out2.splitlines()
+_ws_start = _ws_report_lines.index('WILL SAY')
+_ws_block = []
+for l in _ws_report_lines[_ws_start + 1:]:
+    if not l.startswith('  '):
+        break
+    _ws_block.append(l)
+case('willsay: the actual price copy is printed, product UUID stripped to a '
+     'readable token', '  {price_per_month}/month' in _ws_block, True)
+case('willsay: the actual annual price copy is printed the same way',
+     '  {price_per_year}/year' in _ws_block, True)
+case('willsay: the name-input variable renders as a readable token inside its '
+     'sentence, not dropped',
+     '  Are you ready, {name.value}?' in _ws_block, True)
+case('willsay: plain button copy is printed verbatim',
+     '  Subscribe' in _ws_block, True)
+
+# Position, not just content: `WILL SAY` must be its OWN section, printed only
+# after `WILL ADD` is complete -- element/group line PLUS every carry
+# continuation line (`theme.colors`, `theme.typography`, `_meta.fonts`,
+# `_meta.icons`, `variables`, each printed with a 14-space indent, distinct
+# from WILL SAY's own 2-space content lines). This same plan (`out2`) carries
+# both `theme.colors` and `theme.typography`, so it can actually exercise the
+# ordering -- a plan with no carry lines would pass this trivially either way.
+_wa_carry_labels = ('theme.colors', 'theme.typography', '_meta.fonts',
+                    '_meta.icons', 'variables')
+_wa_carry_line_idx = [i for i, l in enumerate(_ws_report_lines)
+                      if l.startswith('              ')
+                      and l.lstrip(' ').startswith(_wa_carry_labels)]
+case('willsay: this plan actually has WILL ADD carry lines to order against '
+     '(a non-vacuous check)', len(_wa_carry_line_idx) > 0, True)
+case("willsay: every WILL ADD carry continuation line appears BEFORE the "
+     "WILL SAY heading -- WILL SAY is not interleaved inside WILL ADD",
+     all(i < _ws_start for i in _wa_carry_line_idx), True)
+
+case('willsay --json: the plan carries a machine-readable `willSay` list',
+     isinstance(pl7b.get('willSay'), list), True)
+case('willsay --json: the json list contains the full, UNTRUNCATED sentence',
+     'Are you ready, {name.value}?' in pl7b['willSay'], True)
+case('willsay --json: the json list contains the price line with its token form',
+     '{price_per_month}/month' in pl7b['willSay'], True)
+
+# A `theme`-kind plan (`p4`) has no elements at all -- the section must be
+# OMITTED entirely, never printed with an empty heading.
+case('willsay: a theme-kind plan report has no WILL SAY heading at all',
+     'WILL SAY' in out_theme2, False)
+case('willsay --json: a theme-kind plan carries an empty willSay list',
+     json.loads(_out_p4j)['willSay'], [])
+
+# The cap and truncation wiring, END-TO-END through build_plan/render_plan --
+# not just the standalone helpers above. 15 elements, each a few words, so the
+# cap (12) and the "… and N more" tail both fire for real.
+_ws15_map, _ws15_children = {}, []
+for i in range(15):
+    eid = f'el_ws{i}'
+    _ws15_map[eid] = {'id': eid, 'type': 'text',
+                      'props': {'content': f'Line number {i} of the fixture'}}
+    _ws15_children.append({'id': eid, 'children': []})
+_ws15_snippet = {
+    'formatVersion': sn.FORMAT_VERSION, 'kind': 'element', 'name': 'Fifteen lines',
+    'description': '', 'savedAt': '2026-08-27',
+    'source': {'app': None, 'flowName': None, 'screenId': None, 'schemaVersion': None},
+    'intendedScope': 'same-app',
+    'payload': {'rootId': 'ws_root', 'map': _ws15_map,
+               'hierarchy': {'id': 'ws_root', 'children': _ws15_children}},
+    'dependencies': {'colors': [], 'typography': [], 'fonts': [], 'icons': [],
+                     'components': {}, 'groups': [], 'products': [], 'consumes': [],
+                     'producesInternally': [], 'navigateTargets': [], 'media': [],
+                     'variables': [], 'locales': [], 'defaultLocale': None},
+}
+_ws15_cfg = {
+    'screens': [{'id': 'scr_ws15', 'props': {},
+                'elements': {'map': {}, 'hierarchy': {'id': 'root', 'children': []}},
+                'selectableGroups': []}],
+    '_meta': {'screens': {}}, 'theme': {'colors': [], 'typography': []},
+}
+_ws15_plan = sn.build_plan(_ws15_snippet, _ws15_cfg, 'scr_ws15', None, None, None)
+case('willsay: build_plan carries all 15 UNCAPPED lines in willSay',
+     len(_ws15_plan['willSay']), 15)
+_ws15_report = sn.render_plan(_ws15_plan, _ws15_snippet, _ws15_cfg, 'scr_ws15')
+_ws15_report_lines = _ws15_report.splitlines()
+_ws15_shown = [l for l in _ws15_report_lines if l.startswith('  Line number')]
+case('willsay: the rendered report shows exactly the CAP (12), never all 15',
+     len(_ws15_shown), sn.WILL_SAY_MAX_LINES)
+case('willsay: the rendered report names the remaining count precisely (15 - 12 = 3)',
+     '  … and 3 more' in _ws15_report_lines, True)
+
+_wslong_snippet = json.loads(json.dumps(_ws15_snippet))
+_wslong_snippet['payload']['map']['el_ws0']['props']['content'] = 'B' * 100
+_wslong_plan = sn.build_plan(_wslong_snippet, _ws15_cfg, 'scr_ws15', None, None, None)
+_wslong_report = sn.render_plan(_wslong_plan, _wslong_snippet, _ws15_cfg, 'scr_ws15')
+_wslong_line = next(l for l in _wslong_report.splitlines() if l.strip().startswith('B'))
+case('willsay: a single over-cap line is truncated to 72 chars in the actual '
+     'rendered report (end-to-end, not just the helper)',
+     len(_wslong_line.strip()), 72)
 
 if fails:
     print(f'\n{len(fails)} FAILED')

@@ -238,6 +238,117 @@ def definitions_for(config, deps):
 
 MEDIA_RE = re.compile(r'^https?://')
 
+# --- WCAG contrast: a carried colour brings the source's background assumption
+# with it, and only a device or a render catches that -- so this checks it here.
+HEX_RE = re.compile(r'^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$')
+
+
+def _hex_to_rgb(h):
+    """3- or 6-digit hex, leading `#` optional, case-insensitive. None for
+    anything else -- an 8-digit alpha hex (this corpus has `#FFFFFFD9`) or a
+    malformed string is unresolvable, not guessed at."""
+    if not isinstance(h, str):
+        return None
+    m = HEX_RE.match(h.strip())
+    if not m:
+        return None
+    s = m.group(1)
+    if len(s) == 3:
+        s = ''.join(c * 2 for c in s)
+    return tuple(int(s[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _srgb_channel_to_linear(c):
+    c = c / 255.0
+    return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def _relative_luminance(rgb):
+    r, g, b = (_srgb_channel_to_linear(v) for v in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast_ratio(hex_a, hex_b):
+    """The WCAG relative-luminance contrast ratio between two hex colours, or
+    None when either is unparseable -- never a guess. sRGB -> linear ->
+    relative luminance -> (lighter + 0.05) / (darker + 0.05)."""
+    rgb_a, rgb_b = _hex_to_rgb(hex_a), _hex_to_rgb(hex_b)
+    if rgb_a is None or rgb_b is None:
+        return None
+    l1, l2 = _relative_luminance(rgb_a), _relative_luminance(rgb_b)
+    hi, lo = (l1, l2) if l1 >= l2 else (l2, l1)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def _fill_color_hex(color_obj, dest_colors):
+    """One hex out of a fill's `color` sub-object: a literal `hex` value, or a
+    `colorId` resolved against the DESTINATION's own theme (never the
+    snippet's -- this function only ever runs against a config already on the
+    ground). None for anything it does not recognise."""
+    if not isinstance(color_obj, dict):
+        return None
+    if color_obj.get('type') == 'hex' and isinstance(color_obj.get('hex'), str):
+        return color_obj['hex']
+    if color_obj.get('type') == 'color-style' and isinstance(color_obj.get('colorId'), str):
+        cdef = dest_colors.get(color_obj['colorId'])
+        return (cdef.get('light') or {}).get('hex') if cdef else None
+    return None
+
+
+def _screen_background_hex(screen, dest_colors):
+    """The destination screen's own background as one hex, or None when it
+    cannot be resolved without guessing: an `image` fill, an absent fill, or a
+    shape this does not recognise. A `color` fill resolves via `colorId` or a
+    literal `hex`; a `gradient` fill resolves via its FIRST stop. A fill may be
+    a single object (v9) or a one-element array (v10) -- read either, per this
+    file's own note on the array holding exactly one layer."""
+    fill = (screen.get('props') or {}).get('fill')
+    if isinstance(fill, list):
+        fill = fill[0] if fill else None
+    if not isinstance(fill, dict):
+        return None
+    if fill.get('type') == 'color':
+        return _fill_color_hex(fill.get('color'), dest_colors)
+    if fill.get('type') == 'gradient':
+        stops = fill.get('stops')
+        if isinstance(stops, list) and stops and isinstance(stops[0], dict):
+            return _fill_color_hex(stops[0].get('color'), dest_colors)
+        return None
+    return None  # image, or anything else: unresolvable -- skip silently
+
+
+def check_carried_contrast(carried_colors, screen, dest_colors):
+    """`?`-level asks for a CARRIED colour that would be near-invisible against
+    the destination screen's own background. The mechanism: a carried colour
+    brings the source flow's background assumption along with it, where an
+    ADOPTED colour cannot -- the destination already has an opinion about that
+    id. Every `carried_colors` entry is already, by construction, a colour
+    `scan_dependencies` found referenced by an element in the payload (that is
+    how it reached `carry['colors']` in the first place), so no further
+    referenced-by-an-element filter is needed here. Silent whenever the
+    background cannot be resolved -- it never guesses -- and silent below the
+    3.0 threshold, which is deliberately looser than WCAG's own text minimums:
+    this is a carried-colour SMOKE ALARM, not a full accessibility audit."""
+    if screen is None:
+        return []
+    bg = _screen_background_hex(screen, dest_colors)
+    if bg is None:
+        return []
+    needs = []
+    for c in carried_colors:
+        hexv = (c.get('light') or {}).get('hex')
+        if not hexv:
+            continue
+        ratio = contrast_ratio(hexv, bg)
+        if ratio is not None and ratio < 3.0:
+            needs.append({'level': '?', 'text':
+                          f'colour `{c["id"]}` ({hexv}) was carried in from a flow '
+                          f'whose background differs from this screen\'s ({bg}) -- '
+                          f'contrast {ratio:.2f}:1, likely near-invisible here. '
+                          f'Adopt the destination\'s own colour for this id instead, '
+                          f'or repoint it.'})
+    return needs
+
 
 def _enrich(config, deps, defs, elements, screen, catalog):
     # Groups: the declaration lives on the screen, not in the element.
@@ -409,11 +520,16 @@ def _same_definition(a, b):
     return json.dumps(strip(a), sort_keys=True) == json.dumps(strip(b), sort_keys=True)
 
 
-def resolve_theme(snippet, config):
+def resolve_theme(snippet, config, dest_screen=None):
     """Decide, per theme id the snippet depends on, whether the destination flow
     already means the same thing (reuse), means something different (adopt the
     destination's -- no payload rewrite needed, the snippet already refers to the id),
-    or has never heard of it (carry the snippet's own definition in)."""
+    or has never heard of it (carry the snippet's own definition in).
+
+    `dest_screen`, when given, is the EXISTING destination screen an `element`
+    snippet attaches to -- it is used for nothing but the carried-colour contrast
+    check below, and is None for every other kind (a `screen` snippet brings its
+    own background with it; `component` and `theme` have no fixed screen at all)."""
     dep = snippet['dependencies']
     theme = config.get('theme') or {}
     dest_colors = _by_id(theme.get('colors') or [])
@@ -487,7 +603,10 @@ def resolve_theme(snippet, config):
         # else: only an ADOPTED preset named it -- nothing references it any more,
         # so it is neither carried nor reused.
 
-    return {'adopt': adopt, 'carry': carry, 'reuse': sorted(set(reuse))}
+    contrast_needs = check_carried_contrast(carry['colors'], dest_screen, dest_colors)
+
+    return {'adopt': adopt, 'carry': carry, 'reuse': sorted(set(reuse)),
+            'needs': contrast_needs}
 
 
 def mint(existing, base):
@@ -740,12 +859,221 @@ def resolve_identity(snippet, config, screen_id, catalog_path):
     return {'needs': needs, 'rebinds': rebinds}
 
 
+def _screen_label(screen):
+    """`"Caption" (scr_id)`, or a bare backtick-quoted id when the screen has no
+    caption. The same notation the plan header already uses for its own screen."""
+    cap = (screen.get('caption') or {}).get('value') if isinstance(screen.get('caption'), dict) \
+        else screen.get('caption')
+    return f'"{cap}" ({screen["id"]})' if cap else f'`{screen["id"]}`'
+
+
+def _describe_placement(config, kind, screen_id, parent, index):
+    """Precise prose for where a graft's payload will land, read off the
+    DESTINATION as it stands before the write -- never invented, and never
+    produced for `theme` or `component`, neither of which is positioned at all
+    (a `theme` snippet touches no screen; a `component` lands in top-level
+    `components`, not `screens[]`, and is reused across screens with no single
+    destination screen to describe). Clamps an out-of-range index the same way
+    `apply_plan`'s own `list.insert` would, rather than raising on it -- this is
+    prose about an insertion, not a second validator."""
+    if kind in ('theme', 'component'):
+        return None
+    if kind == 'screen':
+        screens = config.get('screens') or []
+        n = len(screens)
+        at = n if index is None else max(0, min(index, n))
+        if at >= n:
+            return 'appended as the last screen'
+        if at == 0:
+            return (f'first in `screens[]`, before screen {_screen_label(screens[0])}'
+                    if screens else 'first in `screens[]`')
+        return (f'in `screens[]` at index {at}, after screen '
+                f'{_screen_label(screens[at - 1])}')
+    # `element`: position within one screen's hierarchy.
+    screen = next((s for s in config.get('screens') or [] if s['id'] == screen_id), None)
+    if screen is None:
+        return None
+    hier = (screen.get('elements') or {}).get('hierarchy')
+    if not isinstance(hier, dict):
+        return None
+    parent_node = hier if not parent else find_node(hier, parent)[0]
+    if parent_node is None:
+        return None
+    label = parent_node.get('id') or 'root'
+    kids = parent_node.get('children') or []
+    n = len(kids)
+    at = n if index is None else max(0, min(index, n))
+    if at >= n:
+        return f'appended as the last child of `{label}`'
+    if at == 0:
+        return f'first child of `{label}`, before `{kids[0]["id"]}`'
+    return f'at index {at} under `{label}`, after `{kids[at - 1]["id"]}`'
+
+
+# --- WILL SAY: the plan lists the copy it is importing -------------------------
+# A real failure: a three-step "how it works" timeline grafted from a
+# personal-finance paywall into an AI language-learning one. Every gate passed --
+# verify-config.py, the render, the contrast check above -- and the shipped screen
+# told someone learning French to "Link your accounts once -- balances keep
+# themselves up to date." None of those gates knows what the product IS; they
+# check that a reference resolves, that the document publishes, that pixels are
+# legible. Printing the actual sentence under the destination screen's own name
+# makes a mismatch this obvious visible headless, with no render -- see
+# snippets.md.
+VAR_UUID_RE = re.compile(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+
+TEXT_PROP_KEYS = ('content', 'placeholder')   # the two text-bearing keys the
+                                              # family table in flow-schema.md
+                                              # names -- never `image`, which is
+                                              # `_localizable` too but carries an
+                                              # asset, not copy.
+
+
+def _readable_ref(variable_id):
+    """A `variable` node's `variableId` rendered as a readable `{...}` token,
+    never dropped -- a line that silently loses its price is worse than one that
+    shows it (Change 1's own design note). The head of a product-relative price
+    variable is a UUID that means nothing to a reader; the field name alone, with
+    its `prod_` prefix stripped, is what a human recognises (`{price_per_year}`).
+    Anything else -- `name.value`, a group-relative `<groupId>.selectedProduct.
+    <field>` -- is shown verbatim, which is already readable."""
+    head, dot, tail = variable_id.partition('.')
+    if dot and VAR_UUID_RE.match(head) and tail.startswith('prod_'):
+        return '{' + tail[len('prod_'):] + '}'
+    return '{' + variable_id + '}'
+
+
+def _inline_text(nodes):
+    """Concatenate one rich-text paragraph's inline nodes into plain text. `text`
+    nodes contribute their own `text` verbatim, including whatever spacing the
+    author put around them; `variable` and `token` nodes carry no `text` key at
+    all (flow-schema.md #2 -- "Neither has a `text` key") and render as a
+    readable placeholder instead of vanishing. Any inline type not yet observed
+    in a real export is skipped rather than guessed at."""
+    out = []
+    for n in nodes or []:
+        if not isinstance(n, dict):
+            continue
+        t = n.get('type')
+        if t == 'text':
+            out.append(n.get('text') or '')
+        elif t == 'variable':
+            vid = (n.get('attrs') or {}).get('variableId')
+            if isinstance(vid, str):
+                out.append(_readable_ref(vid))
+        elif t == 'token':
+            tok = (n.get('attrs') or {}).get('token')
+            if isinstance(tok, str):
+                out.append('{' + tok + '}')
+    return ''.join(out)
+
+
+def _readable_value(value):
+    """One localizable VALUE, already resolved to a single locale, rendered as
+    plain text -- a bare string (the `placeholder` family) verbatim, or an array
+    of paragraph blocks (the `content` family, flow-schema.md #1/#2) with each
+    block's inline nodes concatenated and the blocks themselves joined with NO
+    separator: the source spacing is already carried inside the text spans (a
+    block ending "Are you ready, " followed by a block starting "{name.value}?"
+    is the same sentence, not two). None for a shape this does not recognise --
+    never guessed at, matching this file's own rule elsewhere."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        parts = [_inline_text(b.get('content')) for b in value
+                 if isinstance(b, dict) and b.get('type') == 'paragraph']
+        return ''.join(parts)
+    return None
+
+
+def _element_text_line(el, default_locale):
+    """The one line an element contributes to WILL SAY: its `content` and/or
+    `placeholder`, resolved to ONE locale -- the snippet's own `defaultLocale`
+    when that locale is present, else the first declared locale alphabetically
+    (the same fallback `resolve_locales` uses for a snippet with no default) --
+    joined by a single space if an element somehow carries both. '' when the
+    element has neither key, or neither resolves to anything printable."""
+    props = el.get('props') or {}
+    parts = []
+    for key in TEXT_PROP_KEYS:
+        val = props.get(key)
+        if val is None:
+            continue
+        if isinstance(val, dict) and val.get('_localizable') is True:
+            vals = val.get('values')
+            if not isinstance(vals, dict) or not vals:
+                continue
+            locale = default_locale if default_locale in vals else sorted(vals)[0]
+            rendered = _readable_value(vals.get(locale))
+        else:
+            rendered = _readable_value(val)          # a bare string or block list
+        if rendered:
+            parts.append(rendered)
+    return ' '.join(parts)
+
+
+def will_say_lines(payload, kind, default_locale):
+    """One readable line per element carrying localizable text, in HIERARCHY
+    order -- the order a screen actually reads top to bottom, not `map` order,
+    which is insertion order and says nothing about layout. `[]` for a `theme`
+    snippet (no elements at all) and for anything this payload shape does not
+    recognise -- omitted from the report entirely rather than printed as an
+    empty heading, per Change 1's own instruction. Full, UNTRUNCATED lines: the
+    same discipline `plan['carry']` already follows -- `render_plan` truncates
+    and caps for display, `--json` gets the whole list, matching every other
+    bucket in this plan."""
+    if kind == 'theme' or not payload:
+        return []
+    scoped = payload.get('screen') or payload
+    emap = scoped.get('map') or (scoped.get('elements') or {}).get('map')
+    hier = scoped.get('hierarchy') or (scoped.get('elements') or {}).get('hierarchy')
+    if not emap or not hier:
+        return []
+
+    order = []
+    def walk_hier(node):
+        eid = node.get('id')
+        if eid in emap and eid not in order:
+            order.append(eid)
+        for c in node.get('children') or []:
+            walk_hier(c)
+    walk_hier(hier)
+    for eid in emap:                    # anything the hierarchy walk missed
+        if eid not in order:
+            order.append(eid)
+
+    lines = []
+    for eid in order:
+        line = _element_text_line(emap.get(eid) or {}, default_locale)
+        if line:
+            lines.append(line)
+    return lines
+
+
+WILL_SAY_LINE_CHARS = 72     # scannable, not a wall of text
+WILL_SAY_MAX_LINES = 12
+
+
+def _truncate_line(s, n=WILL_SAY_LINE_CHARS):
+    s = ' '.join(s.split())     # collapse embedded newlines/runs of whitespace
+    return s if len(s) <= n else s[:n - 1].rstrip() + '…'
+
+
 def build_plan(snippet, config, screen_id, parent, index, catalog):
     """Run all four resolvers, in order, and assemble one plan dict -- the report a
     user reads before anything is written. Operates on a DEEP COPY of the snippet's
     payload throughout; `snippet` itself is never mutated."""
     payload = json.loads(json.dumps(snippet.get('payload') or {}))   # deep copy
-    theme = resolve_theme(snippet, config)
+    # Only an `element` snippet attaches to an EXISTING destination screen --
+    # `resolve_theme`'s contrast check needs that screen's own background, and
+    # only makes sense here (a `screen` snippet brings its own background with
+    # it; `component` and `theme` have no fixed screen).
+    dest_screen = None
+    if snippet.get('kind') == 'element' and screen_id:
+        dest_screen = next((s for s in config.get('screens') or []
+                            if s['id'] == screen_id), None)
+    theme = resolve_theme(snippet, config, dest_screen)
     ren = plan_renames(snippet, config)
     rewrite_ids(payload, ren['elements'], ren['groups'])
     # `plan_renames` mints a fresh screen id on a same-flow collision but does not
@@ -762,11 +1090,18 @@ def build_plan(snippet, config, screen_id, parent, index, catalog):
     # `single_choice` group behave differently, and `WILL ADD` names it.
     add_groups = [{'id': g['id'], 'type': g.get('type')}
                  for g in snippet['dependencies'].get('groups') or []]
+    placement_text = _describe_placement(config, snippet.get('kind'), screen_id,
+                                         parent, index)
+    default_locale = snippet['dependencies'].get('defaultLocale')
+    will_say = will_say_lines(payload, snippet.get('kind'), default_locale)
     return {'adds': {'elements': sorted(emap), 'groups': add_groups},
             'adopt': theme['adopt'], 'carry': theme['carry'], 'reuse': theme['reuse'],
             'renames': ren,
-            'locales': locales, 'needs': ident['needs'], 'rebinds': ident['rebinds'],
+            'locales': locales, 'needs': ident['needs'] + theme['needs'],
+            'rebinds': ident['rebinds'],
             'placement': {'screen': screen_id, 'parent': parent, 'index': index},
+            'placementText': placement_text,
+            'willSay': will_say,
             '_payload': payload}
 
 
@@ -814,12 +1149,17 @@ def render_plan(plan, snippet, config, screen_id):
     # whole, not a screen -- render a header that says so rather than the
     # placeholder `screen "None" (None)` a lookup-by-None produces.
     if snippet.get('kind') == 'theme' or not screen_id:
-        L = [f'GRAFT PLAN — {name} → flow-wide theme (no screen)', '']
+        L = [f'GRAFT PLAN — {name} → flow-wide theme (no screen)']
     else:
         scr = next((s for s in config['screens'] if s['id'] == screen_id), {})
         cap = (scr.get('caption') or {}).get('value') if isinstance(scr.get('caption'), dict) \
             else scr.get('caption')
-        L = [f'GRAFT PLAN — {name} → screen "{cap or screen_id}" ({screen_id})', '']
+        L = [f'GRAFT PLAN — {name} → screen "{cap or screen_id}" ({screen_id})']
+    # Where the payload lands, precisely -- absent for `theme` and `component`,
+    # which are not positioned at all (see `_describe_placement`).
+    if plan.get('placementText'):
+        L.append(f'  {plan["placementText"]}')
+    L.append('')
     add = [f'{len(plan["adds"]["elements"])} elements']
     if plan['adds']['groups']:
         gtxt = []
@@ -836,6 +1176,18 @@ def render_plan(plan, snippet, config, screen_id):
             names = ', '.join(str(i.get('id') or i.get('name')) for i in items[:4])
             more = f' +{len(items) - 4} more' if len(items) > 4 else ''
             L.append(f'              {label} + {names}{more}')
+    # `WILL SAY` is its own section -- printed only after `WILL ADD` is fully
+    # assembled (element/group line PLUS every carry continuation line above),
+    # never interleaved with it.
+    will_say = plan.get('willSay') or []
+    if will_say:
+        L += ['', 'WILL SAY']
+        shown = will_say[:WILL_SAY_MAX_LINES]
+        for line in shown:
+            L.append(f'  {_truncate_line(line)}')
+        remaining = len(will_say) - len(shown)
+        if remaining > 0:
+            L.append(f'  … and {remaining} more')
     for a in plan['adopt']:
         # Both values, labelled, never arrowed -- this is the one decision in the
         # whole flow a user might veto, and a generic "had a different value" (or a
@@ -970,6 +1322,29 @@ def apply_plan(config, snippet, plan):
         if gid not in {x['id'] for x in groups}:
             groups.append({**g, 'id': gid})
     return cfg
+
+
+def _applied_line(plan, snippet):
+    """The line a user reads AFTER a graft to confirm the write did what the plan
+    said -- what actually landed, and exactly where, read off the SAME plan the
+    header already announced (`plan['_payload']` carries the final, post-rename
+    ids), never recomputed from the written file."""
+    kind = snippet.get('kind')
+    payload = plan['_payload']
+    where = plan.get('placementText')
+    if kind == 'element':
+        n = len(plan['adds']['elements'])
+        scr_id = plan['placement'].get('screen')
+        tail = f', {where}' if where else ''
+        return f'APPLIED       {n} element{"s" if n != 1 else ""} → screen `{scr_id}`{tail}'
+    if kind == 'screen':
+        scr = payload.get('screen') or {}
+        label = _screen_label(scr) if scr.get('id') else '(unknown)'
+        tail = f', {where}' if where else ''
+        return f'APPLIED       screen {label}{tail}'
+    if kind == 'component':
+        return f'APPLIED       component `{payload.get("componentId")}` → components'
+    return 'APPLIED       theme merged into theme/_meta/variables'
 
 
 def main(argv):
@@ -1113,7 +1488,8 @@ def main(argv):
         with open(a2.out, 'w') as fh:
             json.dump(out, fh, indent=2)
             fh.write('\n')
-        print(f'\nwrote: {os.path.abspath(a2.out)}')
+        print(f'\n{_applied_line(pl, snip)}')
+        print(f'wrote: {os.path.abspath(a2.out)}')
         print('next: verify-config.py, then `flows config validate`, then preview — '
               'SKILL.md phase 3.')
         return 1 if pl['needs'] else 0

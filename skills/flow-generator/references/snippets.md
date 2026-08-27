@@ -80,7 +80,11 @@ the file regardless of the answer. **The file is lossless either way, so a wrong
 nothing** — do not turn this into a longer interrogation.
 
 Pass `--catalog <file>` (your own `adapty products list --json` output) when the snippet binds
-a product, so the store ids ride along:
+a product, so the store ids ride along. `products list` paginates like `flows list` — defaults
+to `--page-size 20`, caps at 100 — so build the catalog with `--page-size 100` and walk `--page`
+if a full page comes back. A truncated catalog does not error: a product past the cutoff simply
+has no match, and `NEEDS YOU` reports its binding as stripped as if the product didn't exist in
+the destination app:
 
 ```bash
 python3 references/snippet.py extract --config flow.json --element el_X@scr_Y \
@@ -159,6 +163,35 @@ should look like *that* app's `primary`, not grow a second `primary-snippet-2` o
 It is visible in the plan before anything is written, so a user who wants exact fidelity instead
 can say so.
 
+**When the destination sells something different from the source, the imported copy is wrong even
+though every gate passes.** This is from a real failure: a three-step "how it works" timeline
+grafted from a personal-finance paywall into an AI language-learning one. `verify-config.py`
+passed (every reference resolves), `validate` passed (the document publishes), the render was
+legible — and the shipped screen told someone learning French to *"Link your accounts once —
+balances keep themselves up to date."* None of those checks knows what the product **is**; each
+checks that a reference resolves, that the document publishes, that pixels are legible, never
+whether the sentence is true of this app. `plan`'s **WILL SAY** section is the moment this becomes
+checkable — it prints the actual copy the graft is importing, in hierarchy order, under the
+destination screen's own name. Read it against the destination screen and rewrite whatever
+doesn't belong, or say plainly that you did not.
+
+**A carried colour brings the source's background assumption with it — an adopted one cannot,
+because the destination already has an opinion about that id.** This is from a real failure: a
+timeline grafted from a light-background flow into a dark one. `muted` existed in both flows and
+was adopted — fine, since it now resolves against the destination's own definition. `ink`
+(`#0C1116`) did not exist in the destination, so it was carried in verbatim, and the destination
+screen's background is `#080D1C` — step titles rendered near-black on near-black. `verify-config.py`
+passed (the reference resolves), the schema passed, and only the render showed it. `plan` now
+checks every **carried** colour actually referenced by an element in the payload against the
+destination screen's own background (a `color` fill via `colorId` or a literal hex, or a
+`gradient`'s first stop — an image fill, or no fill at all, is skipped silently rather than
+guessed at) and flags a WCAG contrast ratio below 3.0 as a `?`-level `NEEDS YOU` line naming both
+hex values. It never fires on a reused or adopted colour — those can't have this problem, the
+destination already defines them — and it never repoints the colour itself; that is a design
+decision for the user. Calibrated against the tracked fixture corpus: silent across 108 same-app
+element grafts (the realistic in-flow case, where every carried colour is by definition never
+carried at all — same theme, same definition, always reused).
+
 Two facts the implementation turned up, and neither is written anywhere else:
 
 - **A carried typography preset drags its font with it** — the second reference path of
@@ -212,6 +245,49 @@ target in `NEEDS YOU` and leaves it dangling on purpose, because inventing a des
 routing nothing asked to change. Run `verify-config.py` on the graft output the same way phase 3
 always does, expect it to agree with what the plan told you, and never report a graft as clean
 without having read both.
+
+**The plan header states the insertion point precisely, and `graft` confirms it landed there.**
+`placement: {screen, parent, index}` alone told you the coordinates, not what they meant — an
+`element` snippet's header now reads *"appended as the last child of `root`"* or *"at index 3
+under `el_card`, after `el_title`"*, derived from the destination's own hierarchy: the sibling
+that will precede the new node, or the one it displaces when inserted at index 0. A `screen`
+snippet's header says where in `screens[]` it lands and which screen it follows. A `theme`
+snippet has no placement and the header says nothing rather than inventing one — same for
+`component`, which lands in top-level `components`, not on any one screen. After `graft` writes,
+an `APPLIED` line reports what actually landed, using the same placement text: element count (or
+the screen/component id), the destination, and the resolved position — the line a user reads to
+confirm the write did what the plan promised, not merely that it exited 0.
+
+## Grafting into multiple flows
+
+A request like *"add timeline-products.json to flows A and B"* names **flows, not screens**. The
+CLI stays one flow per call — there is no multi-target flag, and adding one would hide exactly
+the differences that matter. The contract:
+
+1. **Resolve each named flow to its id, and show the resolution.** A user who says "flows A and
+   B" must see which flows you matched before anything else happens — never graft against a
+   guess. `flows list` paginates and defaults to `--page-size 20`; **always pass
+   `--page-size 100`** (the documented max) when resolving a flow by name, and if a full page of
+   100 comes back, walk `--page` until a short page does — a count equal to the page size is a
+   signal more remain, not a total. **Never report "no such flow" from a single unpaginated
+   call**: a negative result is only trustworthy after the full list has been walked — a
+   confident wrong negative sends the user to check their own dashboard, which is worse than
+   saying "I looked at 20 of N".
+2. **Run `plan` for each flow separately, and show all plans together.** Per-flow differences —
+   a different theme so one adopts and the other carries, a collision in one flow and not the
+   other, a product declared in one and not the other — are the whole point of running it more
+   than once. A merged plan would hide exactly those differences; run and read every one.
+3. **Take one approval covering the set,** naming every flow, once every plan is in front of the
+   user.
+4. **Graft each, then report a per-flow table**: flow, destination screen, what landed
+   (`APPLIED`'s own line), exit code. One row per flow, not one paragraph.
+
+**Resolving the destination screen is the agent's job, per flow, and it is never a guess.** The
+request named flows, not screens, so each flow's own screen has to be picked and the choice
+stated — say which screen and why (the flow's only screen; the screen the user pointed at; the
+screen matching the source's own role). A single-screen flow is unambiguous. A multi-screen flow
+usually is not — ask rather than pick silently, the same rule as everywhere else a target has to
+be resolved before a write.
 
 ## What cannot be reused
 
