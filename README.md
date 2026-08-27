@@ -6,13 +6,13 @@ A skill for agentic coding tools (Claude Code, GitHub Copilot CLI, OpenAI Codex,
 
 **Supported platforms:** iOS · Android · Flutter · React Native · Unity · Kotlin Multiplatform · Capacitor
 
-> **Also in this repo: `ads-manager`, `flow-generator` and `paywall-teardown`.** Every install below ships three more skills. `ads-manager` runs your Apple Search Ads through the Adapty CLI — reading campaign, ad group and keyword performance, changing bids and budgets, harvesting search terms, launching and pausing campaigns; needs `adapty` **0.4.0 or newer** for the `adapty asa` commands. `flow-generator` edits a Flow Builder config through the CLI's `flows` commands — adding a locale, rewriting copy, adding or removing screens, wiring branching — validating and previewing before it saves; needs `adapty` **0.6.0 or newer**, or **0.7.0** for the preview command (`flows config validate` is beta-only and its endpoint is not live yet). `paywall-teardown` reads a paywall screenshot and hands back ranked, testable conversion hypotheses — no CLI, no account, no install. See [Managing Apple Search Ads](#managing-apple-search-ads), [Transforming a Flow Builder config](#transforming-a-flow-builder-config) and [Tearing down a paywall](#tearing-down-a-paywall) below.
+> **Also in this repo: `ads-manager`, `flow-audit`, `flow-generator` and `paywall-teardown`.** Every install below ships four more skills. `ads-manager` runs your Apple Search Ads through the Adapty CLI — reading campaign, ad group and keyword performance, changing bids and budgets, harvesting search terms, launching and pausing campaigns; needs `adapty` **0.4.0 or newer** for the `adapty asa` commands. `flow-audit` checks whether a Flow Builder flow is ready for production and returns a verdict plus ranked, fixable findings — read-only, no writes. `flow-generator` edits a Flow Builder config through the CLI's `flows` commands — adding a locale, rewriting copy, adding or removing screens, wiring branching — validating and previewing before it saves; needs `adapty` **0.6.0 or newer**, or **0.7.0** for the preview command (`flows config validate` is beta-only and its endpoint is not live yet). `paywall-teardown` reads a paywall screenshot and hands back ranked, testable conversion hypotheses — no CLI, no account, no install. See [Managing Apple Search Ads](#managing-apple-search-ads), [Auditing a flow](#auditing-a-flow), [Transforming a Flow Builder config](#transforming-a-flow-builder-config) and [Tearing down a paywall](#tearing-down-a-paywall) below.
 
 ## Quickstart
 
 ### Install
 
-This repo holds **four skills** — `adapty-integration`, `ads-manager`, `flow-generator` and `paywall-teardown`. Every command below installs all four.
+This repo holds **five skills** — `adapty-integration`, `ads-manager`, `flow-audit`, `flow-generator` and `paywall-teardown`. Every command below installs all five.
 
 #### Claude Code
 
@@ -23,7 +23,7 @@ claude plugin marketplace add adaptyteam/adapty-skills
 claude plugin install adapty-skills@adapty
 ```
 
-Then run `/reload-plugins` inside Claude Code to activate them. One plugin, `adapty-skills`, carries every skill in the repo — installing it gives you all four.
+Then run `/reload-plugins` inside Claude Code to activate them. One plugin, `adapty-skills`, carries every skill in the repo — installing it gives you all five.
 
 > **Already installed as `adapty-sdk-integration`?** That handle still works and still updates, so nothing breaks if you do nothing. To move over, install the new one and remove the old one — leaving both installed loads the same skills twice:
 >
@@ -42,7 +42,7 @@ The [skills CLI](https://skills.sh) installs into any supported agent — Cursor
 npx skills add adaptyteam/adapty-skills --all
 ```
 
-`--all` is `--skill '*' --agent '*' -y`: every skill, every agent it detects, no prompts. Drop it and the CLI asks which of the four you want, which is fine at a keyboard but hangs in a script.
+`--all` is `--skill '*' --agent '*' -y`: every skill, every agent it detects, no prompts. Drop it and the CLI asks which of the five you want, which is fine at a keyboard but hangs in a script.
 
 For one skill only, name it:
 
@@ -58,7 +58,7 @@ npx skills update
 
 #### Tool-specific installs
 
-All four skills are portable directories — `skills/adapty-integration/`, `skills/ads-manager/`, `skills/flow-generator/` and `skills/paywall-teardown/`. Every CLI below reads the same Claude-style `SKILL.md` format, so copying the directories in place works. The `skills/*` glob takes all of them.
+All five skills are portable directories — `skills/adapty-integration/`, `skills/ads-manager/`, `skills/flow-audit/`, `skills/flow-generator/` and `skills/paywall-teardown/`. Every CLI below reads the same Claude-style `SKILL.md` format, so copying the directories in place works. The `skills/*` glob takes all of them.
 
 **GitHub Copilot CLI**:
 
@@ -127,6 +127,40 @@ It covers ten workflows: orienting on your account, reporting performance, launc
 
 **It treats your ad account as live money.** There is no delete and no undo in this surface, so the skill confirms before every write, never invents an ID or a budget, prefers small keyword batches, and pins idempotency keys so a re-run can't double-apply. Reads and automation dry runs are free and it uses them freely.
 
+## Auditing a flow
+
+The `flow-audit` skill answers one question: **is this Flow Builder flow ready for
+production?** It comes with every install above too.
+
+**It's read-only.** It never calls `flows config update`, `products create`, or `flows
+create` — it fetches the flow's config and cross-references it against your live
+dashboard (catalog, access levels) to catch what an offline checker can't, like a bound
+product that doesn't exist or a card whose copy claims a period the product doesn't
+have. **Requires `adapty` 0.8.0 or newer** (`npm install -g adapty`); if your global
+`adapty` is older, the skill falls back to `npx --yes adapty@latest`.
+
+Ask for it:
+
+```
+/flow-audit
+```
+
+(Or "audit my flow" / "is this ready to publish?" in CLIs that don't map slash
+commands.)
+
+It checks six families — triggers, store compliance, products, variables,
+localization, and placeholders — and comes back with a verdict (`READY FOR
+PRODUCTION`, `NOT READY — n blockers`, or `READY, PENDING n CHECKS I CANNOT MAKE`),
+ranked findings with a concrete fix for each, and a `WHAT TO DO NEXT` section that
+routes every finding into what you need to answer, what the agent can fix in the flow,
+what only you can change in the dashboard, and what's optional.
+
+**It never certifies what it couldn't see.** A question it can't answer from the data
+— can the host app dismiss this paywall on its own, is the flow attached to a
+placement — keeps the verdict from reading a bare `READY` until you've weighed in.
+When you want something fixed, it hands the findings to `flow-generator`, which owns
+the actual write.
+
 ## Transforming a Flow Builder config
 
 The `flow-generator` skill edits an [Adapty Flow Builder](https://adapty.io/docs/adapty-flow-builder) flow as JSON. It comes with every install above too.
@@ -156,7 +190,7 @@ Four transforms:
 
 ## Tearing down a paywall
 
-The `paywall-teardown` skill reads a paywall and hands back a ranked set of testable growth hypotheses. It ships with every install above, and unlike the other three it needs **no CLI, no account and no credentials** — it reads what you give it and writes nothing anywhere.
+The `paywall-teardown` skill reads a paywall and hands back a ranked set of testable growth hypotheses. It ships with every install above, and unlike the other four it needs **no CLI, no account and no credentials** — it reads what you give it and writes nothing anywhere.
 
 Paste a paywall screenshot and say roughly nothing:
 

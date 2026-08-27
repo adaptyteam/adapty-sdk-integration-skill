@@ -109,7 +109,7 @@ comparing pixel positions rather than eyeballing.
 
 ## What a render cannot show you
 
-Six things to know before a screenshot becomes an overclaim — five it cannot show you, and
+What to know before a screenshot becomes an overclaim — mostly things it cannot show you, and
 one it shows that is not there:
 
 - **A stranded variable.** The render prints an unresolved reference as its literal token, so a
@@ -156,6 +156,14 @@ one it shows that is not there:
   the config and move on; "fixing" a correct config here is the trap. A switch, a checkbox and a
   pre-ticked consent row always draw in their off state, and neither their `propsByState` nor
   their default can be checked visually. Send the user to the Adapty app for those.
+- **A `spinner`, layout-dependently.** Measured 2026-08-26: the same `spinner` element drew in an
+  isolated probe and drew **nothing** inside a centred loading screen, while `validate` returned
+  `valid: true` and the device drew the screen's other elements fine. Which layouts suppress it is
+  **not isolated**, so a blank where a spinner should be is *unproven, not broken* — and the
+  rotation is a device check either way, since a still PNG could not show it even if the glyph
+  drew. What this blindness must never license is a repair: swapping the `spinner` for a static
+  ring `icon` makes the screenshot look complete and ships something that does not animate
+  ([patterns.md → a loading screen](patterns.md#a-loading-screen--fill-the-loader-spinner-label-template-never-fake-the-spinner)).
 - **Any locale but the one it draws.** The render ignores `defaultLocale` and the order of
   `locales[]` — measured: forcing `defaultLocale: "de"`, and putting `de` first, both produced
   byte-identical screenshots to the untouched file. **A locale transform therefore cannot be
@@ -275,6 +283,155 @@ this size", never as "the flow works".
 
 You can reach the first. Everything below it belongs to the user, which is why the callout in phase 5
 asks for the mobile-app preview explicitly rather than treating a screenshot as sign-off.
+
+## The mobile-app link, and why it is not the render URL
+
+**You can hand the user a link straight into surface 2 instead of describing it.** The Flow
+Builder's "Test on Device" button is a QR over a plain URL, and that URL is pure string
+construction — no network, no auth, nothing from Adapty's servers:
+
+```
+https://mobile-app.adapty.io/flow-preview?app_id=<uuid>&flow_id=<uuid>&current_locale=en&locales=en,uk&cluster=us
+```
+
+[`mobile-preview.mjs`](mobile-preview.mjs) builds it and renders the QR. Everything it needs is
+already in your hands by phase 5: the two ids, and `locales`/`defaultLocale` off the config.
+
+**It previews what is SAVED, not your local file — the exact opposite of `config preview`.** The app
+opens the link and fetches the flow's current draft from Adapty. So it is a phase-5 tool that runs
+*after* `config update`; built before the write, it shows the previous version and reads as "the
+agent's edit did nothing". The upside of that fetch: one link stays valid across later writes, so
+hand it over once rather than regenerating it per change.
+
+**Print this URL freely.** At ~170 characters it is the opposite of the render URL above — every
+part of it is meaningful and a human may well need to read it aloud or retype it.
+
+Three details worth not rediscovering:
+
+- **`defaultLocale` holds a locale *id*, and the link wants a *code*.** The builder resolves id→code
+  before building the URL. They are equal in every config seen so far, which is exactly why passing
+  the id through would go unnoticed until the first flow where they differ.
+- **The `locales` separator must be a literal comma.** Building the query with `URLSearchParams`
+  percent-encodes it to `%2C`, and the app is only *known* to accept the builder's spelling. The
+  script assembles the string by hand for that reason; a rendered QR has been decoded back to
+  confirm the comma survives.
+- **`cluster` is hardcoded `us`, and that is a real limitation, not an oversight.** The builder
+  hardcodes it too, carrying a TODO to derive it from app config, and nothing on the developer API
+  exposes an app's cluster. An EU or CN app therefore gets a US link from the dashboard and from
+  this script alike. `--cluster` overrides it if you know better.
+
+**What the link does not fix: the app is still the strictest validator you can reach.** On a newly
+authored flow it returns 422 for a missing `flowProductId` until the flow has been published once —
+see the surfaces table above. A link that opens to an error is the transform service talking, not a
+broken link.
+
+### The QR is a PNG, and there is no character-art form
+
+`--qr` writes a 228x228 PNG (~4KB), opens it, and prints a markdown line to paste.
+
+**The link is the deliverable; the QR is off unless asked for.** Without `--qr` the script prints the
+link and nothing else — no PNG, no window, and `qrcode` is never even loaded.
+
+**The two serve different readers, not different tastes.** Someone reading on the phone they want to
+preview on taps the link and is done; a QR is useless to them, since they cannot point their only
+camera at their own screen. The QR is for the reader on a laptop whose test device is a separate
+thing they have to reach. So the link is unconditional, and offering "a QR instead of tapping the
+link" is the wrong frame — it implies a choice where the phone reader already has everything they
+need. Say it as two situations:
+
+> On mobile, tap the link to preview. If you want a QR code to scan for device preview, just say so
+> and I'll generate one.
+
+**Base that decision only on what the user said.** Two drafts of this guidance keyed it on something
+unobservable — first `$TERM` to guess whether images render, then "when the user is at a laptop and
+about to test on a device" — and an unevaluable condition does not become a default, it becomes a
+coin flip. You cannot see their desk. You can see their words: a QR they asked for, a QR they
+declined, or no signal, in which case offer in one line and let them answer.
+
+That is a general rule for this file: **a condition written here has to be one an agent can actually
+check.** If it cannot, it will be resolved by guessing, and the guess will read as considered
+behaviour.
+
+`--qr` **opens the image** and prints a markdown line to paste. Emit that line whatever your surface
+is: where images render the reader scans it inline, and where they do not Claude Code's terminal
+shows `Scan to preview on your phone (flow-preview-qr-b49806c9.png)` — one readable line, measured.
+
+**How the reachability line got here, because two earlier answers both left work for the reader:**
+
+| Attempt | Why it failed |
+| :--- | :--- |
+| `file:///abs/path.png` | **not clickable in a terminal** (reported from a real one) — a path with seven useless characters in front of it |
+| `open /abs/path.png` | reachable, but the reader still has to copy-paste before they can scan |
+| **open it from the script** | a window with a code in it appears; nothing for them to do |
+
+`flows config preview` already opens a browser on a TTY rather than handing over a URL, so this is
+the established move in this skill rather than a new liberty. It is best-effort: headless hosts,
+containers and `CI` have nothing to open with, so the script prints the opener command
+(`open` / `xdg-open` / `start`) and the run is still fine. `--no-open` skips the attempt.
+
+**Surface detection does not work, so do not attempt it.** `$TERM` and `tty` describe where your
+*bash calls* run, not where your *answer* is rendered — a property of the subprocess against a
+property of the reader's app, and they come apart over SSH, in containers, and in any client driving
+a remote shell. The one data point in hand is a client with an empty `TERM` that rendered an inline
+image perfectly, i.e. the heuristic pointing the wrong way.
+
+Emitting both is safe precisely because the image line degrades to **one line** of alt text. That is
+why the rule here inverts the one for character art, where the wrong surface produced 31 rows of
+garbage and choosing correctly was the whole problem.
+
+For the inline form the path must be **relative and inside the directory the client resolves from** —
+an absolute one is refused, reported verbatim as *"This file is outside the working directory. It
+can't be opened here."* Pass `--md-base <that directory>`; the script warns instead if the image
+landed outside it.
+
+**Do not shrink the PNG further without a real phone.** 228px is ~0.9mm per module on a 110dpi
+screen. What a camera needs is module size, and the matrix does not shrink just because the image
+does — a 53-module code at 171px is 0.69mm and unproven.
+
+#### Why there is no terminal QR, after two attempts at one
+
+A half-block QR was built twice and removed twice. Three findings, in the order they landed, and any
+one of them is disqualifying:
+
+**It cannot survive a rendered answer.** The grid packs two module rows into each text line, so those
+rows must touch. Rasterizing the layout with a line gap inserted — which every markdown renderer's
+line-height does — and decoding it:
+
+| Module size | Line gap | Decodes |
+| :--- | :--- | :--- |
+| 6px | **0%** | **yes** |
+| 6px | 8% of the line | no |
+| 10px | 5% of the line | no |
+
+Zero tolerance. That confines the form to a terminal, where cells are contiguous and the gap is 0.
+
+**`qrcode`'s own `type: 'terminal'` is wrong in two ways, both invisible on a light theme.** Its last
+row is emitted as `ESC[0m ESC[37m ▀` per cell, so the glyph lands on the terminal's *default*
+background instead of the white one every other row sets — white-on-white and correct on a light
+theme, a white stripe with no bottom quiet zone on a dark one. And its quiet zone is about 5 module
+rows in total where the spec wants 4 **per side**. Both were found by running it in a real terminal
+and reading the bytes. If anyone tries a third time: render the block yourself, do not call that.
+
+**And then it is simply too big, which is arithmetic rather than a bug.** A correctly rendered block
+for this link is **31 rows x 61 cols**. The only lever is the payload, and it barely moves:
+
+| Payload change | Lines | Cost |
+| :--- | :--- | :--- |
+| none | 31 | — |
+| error correction L | 29 | less damage tolerance |
+| drop `cluster` | 29 | the app must default it |
+| drop `locales` too | 25 | the app must read them from the config it fetches |
+| + uppercase UUIDs (alphanumeric mode) | 25 | the app must accept uppercase |
+| + drop `https://` | 23 | breaks universal-link handling |
+
+Stripping everything buys 31 to 23 lines for three unverifiable changes to a URL already confirmed
+to scan on a device. A 173-character URL is a 53-module code, and 53 modules at two rows per line is
+31 lines. **So the terminal answer is the `file://` link**, which is one line and opens something
+that scans properly.
+
+**Verified end to end**: the PNG was decoded back to the exact URL by an independent decoder, then
+scanned off a screen with a real phone, which opened the flow in the Adapty app. The inline form was
+confirmed to render in a desktop client.
 
 ## When the render fails: the file input, not a smaller config
 

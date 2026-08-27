@@ -319,6 +319,22 @@ The same holds for the asset `id` — omit the whole entry rather than inventing
 Report every element left with an empty `values` map in your handover, so the user knows
 exactly what to upload.
 
+**A video is the same story one element type over — a real `video` element with its source unset,
+NEVER a stack that looks like one.** `flows media upload` has no video path
+([media.md](media.md)), so you cannot bind a source — but the element itself is yours to place. A
+`video` with no `customMediaID`/`video` renders a styled **"Upload Video"** placeholder in the
+builder and in `config preview` (measured 2026-08-26), and it **publishes clean** (`validate` →
+`valid: true`) — exactly the empty-`image` case, one type over. Author it fully styled — `loop:
+true`, `objectFit`, `borderRadius`, a fixed height — so the box the user drops a clip into is
+already the right shape, and report it as an upload ask like any empty image. Do **not** stand a
+`stack` with a Play icon in for it: that is a lookalike of a *different element type* (the same
+mistake as the [fake footer](patterns.md#a-bar-that-stays-at-the-bottom-use-footer) and the fake
+spinner), it forces the user to delete-and-recreate instead of just binding a file, and no gate
+flags it. The rule generalises past these two: **when you cannot fully provide an element — no
+asset, no CLI path, or it is preview-blind — place the REAL element in its unset/placeholder state
+and hand the gap to the user; never substitute an element type that merely looks right** (the
+phase-4 rule in `SKILL.md`).
+
 **A styled placeholder beats a lookalike substitute — never stand an emoji in for a designed
 glyph.** When the reference uses icons you cannot author faithfully, the ladder is: author a
 monochrome SVG and render-verify it ([patterns.md](patterns.md)); if the glyph is **multicolour or
@@ -1308,12 +1324,14 @@ style error: you will search for an element type that does not exist, or invent 
 | radio buttons, a selected state | Not an element. `states: [{"id": "selected", "type": "system"}]` plus a `propsByState.selected` block. Style the same element twice; do not add a second one to hide. |
 | tabs, a segmented control | A **five-element composite**: `tabs` → `tab-bar` → `tab-item`(s), and `tabs` → `tab-content-wrapper` → `tab-content`(s). Each `tab-item` carries `groupId` + `default`, group `type` `tabs`. |
 | a countdown | A `timer` element with `duration`/`behavior`, plus rich-text `token` nodes (`timer_minutes`, `timer_seconds`) in a child `text`. |
+| a loading screen, a spinner | Fill the **`loader-spinner-label` catalog component** — it is the canonical source and its wiring is already correct. The primitives are `spinner` (a rotating icon; `props.icon.type` must be `"custom"`, or the publish gate 422s), `loader` (a determinate bar), and an invisible auto-advance `timer` that moves the flow on. The `spinner` is **preview-blind in some layouts** — never hand-roll it from a static `icon` to satisfy a screenshot; keep the real element and verify on device ([`patterns.md`](patterns.md)). |
 | a progress bar, step dots | A `components` entry (`progress-bar` → `progress-bar-segment` → `progress-bar-loader`), referenced from a screen's `hierarchy` as `{"id": "pb_…", "type": "global"}`, and switched on per screen via `props.progressBar: {enabled, segment}`. |
 | a divider, a rule | A `divider` element exists. Both real exports instead use a `stack` with `height: {type: "fixed", value: 1}` and a `fill` — either is valid; prefer whichever the input already uses. |
 | a text field, email, phone, a date picker | `text-input`, or one of `email-input`, `password-input`, `number-input`, `phone-input`, `date-picker`, `time-picker`, `date-time-picker`. Its `customId` becomes the variable `<customId>.value`. |
 | a price | Never literal text. A rich-text `variable` node — see invariant 5 for the two forms. |
 | a close button, "dismiss" | A tappable `stack` whose action is `{"type": "closeFlow"}` (no payload). |
 | an image, a background | An `image` element for content; `props.fill` with `{"type": "image"}` for a screen or element background. **Different shapes** — see trap 1. |
+| a video, a looping banner | A `video` element (`loop`, `objectFit`). No CLI upload for the source, so leave `customMediaID`/`video` unset — it renders a styled **"Upload Video"** placeholder and publishes clean; style it (`borderRadius`, fixed height) and hand the upload to the user. **Never** fake it with a `stack` + Play icon — trap 5. |
 
 Two rules that follow from the whole table: **the user's noun is rarely the element `type`**,
 so resolve the request through this map before searching the file — and when a request maps to

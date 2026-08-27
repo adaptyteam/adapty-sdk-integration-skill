@@ -61,6 +61,8 @@ python3 skills/flow-generator/references/render-measure.py shot.png --row 343   
 python3 tests/test-flowkit.py                                            # the authoring helpers
 python3 tests/test-diff-config.py                                        # the diff's two directions
 python3 tests/test-snippet.py                                            # extract/plan/graft
+python3 tests/test-audit-flow.py                                         # the audit's checks, both directions
+python3 tests/mobile-preview-check.py                                    # the device-preview link, over the corpus
 ```
 
 Exit codes match the repo's lint convention: `0` clean, `1` findings, `2` infrastructure
@@ -130,6 +132,26 @@ property is what makes it useful — it is how a connector fading out onto the p
 Stdlib only, 8-bit non-interlaced PNG — what headless Chrome writes. It reads any PNG, so point it
 at the user's reference screenshot as readily as at your own render, and compare the two.
 
+
+## `test-audit-flow.py` — the calibration suite for `flow-audit`
+
+Runs `skills/flow-audit/references/audit-flow.py` as a **subprocess**, never as an import, so
+nothing writes a `__pycache__` into `references/` — the copy-install path would ship it.
+
+Every case asserts a direction, because a check that only ever stays quiet is not a check:
+
+    FIRES   — an injected defect must be reported, at the stated severity
+    SILENT  — a real shipped export must produce nothing for that check
+
+The corpus is the six flow configs in `fixtures/`. `catalog-fixture.json` is the product
+catalog the audit compares them against, and it lives **beside** this README rather than in
+`fixtures/` on purpose: `fixtures/` is flow-configs only, and four separate consumers walk it
+assuming that. Putting the catalog there broke three of them.
+
+Calibration state per check — including which are proven to fire on real data and which are
+only proven silent — lives in
+[checks.md](../skills/flow-audit/references/checks.md), along with every false-positive trap
+the checks were written against.
 
 ## `test-flowkit.py` — the guardrail on the authoring helpers
 
@@ -205,6 +227,31 @@ It suppresses one class of error the schema creates by construction: expression 
 *"shape intentionally opaque, validated by the transformer"*, so every value matches both and `oneOf`
 always fails. That fires on every `purchase` payload in real builder exports too. The count is still
 reported.
+
+## `mobile-preview-check.py` — the device-preview link
+
+Runs [`mobile-preview.mjs`](../skills/flow-generator/references/mobile-preview.mjs) over every
+fixture and asserts the URL the Adapty app receives. The link is pure string construction, so
+unlike the rest of phase 5 it is completely checkable locally — no network, no auth, no device.
+
+It runs without `--qr`, so `qrcode` is not required; the image path is exercised only when the
+dependency happens to be installed at `~/.cache/adapty-flow-qr`.
+
+It also guards the output shape. The markdown image path must be **relative** to `--md-base` — an
+absolute one is what a client refuses to render — and **no path may print half-block characters**,
+with `--terminal` staying rejected. A character-art QR was built twice and removed twice; the
+findings that settled it are in
+[preview.md](../skills/flow-generator/references/preview.md#why-there-is-no-terminal-qr-after-two-attempts-at-one).
+
+Two regressions are the reason it exists, both invisible against real data:
+
+- **A percent-encoded `locales` separator.** Rebuilding the query with `URLSearchParams` turns the
+  comma into `%2C`, and the Adapty app is only known to accept the builder's literal comma.
+- **`defaultLocale` passed through as `current_locale`.** It holds a locale *id*; the link carries
+  a *code*. Every fixture in the corpus and every live flow checked has `id == code`, so the
+  synthetic case in this file is the only coverage that distinction has.
+
+Both were injected and confirmed to turn the check red before it was committed.
 
 ## `preserve-builder-state.py` — do not clobber the builder's own work
 

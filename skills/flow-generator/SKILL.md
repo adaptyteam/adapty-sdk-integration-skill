@@ -365,10 +365,21 @@ deliverable, not this pass. What to inventory and what to do with each gap:
 [fidelity.md](references/fidelity.md).
 
 **Read [preview.md → What a render cannot show you](references/preview.md#what-a-render-cannot-show-you)
-before you report what a screenshot proves** — seven blindnesses, each measured, and two of them
-run the *wrong* way: the render draws things a device will not. Two you act on here: it draws no
-notch and no home indicator, so author `safeArea: true` and hand short-device clipping over as a
-device check.
+before you report what a screenshot proves** — every blindness on it measured, and two of them run
+the *wrong* way: the render draws things a device will not. Two you act on here: it draws no notch
+and no home indicator, so author `safeArea: true` and hand short-device clipping over as a device
+check.
+
+**Never downgrade a correct element to a preview-visible lookalike to make the screenshot look
+complete.** When an element is preview-blind — a `spinner` that draws nothing on this screen, a
+`video`, a toggle's `selected` state, a progress bar's advance — the answer is to keep the real
+element, say the preview cannot show it, and hand it to the device check; not to swap in something
+the render *can* draw. Standing a static `icon` in for a `spinner` (or any impostor for the element
+it mimics) ships a thing that passes the screenshot and does nothing on the device — the
+[fake-footer](references/patterns.md#a-bar-that-stays-at-the-bottom-use-footer) mistake in a new
+place, and no local gate catches it. A blank in the render is a reason to reach for a device (the
+Adapty app), never a reason to author a fake. The loading-screen shape and the `spinner`'s two
+non-guessable facts are in [patterns.md](references/patterns.md).
 
 **If you built a screen that advances itself, ship the diagnostic with the first ask.** The page
 never navigates, so a working auto-advance and a broken one look identical here and only the user's
@@ -542,17 +553,118 @@ in phase 2, **at the moment the file is written**, and your closing report repea
 there is no publish command, so saving is as far as you can take it.
 
 **Then end with this callout, every time.** A save is not a release, and the user is the only one
-who can finish it. Fill the slots and keep all four lines — the last one is the point:
+who can finish it. Fill the slots and keep all three steps plus the closing line — that line is the
+point:
 
 > **Saved as a draft — your users can't see this yet.**
 >
-> 1. **Review it:** `https://app.adapty.io/flows/<FLOW_ID>/builder` — refresh the page if you
+> 1. **Review it:** https://app.adapty.io/flows/<FLOW_ID>/builder — refresh the page if you
 >    already have it open, the builder does not notice a CLI write.
-> 2. **Preview on a real device:** open the flow in the **Adapty mobile app** — the actual SDK
->    renderer. **Check `<the specific things this build could not verify>`.**
+> 2. **Preview on a real device.** **Check `<the specific things this build could not verify>`.**
+>
+>    Open this on the device you want to test on — it launches the flow in the **Adapty mobile app**,
+>    the actual SDK renderer.
+>
+>    <the preview link, bare>
+>
+>    On mobile, tap the link to preview.
+>    <the QR image line if they asked for one; otherwise the offer, or nothing>
 > 3. **Publish:** the button at the **top right of the editor**.
 >
 > Until you publish, everyone continues to see the previous version.
+
+**Build the link for slot 2 yourself — do not send the user hunting for it.** It is pure string
+construction from the app id, the flow id and the config's `locales`, so
+[`mobile-preview.mjs`](references/mobile-preview.mjs) produces it with no network call and no auth:
+
+```bash
+# The link alone — the default. No image, no window, no `qrcode` dependency.
+(cd ~/.cache/adapty-flow-qr && node <abs-path>/references/mobile-preview.mjs \
+  --app <APP_UUID> --flow <FLOW_ID> --config <abs-path>/flow.working.json)
+
+# Add a QR as well, when it will actually be scanned:
+#   … --qr --md-base <your working directory>
+```
+
+**The link is required in the callout. The QR is off unless the user asked for it.** `--qr` writes a
+PNG into the working tree and opens a window on their screen, so it is not a free addition.
+
+**Decide from what they actually said — nothing else is observable.** You cannot tell whether someone
+is at a laptop, holding a phone, or about to test anything, so do not build the decision on it:
+
+| What you have | What you do |
+| :--- | :--- |
+| they asked for a QR, to scan, or to test on a device | `--qr`, and keep doing it for the session |
+| they asked for the link only, or declined a QR | link only, and **do not offer again** |
+| anything else, including no signal at all | **link only, plus the one-line offer below** |
+
+The offer is what makes it discoverable without imposing it. Add to the callout, once:
+
+> On mobile, tap the link to preview. If you want a QR code to scan for device preview, just say so
+> and I'll generate one.
+
+**Frame it as two situations, not two options for one situation.** The link works when they are
+reading *on the device they want to preview on* — they tap it and the flow opens there. The QR is for
+when they are reading on a laptop and the device is a separate one they have to reach. "A QR instead
+of tapping the link" gets that wrong: it implies the two are interchangeable, when the link alone
+already covers the phone reader completely and the QR exists only for the reader whose phone is not
+the thing in front of them.
+
+That costs a line, works whatever surface they are on, and puts the choice with the person who knows
+the answer. **A default-on QR is the wrong trade**: it pops a window at everyone to save one round
+trip for the subset who wanted it.
+
+The callout degrades cleanly either way — slot 2 keeps its sentence and its link, and loses only the
+image.
+
+**Run it after the write, never before:** the app fetches the saved draft, so a link built over an
+unsaved file previews the *previous* version and looks like your edit did nothing
+([preview.md](references/preview.md#the-mobile-app-link-and-why-it-is-not-the-render-url)). One
+link survives later writes, so it is worth handing over once rather than per change.
+
+**When you do pass `--qr`, it opens the image and prints one line to paste:**
+
+```
+![Scan to preview on your phone](flow-preview-qr-<flowid8>.png)
+opened /abs/path/flow-preview-qr-<flowid8>.png
+```
+
+**Opening it is the point — do not replace that with something the reader has to act on.** Two
+attempts came before it and both left work for them: a `file://` URL is *not clickable in a
+terminal* (measured), and printing `open <path>` still means copy-pasting before they can scan
+anything. `flows config preview` already opens a browser on a TTY rather than handing over a URL;
+this is the same move. On a headless host, in a container or under `CI` there is nothing to open
+with, so the script prints the opener command instead and the run is still fine.
+
+**Paste the `![...](...)` line into your answer as well, and do not try to detect whether it will
+render.** `$TERM` describes where your *bash calls* run, not where your *answer* is displayed — a
+property of the subprocess against a property of the reader's app, and they come apart over SSH, in
+containers, and in any client driving a remote shell. The one data point in hand is a client with an
+empty `TERM` that rendered an inline image perfectly, i.e. the heuristic pointing the wrong way.
+
+Emitting it unconditionally is safe because the costs are asymmetric: where images render, the reader
+scans without leaving your answer; where they do not, Claude Code's terminal shows
+`Scan to preview on your phone (flow-preview-qr-b49806c9.png)` — **one readable line** (measured).
+Dropping it loses the inline QR on every client that would have shown one.
+
+`--md-base <your working directory>` is what makes the inline form work: the path has to be
+**relative and inside the directory the client resolves from**. An absolute one is refused outright
+— *"This file is outside the working directory. It can't be opened here."* The script warns if the
+image landed outside the base rather than emitting a path that silently will not render. That is
+also why `--qr` writes beside the config rather than into the current directory: the invocation
+above runs from the `qrcode` cache dir. The image is a throwaway — regenerate rather than keep it,
+and never commit it.
+
+**There is no character-art QR, and do not add one.** It was built twice and removed twice: it
+tolerates zero line gap so it dies in any rendered answer, `qrcode`'s own terminal renderer is wrong
+in two ways that only show on a dark theme, and a correct block is 31 rows x 61 cols for this link —
+too big to put in front of anyone, with no payload change that meaningfully helps
+([preview.md](references/preview.md#why-there-is-no-terminal-qr-after-two-attempts-at-one)).
+
+**The bare link goes in every callout, on its own line.** It is the only form that serves a reader on
+the device they want to preview on — a QR is unusable to someone holding the only camera they have,
+and that reader needs no second affordance. Keep it out of backticks: a code span is not a link, and
+most terminals will linkify a bare URL.
 
 **Fill that slot with the actual list, never with "check it works".** You know which of your
 choices the render could not reach — a branch that fires on tap, a toggle, a non-default locale, a
@@ -647,4 +759,5 @@ Each file **owns** its facts; link rather than restate, or the copies drift.
 
 Executable, all under `references/`: `flowkit.py` (authoring), `verify-config.py` (phase 3),
 `validate-with-schema.mjs` (phase 3), `diff-config.py` (phase 2 and phase 5), `montage.py` and
-`render-measure.py` (phase 4), `preview-with-playwright.mjs` (when a render fails).
+`render-measure.py` (phase 4), `preview-with-playwright.mjs` (when a render fails),
+`mobile-preview.mjs` (phase 5, the device-preview link).
