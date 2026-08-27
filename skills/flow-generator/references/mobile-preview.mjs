@@ -6,12 +6,21 @@
  *   (cd ~/.cache/adapty-flow-qr && node <this-file> --app <APP_UUID> --flow <FLOW_ID> \
  *     --config /abs/path/flow.working.json --qr)
  *
- * Prints the link, then the flow's locales, then — with --qr — a file:// URL for the QR image and
- * its plain path. Without --qr it prints the link alone and never loads `qrcode`.
+ * Prints the link, then the flow's locales, then — with --qr — a ready-to-paste markdown image line
+ * and either `opened <path>` or the opener command. Without --qr it prints the link alone and never
+ * loads `qrcode`.
  *
- * --qr writes `flow-preview-qr-<flowid8>.png` NEXT TO THE CONFIG, which is the working directory
- * the reader can actually open a file from. It is a throwaway; regenerate rather than keep it.
- * --out <path> overrides the location.
+ * THE QR IS ALWAYS A PNG. --qr writes it, OPENS it in the OS viewer, and prints a ready-to-paste
+ * `![...](...)` line for a client that renders images. Opening is the point: a terminal reader gets
+ * a window with a code in it rather than a path to act on. --no-open (and CI) skip that and print
+ * the opener command instead. There is deliberately no character-art rendering — see preview.md,
+ * which records the two attempts and why the arithmetic rules it out.
+ *
+ * --qr writes `flow-preview-qr-<flowid8>.png` NEXT TO THE CONFIG, i.e. inside the working tree,
+ * because a client refuses to render an image outside the directory it resolves from. Pass
+ * --md-base <dir> (normally your working directory) to get the markdown path relative to it;
+ * without it the path is absolute, which clients reject. --out <path> overrides the location.
+ * The image is a throwaway: regenerate rather than keep it, and do not commit it.
  *
  * This is the same link the Flow Builder shows behind its "Test on Device" button. It is pure
  * string construction — no network, no auth, nothing from Adapty's servers — which is why it lives
@@ -33,9 +42,10 @@
  * Exits 0 on success, 1 when the flow has no locales to build a link from, 2 on bad usage.
  */
 
+import {spawnSync} from 'node:child_process'
 import {readFileSync} from 'node:fs'
 import {createRequire} from 'node:module'
-import {delimiter, dirname, join, resolve} from 'node:path'
+import {delimiter, dirname, isAbsolute, join, relative, resolve} from 'node:path'
 import {parseArgs} from 'node:util'
 
 /** Where the Adapty app picks the link up. Override for a staging build of the app. */
@@ -52,7 +62,7 @@ const DEFAULT_CLUSTER = 'us'
 const USAGE =
   'Usage: node mobile-preview.mjs --app <APP_UUID> --flow <FLOW_ID>\n' +
   '         (--config <flow.json> | --locales <en,uk>) [--locale <id|code>]\n' +
-  '         [--qr | --out <qr.png>] [--cluster <us>] [--host <url>]'
+  '         [--qr | --out <qr.png>] [--md-base <dir>] [--no-open] [--cluster <us>] [--host <url>]'
 
 function fail(message) {
   console.error(`${message}\n${USAGE}`)
@@ -158,6 +168,8 @@ try {
       locale: {type: 'string'},
       locales: {type: 'string'},
       out: {type: 'string'},
+      'md-base': {type: 'string'},
+      'no-open': {type: 'boolean'},
       qr: {type: 'boolean'},
     },
   })
@@ -206,9 +218,6 @@ const url = buildUrl({
 console.log(url)
 console.log(`locale ${resolved.current} of ${resolved.codes.join(', ')}`)
 
-// The QR is only ever a PNG. Character-art QRs were tried and dropped: a half-block grid is 29-31
-// rows of noise in an answer, and whether it scans at all depends on the reader's terminal theme,
-// because the glyphs take its foreground colour. A file scans at whatever size it is opened at.
 if (values.qr || values.out) {
   const QRCode = loadQrcode()
 
@@ -228,9 +237,54 @@ if (values.qr || values.out) {
     fail('--qr needs --config to know where to write. Pass --out <path> instead.')
   }
 
-  await QRCode.toFile(target, url, {margin: 2, scale: 8, type: 'png'})
-  // A file:// URL so the reader can open the image from wherever they are reading — most terminals
-  // linkify it. The plain path follows for the ones that do not.
-  console.log(`file://${target}`)
-  console.log(target)
+  // scale 4 puts a 53-module code at 228px / ~4KB: about 0.9mm per module on a 110dpi screen, which
+  // scans, and small enough inline that it reads as an affordance rather than a wall. Do not go
+  // below this without re-checking on a real phone — module size is what a camera needs, and the
+  // matrix does not shrink just because the image does.
+  await QRCode.toFile(target, url, {margin: 2, scale: 4, type: 'png'})
+
+  // Emit BOTH lines and let the surface sort it out — you cannot detect which one applies, and the
+  // costs are asymmetric (see SKILL.md). Line 1 renders the code inline where images work and
+  // degrades to its alt text plus the filename where they do not. Line 2 is how a terminal reader
+  // actually gets to the image.
+  //
+  // The path is relative to --md-base (give it the directory the reader's client resolves from,
+  // normally your working directory). An ABSOLUTE path is what clients reject: the report was
+  // "This file is outside the working directory. It can't be opened here." So a relative path
+  // inside that base is the whole trick.
+  const base = values['md-base'] ? resolve(values['md-base']) : null
+  const shown = base ? relative(base, target) : target
+  if (base && (shown.startsWith('..') || isAbsolute(shown))) {
+    console.error(
+      `warning: ${target} is outside --md-base ${base}, so a client will refuse to render it inline. `
+      + 'Write the QR inside the directory your client resolves from.',
+    )
+  }
+
+  console.log(`![Scan to preview on your phone](${shown})`)
+
+  // Then OPEN it, rather than printing something for the reader to act on.
+  //
+  // A file:// URL was the first attempt and is not clickable in a terminal (reported from a real
+  // one) — a path with seven useless characters in front of it. Printing `open <path>` instead was
+  // the second, and it still makes the reader copy-paste before they can scan anything. So do the
+  // step for them: `flows config preview` already opens a browser on a TTY rather than handing over
+  // a URL, and this is the same move.
+  //
+  // Best-effort by design. Headless hosts, CI and containers have nothing to open with, and that is
+  // not a failure of the run — the image and its path are still the deliverable, so fall back to
+  // printing the command and carry on. --no-open skips the attempt entirely.
+  const opener = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open'
+  const skipOpen = values['no-open'] || process.env.CI
+  let opened = false
+  if (!skipOpen) {
+    try {
+      const {status} = spawnSync(opener, [target], {stdio: 'ignore', timeout: 5000})
+      opened = status === 0
+    } catch {
+      opened = false
+    }
+  }
+
+  console.log(opened ? `opened ${target}` : `${opener} ${target}`)
 }

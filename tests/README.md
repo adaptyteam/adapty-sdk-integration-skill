@@ -213,9 +213,14 @@ Runs [`mobile-preview.mjs`](../skills/flow-generator/references/mobile-preview.m
 fixture and asserts the URL the Adapty app receives. The link is pure string construction, so
 unlike the rest of phase 5 it is completely checkable locally — no network, no auth, no device.
 
-It runs without `--out`, so `qrcode` is not required; the PNG path is exercised only when the
-dependency happens to be installed at `~/.cache/adapty-flow-qr`. One check asserts the script
-prints **no half-block characters** — character-art QRs were removed and should stay removed.
+It runs without `--qr`, so `qrcode` is not required; the image path is exercised only when the
+dependency happens to be installed at `~/.cache/adapty-flow-qr`.
+
+It also guards the output shape. The markdown image path must be **relative** to `--md-base` — an
+absolute one is what a client refuses to render — and **no path may print half-block characters**,
+with `--terminal` staying rejected. A character-art QR was built twice and removed twice; the
+findings that settled it are in
+[preview.md](../skills/flow-generator/references/preview.md#why-there-is-no-terminal-qr-after-two-attempts-at-one).
 
 Two regressions are the reason it exists, both invisible against real data:
 

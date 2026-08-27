@@ -182,7 +182,7 @@ def check_rejections(findings):
 
 def check_png(findings):
     """Only meaningful where `qrcode` resolves; skipped otherwise so the corpus check stays
-    dependency-free."""
+    dependency-free. Always passes --no-open: a test run must not spawn an image viewer."""
     cache = os.path.expanduser('~/.cache/adapty-flow-qr')
     if not os.path.isdir(os.path.join(cache, 'node_modules', 'qrcode')):
         print('  PNG: skipped (qrcode not installed at ~/.cache/adapty-flow-qr)')
@@ -191,7 +191,7 @@ def check_png(findings):
     with tempfile.TemporaryDirectory() as tmp:
         out = os.path.join(tmp, 'qr.png')
         code, stdout, stderr = run(
-            ['--app', APP, '--flow', FLOW, '--locales', 'en,uk', '--out', out], cwd=cache
+            ['--app', APP, '--flow', FLOW, '--locales', 'en,uk', '--out', out, '--no-open'], cwd=cache
         )
         if code != 0:
             findings.append(f'PNG: exit {code}: {stderr.strip()}')
@@ -199,10 +199,14 @@ def check_png(findings):
             findings.append('PNG: script reported success but wrote no file')
         elif open(out, 'rb').read(8) != b'\x89PNG\r\n\x1a\n':
             findings.append('PNG: file is not a PNG')
-        elif f'file://{out}' not in stdout:
-            findings.append(f'PNG: printed no file:// URL for {out}; stdout was {stdout!r}')
+        elif not any(l.endswith(out) and l.split(' ')[0] in ('open', 'xdg-open', 'start')
+                     for l in stdout.splitlines()):
+            # Deliberately NOT a file:// URL: measured un-clickable in a real terminal.
+            findings.append(f'PNG: printed no open command for {out}; stdout was {stdout!r}')
+        elif 'file://' in stdout:
+            findings.append('PNG: printed a file:// URL; it is not clickable in a terminal')
         else:
-            print(f'  PNG: wrote {os.path.getsize(out)} bytes, valid header, file:// URL printed')
+            print(f'  PNG: wrote {os.path.getsize(out)} bytes, valid header, open command printed')
 
 
 def check_qr_lands_beside_config(findings):
@@ -218,7 +222,7 @@ def check_qr_lands_beside_config(findings):
         with open(config_path, 'w') as fh:
             json.dump({'defaultLocale': 'en', 'locales': [{'id': 'en', 'code': 'en'}], 'screens': []}, fh)
 
-        code, stdout, stderr = run(['--app', APP, '--flow', FLOW, '--config', config_path, '--qr'], cwd=cache)
+        code, stdout, stderr = run(['--app', APP, '--flow', FLOW, '--config', config_path, '--qr', '--no-open'], cwd=cache)
         if code != 0:
             findings.append(f'--qr: exit {code}: {stderr.strip()}')
             return
@@ -227,20 +231,127 @@ def check_qr_lands_beside_config(findings):
         if not os.path.exists(expected):
             written = os.listdir(tmp)
             findings.append(f'--qr wrote no {os.path.basename(expected)} beside the config; dir holds {written}')
-        elif f'file://{expected}' not in stdout:
-            findings.append('--qr printed no file:// URL for the image it wrote')
+        elif not any(l.endswith(expected) and l.split(' ')[0] in ('open', 'xdg-open', 'start')
+                     for l in stdout.splitlines()):
+            findings.append('--qr printed no open command for the image it wrote')
         else:
             print(f'  --qr placement: wrote {os.path.basename(expected)} beside the config, correct')
 
 
+def check_opens_the_image(findings):
+    """--qr must OPEN the image rather than print something the reader has to act on. Exercised with
+    CI=1, which takes the same suppression branch a headless host would: the fallback line names the
+    platform opener, proving that is the command being run when a viewer exists.
+
+    A file:// URL must never come back — it is not clickable in a terminal, which is why it was
+    replaced."""
+    cache = os.path.expanduser('~/.cache/adapty-flow-qr')
+    if not os.path.isdir(os.path.join(cache, 'node_modules', 'qrcode')):
+        print('  open behaviour: skipped (qrcode not installed)')
+        return
+
+    with tempfile.TemporaryDirectory() as tmp:
+        config_path = os.path.join(tmp, 'flow.working.json')
+        with open(config_path, 'w') as fh:
+            json.dump({'defaultLocale': 'en', 'locales': [{'id': 'en', 'code': 'en'}], 'screens': []}, fh)
+
+        env = dict(os.environ, CI='1')
+        proc = subprocess.run(
+            ['node', SCRIPT, '--app', APP, '--flow', FLOW, '--config', config_path, '--qr',
+             '--md-base', tmp],
+            capture_output=True, text=True, cwd=cache, env=env, timeout=60,
+        )
+        if proc.returncode != 0:
+            findings.append(f'open behaviour: exit {proc.returncode}: {proc.stderr.strip()}')
+            return
+
+        if 'file://' in proc.stdout:
+            findings.append('a file:// URL is back; it is not clickable in a terminal')
+        elif not any(l.split(' ')[0] in ('open', 'xdg-open', 'start') for l in proc.stdout.splitlines()):
+            findings.append(
+                f'no opener command under CI; stdout was {proc.stdout!r} — the script should either '
+                'open the image or name the command that would'
+            )
+        else:
+            print('  open behaviour: opener named under CI, no file:// URL, correct')
+
+
 def check_no_character_art(findings):
-    """Character-art QRs were removed on purpose: bulky in an answer, and the colour-free form is
-    inverted on a dark terminal. Nothing should print half-blocks any more."""
+    """No output path may print half-blocks. A character-art QR was built twice and removed twice:
+    zero line-gap tolerance kills it in any rendered answer, and a correct block is 31x61 for this
+    link, which is too big to show anyone. --terminal must no longer be accepted either."""
+    art = set('\u2588\u2580\u2584')
+
     code, stdout, _ = run(['--app', APP, '--flow', FLOW, '--locales', 'en,uk'])
-    if code == 0 and any(ch in stdout for ch in '█▀▄'):
-        findings.append('character art is back in stdout; the QR must only ever be a file')
+    if code == 0 and any(ch in stdout for ch in art):
+        findings.append('the link-only output prints half-blocks; there is no character-art form')
     else:
-        print('  no character art in stdout, correct')
+        print('  link-only output: no half-blocks, correct')
+
+    code, stdout, stderr = run(['--app', APP, '--flow', FLOW, '--locales', 'en,uk', '--terminal'])
+    if code == 0 or any(ch in stdout for ch in art):
+        findings.append('--terminal is still accepted; the character-art form was removed on purpose')
+    else:
+        print('  --terminal: rejected, correct')
+
+    cache = os.path.expanduser('~/.cache/adapty-flow-qr')
+    if not os.path.isdir(os.path.join(cache, 'node_modules', 'qrcode')):
+        return
+
+    with tempfile.TemporaryDirectory() as tmp:
+        config_path = os.path.join(tmp, 'flow.working.json')
+        with open(config_path, 'w') as fh:
+            json.dump({'defaultLocale': 'en', 'locales': [{'id': 'en', 'code': 'en'}], 'screens': []}, fh)
+        code, stdout, _ = run(
+            ['--app', APP, '--flow', FLOW, '--config', config_path, '--qr', '--no-open', '--md-base', tmp], cwd=cache
+        )
+        if code == 0 and any(ch in stdout for ch in art):
+            findings.append('--qr prints half-blocks; it should print a path and a file:// URL only')
+        else:
+            print('  --qr output: no half-blocks, correct')
+
+
+def check_markdown_line(findings):
+    """--qr must emit a ready-to-paste markdown image whose path is RELATIVE to --md-base. An
+    absolute path is what the client refuses ("outside the working directory")."""
+    cache = os.path.expanduser('~/.cache/adapty-flow-qr')
+    if not os.path.isdir(os.path.join(cache, 'node_modules', 'qrcode')):
+        print('  markdown line: skipped (qrcode not installed)')
+        return
+
+    with tempfile.TemporaryDirectory() as tmp:
+        config_path = os.path.join(tmp, 'flow.working.json')
+        with open(config_path, 'w') as fh:
+            json.dump({'defaultLocale': 'en', 'locales': [{'id': 'en', 'code': 'en'}], 'screens': []}, fh)
+
+        code, stdout, stderr = run(
+            ['--app', APP, '--flow', FLOW, '--config', config_path, '--qr', '--no-open', '--md-base', tmp], cwd=cache
+        )
+        if code != 0:
+            findings.append(f'--md-base: exit {code}: {stderr.strip()}')
+            return
+
+        expected_name = f'flow-preview-qr-{FLOW[:8]}.png'
+        line = f'![Scan to preview on your phone]({expected_name})'
+        if line not in stdout:
+            findings.append(f'expected the markdown line {line!r}; stdout was {stdout!r}')
+        else:
+            print(f'  markdown line: relative to --md-base, correct')
+
+        # An image outside the base must warn rather than emit a path that will not render. The
+        # base has to be a NON-ANCESTOR of the image: a parent directory legitimately contains it,
+        # and the relative path is then valid.
+        with tempfile.TemporaryDirectory() as unrelated:
+            code, stdout, stderr = run(
+                ['--app', APP, '--flow', FLOW, '--config', config_path, '--qr', '--no-open', '--md-base', unrelated],
+                cwd=cache,
+            )
+            if 'warning' in stderr and 'outside' in stderr:
+                print('  markdown line: warns when the image is outside --md-base, correct')
+            else:
+                findings.append(
+                    f'no warning when the image sits outside --md-base; stderr was {stderr.strip()!r}'
+                )
 
 
 def main():
@@ -266,6 +377,8 @@ def main():
     print('qr:')
     check_png(findings)
     check_qr_lands_beside_config(findings)
+    check_markdown_line(findings)
+    check_opens_the_image(findings)
     check_no_character_art(findings)
 
     print()
