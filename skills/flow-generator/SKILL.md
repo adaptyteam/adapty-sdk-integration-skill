@@ -547,17 +547,65 @@ in phase 2, **at the moment the file is written**, and your closing report repea
 there is no publish command, so saving is as far as you can take it.
 
 **Then end with this callout, every time.** A save is not a release, and the user is the only one
-who can finish it. Fill the slots and keep all four lines — the last one is the point:
+who can finish it. Fill the slots and keep all three steps plus the closing line — that line is the
+point:
 
 > **Saved as a draft — your users can't see this yet.**
 >
-> 1. **Review it:** `https://app.adapty.io/flows/<FLOW_ID>/builder` — refresh the page if you
+> 1. **Review it:** https://app.adapty.io/flows/<FLOW_ID>/builder — refresh the page if you
 >    already have it open, the builder does not notice a CLI write.
-> 2. **Preview on a real device:** open the flow in the **Adapty mobile app** — the actual SDK
->    renderer. **Check `<the specific things this build could not verify>`.**
+> 2. **Preview on a real device.** **Check `<the specific things this build could not verify>`.**
+>
+>    Scan this with the phone you want to test on — it opens the flow in the **Adapty mobile app**,
+>    the actual SDK renderer.
+>
+>    <the file:// link to the QR image>
+>
+>    On a phone, tap the link instead.
+>    <the preview link, bare>
 > 3. **Publish:** the button at the **top right of the editor**.
 >
 > Until you publish, everyone continues to see the previous version.
+
+**Build the link for slot 2 yourself — do not send the user hunting for it.** It is pure string
+construction from the app id, the flow id and the config's `locales`, so
+[`mobile-preview.mjs`](references/mobile-preview.mjs) produces it with no network call and no auth:
+
+```bash
+(cd ~/.cache/adapty-flow-qr && node <abs-path>/references/mobile-preview.mjs \
+  --app <APP_UUID> --flow <FLOW_ID> --config <abs-path>/flow.working.json --qr)
+#   drop --qr for the link alone — no image, and no `qrcode` dependency
+```
+
+**Run it after the write, never before:** the app fetches the saved draft, so a link built over an
+unsaved file previews the *previous* version and looks like your edit did nothing
+([preview.md](references/preview.md#the-mobile-app-link-and-why-it-is-not-the-render-url)). One
+link survives later writes, so it is worth handing over once rather than per change.
+
+**Give them two lines, because where they are reading decides which one they use:**
+
+| Their situation | What they use |
+| :--- | :--- |
+| At a laptop, phone in hand | the QR — click to open the image, then scan it |
+| Reading on a phone | **the link — tapping beats scanning their own screen** |
+
+`--qr` writes `flow-preview-qr-<flowid8>.png` **beside the config** and prints a `file://` URL for
+it. Put that URL in the callout, and attach the PNG too where the channel allows it.
+
+**The image has to be inside the working directory or the reader cannot open it** — a viewer refuses
+a path outside it, which defeats the point of emitting a file at all. That is why `--qr` anchors to
+the config rather than to the current directory: the documented invocation runs from the `qrcode`
+cache dir, so anything relative would land there. It is a throwaway — regenerate it rather than
+keeping it, and do not commit it.
+
+**Never render the QR as characters.** Both half-block forms were tried and removed, and one is
+silently inverted on a dark terminal
+([preview.md](references/preview.md#the-qr-is-a-file-and-character-art-was-tried-and-rejected)).
+
+**Always print the bare link as well, on its own line under "On a phone, tap the link instead".** A
+QR is unusable to someone holding the only camera they have, and that is the reader who most wants
+the preview. Keep both links out of backticks: a code span is not a link, and most terminals will
+linkify a bare URL.
 
 **Fill that slot with the actual list, never with "check it works".** You know which of your
 choices the render could not reach — a branch that fires on tap, a toggle, a non-default locale, a
@@ -652,4 +700,5 @@ Each file **owns** its facts; link rather than restate, or the copies drift.
 
 Executable, all under `references/`: `flowkit.py` (authoring), `verify-config.py` (phase 3),
 `validate-with-schema.mjs` (phase 3), `diff-config.py` (phase 2 and phase 5), `montage.py` and
-`render-measure.py` (phase 4), `preview-with-playwright.mjs` (when a render fails).
+`render-measure.py` (phase 4), `preview-with-playwright.mjs` (when a render fails),
+`mobile-preview.mjs` (phase 5, the device-preview link).

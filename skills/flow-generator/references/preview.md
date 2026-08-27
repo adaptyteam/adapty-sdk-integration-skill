@@ -284,6 +284,81 @@ this size", never as "the flow works".
 You can reach the first. Everything below it belongs to the user, which is why the callout in phase 5
 asks for the mobile-app preview explicitly rather than treating a screenshot as sign-off.
 
+## The mobile-app link, and why it is not the render URL
+
+**You can hand the user a link straight into surface 2 instead of describing it.** The Flow
+Builder's "Test on Device" button is a QR over a plain URL, and that URL is pure string
+construction — no network, no auth, nothing from Adapty's servers:
+
+```
+https://mobile-app.adapty.io/flow-preview?app_id=<uuid>&flow_id=<uuid>&current_locale=en&locales=en,uk&cluster=us
+```
+
+[`mobile-preview.mjs`](mobile-preview.mjs) builds it and renders the QR. Everything it needs is
+already in your hands by phase 5: the two ids, and `locales`/`defaultLocale` off the config.
+
+**It previews what is SAVED, not your local file — the exact opposite of `config preview`.** The app
+opens the link and fetches the flow's current draft from Adapty. So it is a phase-5 tool that runs
+*after* `config update`; built before the write, it shows the previous version and reads as "the
+agent's edit did nothing". The upside of that fetch: one link stays valid across later writes, so
+hand it over once rather than regenerating it per change.
+
+**Print this URL freely.** At ~170 characters it is the opposite of the render URL above — every
+part of it is meaningful and a human may well need to read it aloud or retype it.
+
+Three details worth not rediscovering:
+
+- **`defaultLocale` holds a locale *id*, and the link wants a *code*.** The builder resolves id→code
+  before building the URL. They are equal in every config seen so far, which is exactly why passing
+  the id through would go unnoticed until the first flow where they differ.
+- **The `locales` separator must be a literal comma.** Building the query with `URLSearchParams`
+  percent-encodes it to `%2C`, and the app is only *known* to accept the builder's spelling. The
+  script assembles the string by hand for that reason; a rendered QR has been decoded back to
+  confirm the comma survives.
+- **`cluster` is hardcoded `us`, and that is a real limitation, not an oversight.** The builder
+  hardcodes it too, carrying a TODO to derive it from app config, and nothing on the developer API
+  exposes an app's cluster. An EU or CN app therefore gets a US link from the dashboard and from
+  this script alike. `--cluster` overrides it if you know better.
+
+**What the link does not fix: the app is still the strictest validator you can reach.** On a newly
+authored flow it returns 422 for a missing `flowProductId` until the flow has been published once —
+see the surfaces table above. A link that opens to an error is the transform service talking, not a
+broken link.
+
+### The QR is a file, and character art was tried and rejected
+
+`--qr` writes a 456x456 PNG and prints a `file://` URL for it, which is what belongs in the
+callout — the reader clicks it and their image viewer opens something that scans.
+
+**It writes beside the `--config` file, and that placement is the point.** A viewer refuses to open a
+path outside the working directory ("This file is outside the working directory"), so an image
+written anywhere else is unopenable and the file form buys nothing. Anchoring to the config also
+dodges the cache-dir trap: the documented invocation runs from `~/.cache/adapty-flow-qr`, so a
+relative `--out` would land there. The name carries the flow id (`flow-preview-qr-<flowid8>.png`) so
+two flows in one session do not overwrite each other, and it is a throwaway — regenerate rather than
+keep it, and keep it out of commits.
+
+**Do not render a QR as characters.** Both half-block forms were built, measured and removed:
+
+| Form | Size | Why it lost |
+| :--- | :--- | :--- |
+| ANSI terminal | 29 rows x 55 cols | 29 rows of noise in an answer, and the escapes do not survive a markdown renderer |
+| plain half-blocks | 31 rows x 61 cols | same bulk, plus **inverted on a dark terminal** |
+
+The second one is the instructive failure. A glyph there is a **dark** module and takes the
+*foreground* colour — measured, the glyph count equals the matrix's dark-module count exactly — so
+on a dark theme the code renders inverted. Phone cameras often read an inverted code, which is
+worse than never reading it: it works on your machine and fails on the user's. It also has to sit
+in a fenced block or the rows lose alignment and it stops being a QR at all. A file has none of
+these properties, so there is no reason to reach for character art.
+
+**A QR of any kind is useless to a reader on a phone**, who cannot point their only camera at their
+own screen. Always print the bare link beside the image link, and outside backticks so terminals
+linkify it. That reader is disproportionately the one who wants the device preview.
+
+**Verified end to end**: the PNG was decoded back to the exact URL by an independent decoder, then
+scanned off a screen with a real phone, which opened the flow in the Adapty app.
+
 ## When the render fails: the file input, not a smaller config
 
 **Do not decide whether to preview from the file size.** The command's own help calls it a
