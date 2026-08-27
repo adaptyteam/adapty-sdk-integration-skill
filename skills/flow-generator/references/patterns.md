@@ -168,7 +168,13 @@ the condition — team-verified in preview, unconfirmed on device.
 
 ### A progress bar
 
-Lives in `components`, not on a screen, and is switched on per screen.
+Lives in `components`, not on a screen, and is switched on per screen. **It is a real element,
+not a drawing** — never fake it with a static filled `stack` (a partial bar) or a hand-built row of
+step `stack`s. A lookalike renders in the preview but **does not advance** across screens and is not
+wired to `props.progressBar`, so it silently ships a dead indicator — the same mistake as the
+[fake carousel](#a-carousel--the-real-carousel-element-never-a-static-card-with-dots) and the fake
+footer. If step dots are what the design shows, that is still this component (segmented template),
+not a row of dot stacks. `verify-config.py` warns on the dot-row shape.
 
 ```json
 "components": {"pb_…": {

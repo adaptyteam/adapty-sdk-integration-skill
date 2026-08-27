@@ -767,11 +767,12 @@ def check(path):
                             f'no `padding.bottom` reservation (authoring one adds dead space at '
                             f'full scroll); see patterns.md')
 
-    # The FAKE CAROUSEL: a reviews/testimonials slider faked as a static card plus a row of
-    # decorative dot `stack`s. The `carousel` element is swipeable and renders its OWN indicator
-    # dots (props.dots: {size, color, activeColor}); hand-built dots reproduce the look and none
-    # of the behaviour — one slide ever shows and the dots do nothing. Same class as the fake
-    # footer and the fake spinner, and no other gate sees it. Heuristic, hence a warning.
+    # A FAKE CAROUSEL or FAKE PROGRESS BAR: a slider or a step indicator faked as a static card
+    # plus a row of decorative dot `stack`s. The real `carousel` is swipeable and renders its OWN
+    # dots (props.dots: {size, color, activeColor}); the real `progress-bar` is a `components`
+    # entry wired per screen via props.progressBar — both advance, hand-built dots do not (one
+    # slide/step ever shows and the dots are inert). Same class as the fake footer and the fake
+    # spinner, and no other gate sees it. Heuristic, hence a warning.
     #
     # Keyed on dot-like SIBLINGS -- >=3 tiny equal rounded leaf stacks that are direct children
     # of ONE parent, which is the shape of an indicator row. Screen-wide counting tripped on
@@ -799,10 +800,11 @@ def check(path):
             if len(sib_dots) >= 3:
                 warn.append(
                     f'screen {s["id"]}: {len(sib_dots)} dot-like sibling stacks ({sib_dots}) '
-                    f'under one parent and no `carousel` element — likely a FAKE CAROUSEL (a '
-                    f'static card with decorative dots). The `carousel` element is swipeable and '
-                    f'renders its own dots via props.dots; never hand-build a '
-                    f'reviews/testimonials slider. See patterns.md')
+                    f'under one parent and no `carousel` element — likely a FAKE CAROUSEL or '
+                    f'progress indicator (a static card/row with decorative dots). Use the real '
+                    f'`carousel` (swipeable, renders its own dots via props.dots) or the '
+                    f'`progress-bar` component; never hand-build one from dot stacks. See '
+                    f'patterns.md')
             for c in kids:
                 _walk(c)
         _walk(s['elements']['hierarchy'])

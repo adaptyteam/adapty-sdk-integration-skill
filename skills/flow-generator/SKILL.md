@@ -385,7 +385,9 @@ to copy. Resolve the request through the map in
 [flow-schema.md](references/flow-schema.md#from-what-the-user-asks-for-to-what-the-json-calls-it)
 before you reach for a lookalike — reviews, sliders, swipeable cards and dots all route to
 `carousel`, never to hand-built dots. `verify-config.py` warns on the dot-cluster tell, but it is a
-heuristic; the map and this rule are the real guard.
+heuristic; the map and this rule are the real guard. The same trap catches the **`progress-bar`**:
+a static filled `stack` or a row of step `stack`s looks like progress and never advances — build the
+real `components` entry and wire it per screen via `props.progressBar`, never a bar that cannot move.
 
 **If you built a screen that advances itself, ship the diagnostic with the first ask.** The page
 never navigates, so a working auto-advance and a broken one look identical here and only the user's
