@@ -170,7 +170,13 @@ locales, products, the navigation graph. Before proposing anything; it grounds t
 catches a wrong flow immediately.
 
 **Confirm the transform.** In scope: add a locale, rewrite copy, add/remove/reorder screens,
-branching and conditions. A request outside those is named as out of scope, not improvised.
+branching and conditions, and reusing a piece of another flow — its dependency resolution has a
+measured hard-422 class (`flow-schema.md` invariant 8), so it runs through
+`references/snippet.py`, never by hand ([snippets.md](references/snippets.md)). A request outside
+those is named as out of scope, not improvised.
+
+If the request is *"save this for reuse"* or *"add the thing I saved"*, run
+`references/snippet.py plan` before any `graft` — read [snippets.md](references/snippets.md) first.
 
 **Were you given a design to follow?** Answer it out loud: it decides who is choosing. A reference
 image, a screen to copy, or a layout they spelled out means *they* chose it — follow it, and
