@@ -4,7 +4,7 @@
 
 Subscriptions are the part of a mobile app nobody wants to build and everybody has to — SDK wiring, paywall UI, store config, then the ads and tests that make it pay.
 
-**These five skills hand that whole surface to the agent you already have open.**
+**These skills hand that whole surface to the agent you already have open.**
 
 ```
 > /adapty-integration
@@ -21,9 +21,9 @@ Subscriptions are the part of a mobile app nobody wants to build and everybody h
 
 **Supported platforms:** iOS · Android · Flutter · React Native · Unity · Kotlin Multiplatform · Capacitor
 
-## The five skills
+## The toolkit
 
-Every install below gives you all five.
+Every install below gives you the whole toolkit — and it grows, so an update brings new skills with it.
 
 | Skill | What it does | Needs |
 |---|---|---|
@@ -70,7 +70,7 @@ The [skills CLI](https://skills.sh) installs into any supported agent — Cursor
 npx skills add adaptyteam/adapty-skills --all
 ```
 
-`--all` is `--skill '*' --agent '*' -y`: every skill, every agent it detects, no prompts. Drop it and the CLI asks which of the five you want, which is fine at a keyboard but hangs in a script.
+`--all` is `--skill '*' --agent '*' -y`: every skill, every agent it detects, no prompts. Drop it and the CLI asks which ones you want, which is fine at a keyboard but hangs in a script.
 
 For one skill only, name it:
 
@@ -86,7 +86,7 @@ npx skills update
 
 ### Copy the directories
 
-All five skills are portable directories under `skills/`, and every CLI below reads the same Claude-style `SKILL.md` format — so copying them into place works. The `skills/*` glob takes all of them.
+The skills are portable directories under `skills/`, and every CLI below reads the same Claude-style `SKILL.md` format — so copying them into place works. The `skills/*` glob takes all of them.
 
 **GitHub Copilot CLI** — [docs](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills):
 
@@ -194,7 +194,7 @@ Four transforms:
 
 ## Tearing down a paywall
 
-A screenshot turned into a ranked list of things to test. Unlike the other four, `paywall-teardown` needs **no CLI, no account and no credentials** — it reads what you give it and writes nothing anywhere.
+A screenshot turned into a ranked list of things to test. Alone among them, `paywall-teardown` needs **no CLI, no account and no credentials** — it reads what you give it and writes nothing anywhere.
 
 Paste a paywall screenshot and say roughly nothing:
 
@@ -230,4 +230,4 @@ adapty.io
 
 ## Feedback
 
-`adapty-integration` is the only skill here that sends anything back. At the end of a successful integration it asks whether you'd like to share anonymous signals — platform, steps completed, rating — with no code, no project details and nothing identifying. Say no and nothing is sent. The other four skills collect nothing at any point.
+`adapty-integration` is the only skill here that sends anything back. At the end of a successful integration it asks whether you'd like to share anonymous signals — platform, steps completed, rating — with no code, no project details and nothing identifying. Say no and nothing is sent. Every other skill here collects nothing at any point.
