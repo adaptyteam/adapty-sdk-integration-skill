@@ -1,8 +1,14 @@
 # Skill validation lints - two triggers for two failure modes:
 #
-#   1. pull_request / push: catches breakage WE introduce by editing the
+#   1. pull_request / push: catches breakage WE introduce by editing a
 #      skill (typo'd SDK symbol, dead docs link, new wrapper name outside
 #      the allowlist). Red blocks the merge.
+#
+#      SCOPE: the link lint walks ALL of skills/ (widened 2026-08-28 - it
+#      covered adapty-integration alone before, so a green run said nothing
+#      about four of the five skills that ship). The symbol lint verifies
+#      adapty-integration, which is where every SDK symbol lives, and
+#      carries a scope guard that turns red if one appears elsewhere.
 #   2. daily cron: catches drift that happens WITHOUT any skill commit -
 #      the docs renamed a page, an SDK release rewrote a section. On
 #      failure a GitHub issue is filed (deduped: one open issue, follow-up
@@ -44,11 +50,11 @@ jobs:
         with:
           node-version: 22
 
-      - name: Symbol lint (SDK symbols in references exist in the docs)
+      - name: Symbol lint (SDK symbols exist in the docs; + out-of-scope guard)
         id: symbols
         run: node scripts/lint-symbols.mjs 2>&1 | tee /tmp/lint-symbols.out
 
-      - name: Link lint (every docs URL works the way an agent fetches it)
+      - name: Link lint (every docs URL in EVERY skill works the way an agent fetches it)
         id: links
         if: always()
         run: node scripts/lint-links.mjs 2>&1 | tee /tmp/lint-links.out
