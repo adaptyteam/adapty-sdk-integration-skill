@@ -69,6 +69,27 @@ shoot_one() {  # $1 = url, $2 = out png, $3 = budget ms, $4 = watchdog s
   wait "$c" 2>/dev/null
 }
 
+# Is the render host actually reachable? This is the ROOT CAUSE of the page the sanity guard
+# below exists to catch: when the host cannot be resolved or refuses the connection, Chrome
+# screenshots its own error screen into a perfectly valid PNG. Testing the host directly beats
+# inferring it from pixels afterwards on every count -- it is unambiguous where the pixels are
+# not (a real screen made only of text measures the same as an error page, measured), it names
+# the actual problem, and it costs ~0.3 s instead of an 18 s Chrome launch that was never going
+# to produce anything. Skipped silently if curl is unavailable; the pixel guard is the backstop.
+probed=0
+probe_host() {  # $1 = any URL on the host
+  [ "$probed" = 1 ] && return 0
+  probed=1
+  command -v curl >/dev/null 2>&1 || return 0
+  origin=$(printf '%s' "$1" | sed -E 's#^(https?://[^/]+).*#\1#')
+  if ! curl -s -o /dev/null -m 10 "$origin"; then
+    echo "shoot: the render host $origin is unreachable from here." >&2
+    echo "       Chrome would screenshot its own error page into a valid PNG, which is how a" >&2
+    echo "       broken network gets reported as a broken config. Fix the network, then retry." >&2
+    exit 1
+  fi
+}
+
 shots=""; n=0
 [ -n "$SCREENS" ] || SCREENS="__default__"
 for s in $SCREENS; do
@@ -81,6 +102,7 @@ for s in $SCREENS; do
     http*) ;;
     *) echo "shoot: preview failed for $s: $(printf '%s' "$url" | head -2)" >&2; exit 1 ;;
   esac
+  probe_host "$url"
   shoot_one "$url" "$png" "$BUDGET" "${WATCHDOG:-180}"
   if [ ! -s "$png" ]; then
     # Escalate before concluding anything. Measured: on a slow render host an 8 s budget produced
@@ -96,7 +118,12 @@ for s in $SCREENS; do
     # false-passed `render-check.py` on its 216 antialiasing colours until a dominant-share
     # guard was added. That guard then over-fired -- four agents in the 2026-08-28 round had
     # GOOD renders renamed, because a sparse light screen is flatter than a DNS-error page.
-    # `--sanity` now needs flatness AND the ink confined to one band; see render-measure.py.
+    # `--sanity` needs flatness AND the ink confined to one band AND nothing drawn wider than a
+    # line of text -- the third axis added 2026-08-28, after a correct render of a single
+    # carousel was refused: on the first two axes it sat BETWEEN two real error pages, so no
+    # threshold on them could have separated it. See render-measure.py, which also records the
+    # one case still not separable (a screen made only of text) -- the host probe above is what
+    # covers that one.
     if python3 "$HERE/render-measure.py" --sanity "$png" >/dev/null 2>&1; then
       echo "   rendered $s -> $(basename "$png")"
       shots="$shots $png"; n=$((n+1))

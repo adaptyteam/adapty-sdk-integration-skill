@@ -393,8 +393,9 @@ thing is usually *less* work than the fake, and the seed flow you already fetche
 to copy. Resolve the request through the map in
 [flow-schema.md](references/flow-schema.md#from-what-the-user-asks-for-to-what-the-json-calls-it)
 before you reach for a lookalike — reviews, sliders, swipeable cards and dots all route to
-`carousel`, never to hand-built dots. `verify-config.py` warns on the dot-cluster tell, but it is a
-heuristic; the map and this rule are the real guard. The same trap catches the **`progress-bar`**:
+`carousel`, never to hand-built dots. `component-catalog.json` ships a filled `reviews-carousel`
+template and `flowkit.carousel()` builds one from scratch; `verify-config.py` **errors** on a
+hand-built indicator row and warns on the dotless form. The same trap catches the **`progress-bar`**:
 a static filled `stack` or a row of step `stack`s looks like progress and never advances — build the
 real `components` entry and wire it per screen via `props.progressBar`, never a bar that cannot move.
 
