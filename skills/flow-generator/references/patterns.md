@@ -342,6 +342,17 @@ Its `hierarchy` children are **one node per slide** (each a `stack` holding the 
 and body). **The dots come from `props.dots` — do not add your own dot `stack`s**; that is exactly
 the fake this section exists to stop.
 
+**Authoring one: `flowkit.carousel(slides, slide_w=…, slide_h=…)`.** It emits exactly the shape
+above and enforces the three things that turn a carousel back into the fake: fewer than two slides
+raises (that *is* the frozen slide), a dot-like `stack` passed as a slide raises (the dots are the
+element's own), and the slide geometry is a required number because a `hug` slide is dropped on
+device. All four of `color`, `activeColor`, `size` and `gap` are **required** by the schema's
+`IDots`, so the helper always writes them together — a partial `dots` object fails the schema
+check. Prefer a **theme colour id** for the dots (`dot_color='muted'`): `IDots.color` is an
+`IColor`, so it accepts a `color-style`, and the hardcoded white above is invisible on a light
+screen. `tests/fixtures/reviews-carousel.json` is a rendered example — the dots draw, and the file
+contains no dot `stack` at all.
+
 Now the SDK limitations, which shape the *geometry* of a real carousel — not whether to use one.
 Support-channel distilled (2026-08, team-stated and device-verified). The carousel supports exactly
 **two layouts**: adjacent-slide peek (the standard Apple layout), or one full slide with neighbours

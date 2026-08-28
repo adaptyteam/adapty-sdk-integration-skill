@@ -74,8 +74,14 @@ def sample():
                          custom_id='offer', minutes=15, padding=fk.pad(12, 16, 16, 12),
                          corner=fk.radius(20), fill_=fk.fill('card'),
                          visibility=fk.visible(), caption='Countdown')
+    reviews = fk.carousel(
+        [fk.stack([fk.text(fk.rich(f'"Review {i}"'), preset='body', color_id='ink')],
+                  fixed_w=340, fixed_h=120, corner=fk.radius(16), fill_=fk.fill('card'),
+                  padding=fk.pad(16, 16, 16, 16), caption=f'Slide {i}')
+         for i in (1, 2, 3)],
+        slide_w=340, slide_h=120, caption='Reviews')
     return fk.config(
-        screens=[fk.screen('scr_main', [card, rail, cta, countdown], caption='Plans',
+        screens=[fk.screen('scr_main', [card, rail, cta, countdown, reviews], caption='Plans',
                            fill_=fk.fill('bg'), padding=fk.pad(0, 0, 0, 120),
                            selectable_groups=[{'id': 'plans', 'type': 'product'}])],
         colors=[('bg', 'Background', '#FFFFFF', '#101014'),
@@ -382,6 +388,42 @@ def main():
     check('one footer per screen is fine',
           fk.screen('scr_y', [fk.stack([]), fk.footer([], fill_=fk.fill('surface'))])
             is not None)
+
+    # carousel() — the swipeable element. Same story as footer(): the module exposed no way to
+    # build one, so an author reaching for a reviews slider found only stack(), and the result
+    # was a static card plus decorative dot stacks — one frozen slide, dead dots, and a
+    # screenshot that looks finished. The preview never swipes, so no local render sees it.
+    car = [n for n in node_map.values() if n['type'] == 'carousel'][0]
+    check('carousel() emits type carousel', car['type'] == 'carousel')
+    check('carousel props match the real-export key set (no layout prop exists on a carousel)',
+          set(car['props']) == {'gap', 'width', 'height', 'slideWidth', 'slideHeight', 'dots'},
+          str(sorted(car['props'])))
+    check('slide geometry is fixed — a hug slide is dropped on device',
+          car['props']['slideWidth']['type'] == 'fixed'
+          and car['props']['slideHeight']['type'] == 'fixed')
+    check('height defaults to the slide height',
+          car['props']['height'] == car['props']['slideHeight'])
+    check('the dots are the element\'s own, with all four keys IDots requires',
+          set(car['props']['dots']) == {'color', 'activeColor', 'size', 'gap'},
+          str(sorted(car['props']['dots'])))
+    check('one node per slide, and no dot children among them',
+          len([n for n in node_map.values() if str(n.get('caption', '')).startswith('Slide')]) == 3)
+    check('a single-slide carousel raises (that is the frozen slide)',
+          raises(lambda: fk.carousel([fk.stack([])], slide_w=340, slide_h=120)))
+    check('dot-like stacks passed as slides raise (the dots come from props.dots)',
+          raises(lambda: fk.carousel(
+              [fk.stack([], fixed_w=6, fixed_h=6, corner=fk.radius(9999)) for _ in range(3)],
+              slide_w=340, slide_h=120)))
+    check('dots=False omits the key rather than emitting a partial IDots',
+          'dots' not in fk.carousel([fk.stack([]), fk.stack([])], slide_w=340, slide_h=120,
+                                    dots=False)['props'])
+    check('a dot colour given as a theme id becomes a color-style, so the dots follow the theme',
+          fk.carousel([fk.stack([]), fk.stack([])], slide_w=340, slide_h=120,
+                      dot_color='muted')['props']['dots']['color']
+          == {'type': 'color-style', 'colorId': 'muted'})
+    check('a dot colour given as a hex stays a hex',
+          fk.carousel([fk.stack([]), fk.stack([])], slide_w=340, slide_h=120,
+                      dot_color='#101828')['props']['dots']['color']['type'] == 'hex')
 
     print()
     if FAILURES:
