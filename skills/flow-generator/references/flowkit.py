@@ -659,8 +659,8 @@ def _dot_color(value, default):
 
 def carousel(slides=(), *, slide_w, slide_h, height=None, gap=12, width='fill',
              dots=True, dot_size=6, dot_gap=6, dot_color=None, dot_active_color=None,
-             fill_=None, padding=None, corner=None, position=None, visibility=None,
-             node_id=None, **kw):
+             fill_=None, padding=None, margin=None, corner=None, position=None,
+             visibility=None, node_id=None, **kw):
     """A swipeable `carousel`. Reviews, testimonials, sliders, swipeable cards, cards with dots.
 
     Reach for this whenever the design shows more than one card the user is meant to move
@@ -711,6 +711,10 @@ def carousel(slides=(), *, slide_w, slide_h, height=None, gap=12, width='fill',
             'activeColor': _dot_color(dot_active_color, hex_color('#FFFFFF', 95))}
     if fill_ is not None:      props['fill'] = fill_
     if padding is not None:    props['padding'] = padding
+    # The dot band is the last few px of the carousel's OWN box and the next element begins
+    # immediately after it, so clearance from what follows is a margin -- there is nowhere else
+    # to put it. Without this parameter it had to be assigned onto the node by hand.
+    if margin is not None:     props['margin'] = margin
     if corner is not None:     props['borderRadius'] = corner
     if position is not None:   props['position'] = position
     if visibility is not None: props['visibility'] = visibility
@@ -924,6 +928,42 @@ def date_time_picker(custom_id, *, date_format='yyyy-mm-dd', time_format='24h',
     extra = _dates(date_format, min_date, max_date)
     extra['timeFormat'] = time_format
     return _input('date-time-picker', custom_id, extra=extra, **kw)
+
+
+#: The one system state a group member receives on tap. Declared on the MEMBER; the visual
+#: overrides may sit on the member, on any descendant, or both -- real exports do all three.
+SELECTED_STATE = [{'id': 'selected', 'type': 'system'}]
+
+
+def on_selected(node, **props):
+    """Give `node` a different look while its group member is selected.
+
+    THE reason this exists: without it there is no way to express "selected" from this module,
+    so an author styles the card that starts selected differently in its BASE props -- and that
+    look is then stuck on that card forever. Tapping flips the internal selection and nothing on
+    screen moves, which reads to a user as "it blinks and nothing changes". Shipped to a real
+    user on 2026-08-28 from a build that had `patterns.md`'s rule in front of it; the words were
+    there and the helper was not, which is the difference this closes.
+
+    Use it on the member AND on every descendant whose colour or font should follow:
+
+        card = on_selected(product([...], product_id=P, group_id='plans', default=True),
+                           fill=fill('planOn'), padding=pad(16, 16, 16, 16),
+                           borderRadius=radius(16))
+        name = on_selected(text(rich('Annual'), preset='plan', color_id='inkMuted'),
+                           color=color('ink'), font={'preset': 'plan'})
+
+    Give every member the SAME base look; `default=True` picks which one starts selected, never
+    how it looks. A real export repeats the props it touches (fill, padding, borderRadius)
+    rather than sending a delta, so pass the full set you want applied in that state.
+    """
+    if not props:
+        raise ValueError('on_selected() with no props does nothing — pass the overrides that '
+                         'should apply while selected, e.g. fill=fill("planOn").')
+    if node.get('type') in ('product', 'selectable', 'tab-item'):
+        node['states'] = list(SELECTED_STATE)
+    node.setdefault('propsByState', {})['selected'] = props
+    return node
 
 
 def product(children=(), *, product_id, group_id, default=False, **kw):

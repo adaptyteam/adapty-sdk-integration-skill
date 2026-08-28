@@ -1050,6 +1050,86 @@ def check(path):
                 _walk(c)
         _walk(s['elements']['hierarchy'])
 
+    # A SELECTION THAT CANNOT BE SEEN. A `product` / `selectable` / `tab-item` group changes
+    # which member is selected on tap, but the LOOK only follows if something in the member's
+    # subtree carries `propsByState.selected`. Style the members differently in their BASE props
+    # instead -- the violet card violet, the muted card muted -- and the selected member is
+    # whichever one you drew that way, forever: tapping flips the internal selection and nothing
+    # on screen moves. The user-visible symptom is "the card just blinks and nothing changes".
+    #
+    # Added 2026-08-28 after shipping exactly that to a user. `patterns.md` has stated the rule
+    # in words since the plan-card section was written -- "Put the selected LOOK in
+    # `propsByState`, never on whichever card starts selected" -- and it was read past anyway,
+    # because the reference screenshot showed one card highlighted and copying a static image
+    # literally bakes in the one frame it can show. A prose rule that was documented AND still
+    # defeated is this repo's trigger for a mechanical guard.
+    #
+    # NOTHING else sees it: `flows config validate` returns valid (the document is well formed),
+    # the schema check passes (both shapes are legal), and `config preview` draws a single frame
+    # in which the baked-in look and the state-driven look are pixel-identical.
+    for s in d.get('screens', []):
+        m = s['elements']['map']
+        for g in (s.get('selectableGroups') or []):
+            gid = g.get('id')
+            members = [(k, e) for k, e in m.items()
+                       if (e.get('props') or {}).get('groupId') == gid]
+            if len(members) < 2:
+                continue
+
+            def _subtree(root_id):
+                """Every element id under `root_id`, itself included."""
+                out, node = [], None
+
+                def find(n):
+                    nonlocal node
+                    if n.get('id') == root_id:
+                        node = n
+                    for c in n.get('children') or []:
+                        find(c)
+                find(s['elements']['hierarchy'])
+
+                def collect(n):
+                    out.append(n['id'])
+                    for c in n.get('children') or []:
+                        collect(c)
+                if node:
+                    collect(node)
+                return out
+
+            def _looks(eid):
+                """The base props a reader would call 'the styling' of this member."""
+                pr = m.get(eid, {}).get('props') or {}
+                return json.dumps({k: pr.get(k) for k in ('fill', 'border', 'color')},
+                                  sort_keys=True)
+
+            has_state = False
+            for k, _ in members:
+                for eid in _subtree(k):
+                    if ((m.get(eid, {}).get('propsByState') or {}).get('selected')) is not None:
+                        has_state = True
+                        break
+                if has_state:
+                    break
+            if has_state:
+                continue
+
+            distinct = {_looks(k) for k, _ in members}
+            names = sorted(k for k, _ in members)
+            if len(distinct) > 1:
+                bad.append(
+                    f'screen {s["id"]}: group {gid!r} styles its members differently in their '
+                    f'BASE props ({len(members)} members, {len(distinct)} distinct looks) and '
+                    f'nothing in them carries `propsByState.selected` — the selected look is '
+                    f'baked into one member, so tapping changes the selection and NOTHING on '
+                    f'screen changes. Give every member the same base look and put the selected '
+                    f'one in `propsByState.selected`; `default: true` picks which starts '
+                    f'selected, not how it looks. Members: {names}. See patterns.md')
+            else:
+                warn.append(
+                    f'screen {s["id"]}: group {gid!r} has {len(members)} members that look '
+                    f'identical and nothing carries `propsByState.selected`, so a user cannot '
+                    f'tell which one is selected. If the design marks selection some other way '
+                    f'(a radio dot with its own state) this is fine. Members: {names}')
     # ---- conditions the transform service compiles: shape, then variable resolution.
     # Both are hard 422s and neither is visible to any other gate — the schema types a
     # condition loosely and `config preview` renders the element in whichever state it draws.
