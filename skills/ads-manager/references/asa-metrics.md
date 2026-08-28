@@ -88,7 +88,7 @@ day-90 value.
   `--order-by roas` — see [Metric vocabulary](#metric-vocabulary).
 
 ```sh
-adapty asa metrics --entity campaign --date-from 2026-07-01 --date-to 2026-07-31 \
+$ADAPTY asa metrics --entity campaign --date-from 2026-07-01 --date-to 2026-07-31 \
   --metric roas --by-days 7 --by-days 90 --order-by gross_roas --order-by-day 90
 ```
 
