@@ -15,16 +15,47 @@ Open the reference a workflow names before running its commands:
 - `references/asa-metrics.md` — `metrics`, `metrics overview`, `search-terms list`,
   `competitors summary`.
 
+## The CLI
+
+**Resolve `$ADAPTY` once, before your first `asa` call, and use it for every command you run.** A
+global `adapty` is frequently old — the `asa` topic ships in **0.4.0**, and an older install answers
+every command in this skill with `unknown command`, which reads like the command does not exist
+rather than like a stale CLI:
+
+```bash
+adapty --version                                   # >= 0.4.0 ?  ADAPTY="adapty", done
+npm i -g adapty@latest >/dev/null 2>&1 \
+  && ADAPTY="adapty" \
+  || ADAPTY="npx --yes adapty@latest"              # fallback: prefix not writable
+```
+
+**Install once; do not wrap every call in `npx`.** The wrapper costs ~1 s *per call* against 0.07 s
+installed, and an optimization pass makes dozens of calls. Where the global prefix is not writable
+the `npx` form still works, and there `--yes` is not optional: without it npx stops to ask
+permission to install, and a headless run has nobody to answer.
+
+**Writing a command out for the user? Expand it to a literal `adapty`.** Their shell has no
+`$ADAPTY`. Same split as `--yes` below — what you run carries the variable, what they run carries
+the command name.
+
+**In `zsh`, the macOS default, a multi-word `$ADAPTY` is not split into words**, so the command
+fails with `command not found: npx --yes adapty@latest`. Run `setopt shwordsplit` once in the same
+shell, or write `npx --yes adapty@latest` out in full. That error is a shell problem, never evidence
+that the CLI or the command is missing.
+
+Declare an `asa` command unavailable only after `npx --yes adapty@latest` lacks it — never from a
+version number you read somewhere.
+
 ## Account surface
 
-- `adapty asa whoami` — company, how access was granted, Apple connection state. Run it first.
-- `adapty asa connect [--no-wait]` — prints the Apple authorization link and waits; `--no-wait`
+- `$ADAPTY asa whoami` — company, how access was granted, Apple connection state. Run it first.
+- `$ADAPTY asa connect [--no-wait]` — prints the Apple authorization link and waits; `--no-wait`
   returns immediately.
-- `adapty asa orgs list` — ASA organizations. Each row carries two identifiers, not
+- `$ADAPTY asa orgs list` — ASA organizations. Each row carries two identifiers, not
   interchangeable: `internal_id`, the UUID `--org` takes on `campaigns create` and
   `--campaign-group` takes on the lists that accept scope filters, and `org_id`, Apple's numeric id,
   which both reject. `--org` itself exists only on `campaigns create`; no list accepts it.
-- `adapty asa apps list` — apps promoted in Apple Search Ads. Each row carries two identifiers,
+- `$ADAPTY asa apps list` — apps promoted in Apple Search Ads. Each row carries two identifiers,
   not interchangeable: Apple's numeric adam-id (`--adam-id`) and the ASA app UUID (`--app`).
 - Those two and `automations list` take pagination only — no scope filters exist.
 - Scope is the token's company. No `asa` command takes `--app` to select scope — `--app` is a
@@ -41,8 +72,8 @@ Open the reference a workflow names before running its commands:
 Fill every slot. A slot you cannot fill from a read is one you ask about, not one you drop.
 
 ```
-adapty asa <topic> list --<filter-from-that-list-s-matrix-row> <id-from-a-previous-list> [--status <enum>]
-adapty asa <topic> <create|update|add> [<id>] <field flags> --idempotency-key <key>
+$ADAPTY asa <topic> list --<filter-from-that-list-s-matrix-row> <id-from-a-previous-list> [--status <enum>]
+$ADAPTY asa <topic> <create|update|add> [<id>] <field flags> --idempotency-key <key>
 ```
 
 **The scope filter is a required slot, and the matrix is the only place it comes from** — read that
@@ -164,8 +195,8 @@ before it reaches Apple. Counting needs no metrics call: any list at `--page-siz
 only name one of those values. → `references/asa-metrics.md`, `## Cohort windows`.
 
 ```
-adapty asa metrics overview --entity <level> --date-from <YYYY-MM-DD> --date-to <YYYY-MM-DD> [--period-unit <bucket>]
-adapty asa metrics --entity <ad|ad-group|campaign|keyword> --date-from <YYYY-MM-DD> --date-to <YYYY-MM-DD> --order-by <metric> --page-size <n>
+$ADAPTY asa metrics overview --entity <level> --date-from <YYYY-MM-DD> --date-to <YYYY-MM-DD> [--period-unit <bucket>]
+$ADAPTY asa metrics --entity <ad|ad-group|campaign|keyword> --date-from <YYYY-MM-DD> --date-to <YYYY-MM-DD> --order-by <metric> --page-size <n>
 ```
 
 **3. Launch a campaign.** Read `orgs list` → `--org` and `apps list` → `--adam-id` first; then
@@ -176,11 +207,11 @@ verify the structure, then enable it with workflow 6 — nothing spends until yo
 `references/asa-management.md`, `## Writes and idempotency`.
 
 ```
-adapty asa campaigns create --org <id> --adam-id <adam-id> --name <name> --country <country-code> --daily-budget <amount> --status PAUSED --idempotency-key <run>-camp
-adapty asa ad-groups create --campaign <id> --name <name> --default-bid <amount> --idempotency-key <run>-ag
-adapty asa creatives list --app <app-uuid>   # → --creative-id; no creatives create exists
-adapty asa ads create --ad-group <id> --creative-id <id> --name <name> --idempotency-key <run>-ad
-adapty asa keywords add --ad-group <id> --text <keyword> --match-type <EXACT|BROAD> --idempotency-key <run>-kw-1   # ≤15 per call, fresh key per batch
+$ADAPTY asa campaigns create --org <id> --adam-id <adam-id> --name <name> --country <country-code> --daily-budget <amount> --status PAUSED --idempotency-key <run>-camp
+$ADAPTY asa ad-groups create --campaign <id> --name <name> --default-bid <amount> --idempotency-key <run>-ag
+$ADAPTY asa creatives list --app <app-uuid>   # → --creative-id; no creatives create exists
+$ADAPTY asa ads create --ad-group <id> --creative-id <id> --name <name> --idempotency-key <run>-ad
+$ADAPTY asa keywords add --ad-group <id> --text <keyword> --match-type <EXACT|BROAD> --idempotency-key <run>-kw-1   # ≤15 per call, fresh key per batch
 ```
 
 **4. Harvest keywords.** Read `search-terms list --ad-group <id> --date-from <YYYY-MM-DD>
@@ -227,7 +258,7 @@ the analytics pool, slow on a cold cache. → `references/asa-metrics.md`.
 ## Anything not covered here
 
 1. This file and its two references are the source of truth for the `asa` surface.
-2. `adapty asa <topic> <command> --help` — exact flag syntax for the installed version.
+2. `$ADAPTY asa <topic> <command> --help` — exact flag syntax for the installed version.
 3. The CLI repo, https://github.com/adaptyteam/adapty-cli (default branch): `README.md`, then
    `skills/adapty-cli/references/cli-commands.md` — both can lag the installed CLI — then
    `src/commands/asa/**`, where a command's own `static flags` declaration outranks any table and
