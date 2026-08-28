@@ -9,15 +9,23 @@ The images are SYNTHESISED here rather than checked in, for the same reason
 a binary fixture nobody can regenerate rots. Each one reproduces the SHAPE of a class measured
 on real samples on 2026-08-28:
 
-    error page   mostly one colour, all ink in one central band   -> must FAIL (exit 1)
+    error page   flat, ink in one band, and only TEXT-width runs  -> must FAIL (exit 1)
     blank page   one colour, no ink at all                        -> must FAIL
     sparse app   mostly one colour, ink spread down the frame     -> must PASS (exit 0)
     banded app   ink in ONE band but not flat enough              -> must PASS
     dense app    neither flat nor banded                          -> must PASS
+    card screen  flat AND banded, but a card edge runs the width  -> must PASS
 
-The last two are the false positives the previous single-axis guard produced: four agents in
-one GREEN round had good renders renamed `NOT-A-RENDER-*`, because a sparse light signup screen
-measured 99.1% one colour where the DNS-error page it exists to catch measured 97.6%.
+The last one is the 2026-08-28 report: a correct render of a single reviews carousel was
+renamed `NOT-A-RENDER-*`. It is the case the previous two-axis guard could not have got right,
+because on those two axes the real render sits BETWEEN two error pages (dom 0.969 / span 0.287,
+against conn-refused 0.976 / 0.263 and dns-error 0.972 / 0.333). The third axis -- the longest
+CONTIGUOUS run of ink in a row -- separates them 0.139 vs 0.646, because glyphs have gaps
+between them and a card edge does not.
+
+Note the error-page fixture below draws TEXT-WIDTH runs. It used to draw solid 250px bars,
+which no real error page produces (measured: 0.090-0.139 of the width), and the third axis
+correctly began accepting it -- an unfaithful fixture caught by the check it was meant to test.
 
 Usage: python3 tests/test-render-sanity.py       # 0 all pass, 1 a case regressed
 """
@@ -69,9 +77,16 @@ def case(name, rows, want_fail):
         fails.append(f'{name}: wanted {"exit 1" if want_fail else "exit 0"}, got exit {rc}')
 
 
-# an error page: one clump of text lines in the middle third
-case('error page — flat, ink in one central band',
-     lambda y: [(90, 340)] if 300 <= y <= 420 and (y // 6) % 2 == 0 else [], True)
+# An error page: one clump in the middle third, drawn as TEXT -- short glyph runs with gaps,
+# plus a small solid icon. Longest contiguous run ~45px (0.105 of the width), matching the
+# 0.090-0.139 measured on four real Chrome error pages.
+def error_page(y):
+    if 300 <= y <= 344:                       # the icon: the widest solid thing on the page
+        return [(90, 135)]
+    if 360 <= y <= 420 and (y // 6) % 2 == 0:  # lines of text
+        return [(x, x + 9) for x in range(90, 330, 14)]
+    return []
+case('error page — flat, one band, only text-width runs', error_page, True)
 
 case('blank page — one colour, no ink at all', lambda y: [], True)
 
@@ -92,6 +107,27 @@ case('banded app screen — one section, not flat enough', banded, False)
 # a dense paywall: neither flat nor banded
 case('dense app screen — neither flat nor banded',
      lambda y: [(10, 420)] if 40 <= y <= 860 else [], False)
+
+# THE REPORTED BUG (2026-08-28): one card on a white frame. Flat, and its ink is confined to a
+# band -- so the old two-axis gate rejected it -- but the card's top and bottom edges run
+# unbroken across most of the width, which no page made of text can do.
+def one_card(y):
+    if y in (200, 380):        return [(30, 400)]      # card top / bottom edge
+    if 200 < y < 380:          return [(30, 32), (398, 400)]   # card sides
+    if 120 <= y <= 145:        return [(x, x + 9) for x in range(40, 260, 14)]  # heading text
+    return []
+case('one card on a white frame — flat AND banded, but drawn edges', one_card, False)
+
+# KNOWN LIMITATION, asserted so it stays visible rather than forgotten: a screen made only of
+# text is not distinguishable from an error page by any of the three axes -- measured, a real
+# heading-only render scores a 0.042 longest run and a real terms screen 0.062, BELOW the
+# 0.090-0.139 of the error pages, because Chrome's error page has a solid icon and button. No
+# threshold separates them; they are the same image. `shoot.sh` covers this case a different
+# way, by probing the render host before it launches Chrome at all. If someone later makes this
+# case pass, that is an improvement -- update this assertion and the note in render-measure.py.
+case('KNOWN LIMITATION: a text-only app screen is still rejected',
+     lambda y: [(x, x + 9) for x in range(40, 300, 14)] if 120 <= y <= 200 and (y // 5) % 2 == 0
+     else [], True)
 
 print()
 if fails:

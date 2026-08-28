@@ -50,9 +50,92 @@ MAX_DOMINANT_SHARE = 0.95
 # Against that rule the full set is 19/19 correct, with the nearest real render 0.057 clear on
 # flatness (0.893 where 0.95 is needed) and 0.155 clear on span (0.655 where < 0.50 is needed).
 MIN_INK_SPAN = 0.50
+# ...and flatness AND span TOGETHER are still not enough, which is the second over-fire of this
+# guard (2026-08-28, reported after a correct render of a reviews carousel was renamed
+# `NOT-A-RENDER-*`). Measured on that capture against four freshly taken Chrome error pages, the
+# real render sits INSIDE the error-page range on both existing axes -- it is bracketed, so no
+# threshold on them could ever have separated it:
+#
+#     conn-refused        dom 0.976   span 0.263
+#     THE REAL RENDER     dom 0.969   span 0.287
+#     dns-error           dom 0.972   span 0.333
+#
+# What does separate them is the longest CONTIGUOUS run of ink in any row, as a fraction of the
+# width. Text cannot produce a long one -- there are gaps between glyphs -- while almost any app
+# screen draws a card edge, a divider, a filled button or an image that runs unbroken across
+# much of the frame. Measured:
+#
+#     error pages   n=4   longest run 0.000-0.139   (blank page is 0.000)
+#     real renders  n=3   longest run 0.646-0.792   (carousel, one-card, divider)
+#
+# 0.35 sits in that gap, ~150px at 430 wide, which nothing made of glyphs reaches.
+#
+# KNOWN LIMITATION, measured rather than assumed: a real screen that is ONLY text (a heading
+# alone, 0.042; a paragraph of terms, 0.062) is indistinguishable from an error page on all
+# three axes -- it scores LOWER than the error pages do, because Chrome's error page has a solid
+# icon and button. That is not a threshold that can be tuned; the two are the same image. It is
+# why `shoot.sh` now probes the render host BEFORE launching Chrome: an unreachable host is the
+# actual cause of the page this guard was invented to catch, and testing it directly is both
+# reliable and 18 seconds cheaper than screenshotting the result.
+MIN_LONGEST_RUN = 0.35
 # A pixel counts as ink at this Manhattan distance from the dominant colour -- above
 # antialiasing, below any real content.
 INK_DELTA = 60
+
+
+def sanity_metrics(w, h, chans, buf):
+    """The three numbers `--sanity` judges on, computed once, in one place.
+
+    Extracted so the calibration in `tests/test-render-sanity.py` measures the SHIPPED code
+    rather than a reimplementation beside it -- the subsampling below means a full-resolution
+    recomputation does not produce the same numbers (0.974 vs 0.976 on the same file, measured).
+    """
+    # Every 3rd pixel: 20x cheaper and the share does not move meaningfully.
+    counts = collections.Counter()
+    for y in range(0, h, 3):
+        row = y * w * chans
+        for x in range(0, w, 3):
+            i = row + x * chans
+            counts[buf[i:i + 3]] += 1
+    total = sum(counts.values()) or 1
+    bg, n = counts.most_common(1)[0]
+    dom = n / total
+
+    # The second pass runs only for an image that is already suspiciously flat, so the common
+    # case still costs one pass over the pixels.
+    span = longest_run = None
+    if dom > MAX_DOMINANT_SHARE:
+        cols = len(range(0, w, 3)) or 1
+        first = last = None
+        widest = 0
+        # EVERY row here, where the colour pass above samples every 3rd. A card border or a
+        # divider is often a single pixel tall, and on a stride of 3 whether it is seen at all
+        # comes down to where it happens to land on the sample grid -- two real captures in the
+        # calibration set were caught only by that luck. This pass runs solely on images already
+        # judged flat, so the extra cost is 3x of a rare pass, and it buys a longest-run number
+        # that does not depend on alignment.
+        for y in range(h):
+            row, hit, run, best = y * w * chans, 0, 0, 0
+            for x in range(0, w, 3):
+                i = row + x * chans
+                if (abs(buf[i] - bg[0]) + abs(buf[i + 1] - bg[1])
+                        + abs(buf[i + 2] - bg[2])) > INK_DELTA:
+                    hit += 1
+                    run += 1
+                    best = max(best, run)
+                else:
+                    run = 0
+            if hit >= 3:
+                first = y if first is None else first
+                last = y
+                widest = max(widest, best)
+        span = 0.0 if first is None else (last - first + 1) / h
+        longest_run = widest / cols
+
+    flat = (span is not None and span < MIN_INK_SPAN
+            and longest_run is not None and longest_run < MIN_LONGEST_RUN)
+    return {'colours': len(counts), 'dom': dom, 'span': span,
+            'longest_run': longest_run, 'flat': flat, 'bg': bg}
 
 
 def read_png(path):
@@ -135,43 +218,19 @@ def main():
 
     w, h, chans, buf = read_png(a.png)
     if a.sanity:
-        # Every 3rd pixel: 20x cheaper and the share does not move meaningfully.
-        counts = collections.Counter()
-        for y in range(0, h, 3):
-            row = y * w * chans
-            for x in range(0, w, 3):
-                i = row + x * chans
-                counts[buf[i:i + 3]] += 1
-        total = sum(counts.values()) or 1
-        bg, n = counts.most_common(1)[0]
-        dom = n / total
-        # The span pass runs only for an image that is already suspiciously flat, so the
-        # common case still costs one pass over the pixels.
-        span = None
-        if dom > MAX_DOMINANT_SHARE:
-            first = last = None
-            for y in range(0, h, 3):          # same subsampling as the colour pass above
-                row, hit = y * w * chans, 0
-                for x in range(0, w, 3):
-                    i = row + x * chans
-                    if (abs(buf[i] - bg[0]) + abs(buf[i + 1] - bg[1])
-                            + abs(buf[i + 2] - bg[2])) > INK_DELTA:
-                        hit += 1
-                        if hit >= 3:
-                            break
-                if hit >= 3:
-                    first = y if first is None else first
-                    last = y
-            span = 0.0 if first is None else (last - first + 3) / h
-        flat = span is not None and span < MIN_INK_SPAN
-        detail = '' if span is None else f', ink spans {span:.0%} of the height'
-        verdict = 'FLAT — this is not a render' if flat else 'looks drawn'
-        print(f'{a.png}  {w}x{h}  {len(counts)} colours, {dom:.1%} one colour'
-              f'{detail} — {verdict}')
-        if flat:
-            print('  Mostly one colour AND all the content in one band: that is the shape of an '
-                  'error page, not a screen. A screenshot of one is a valid PNG — open the URL '
-                  'in a real browser before blaming the config.')
+        m = sanity_metrics(w, h, chans, buf)
+        bits = [f'{m["colours"]} colours', f'{m["dom"]:.1%} one colour']
+        if m['span'] is not None:
+            bits.append(f'ink spans {m["span"]:.0%} of the height')
+        if m['longest_run'] is not None:
+            bits.append(f'longest run {m["longest_run"]:.0%} of the width')
+        verdict = 'FLAT — this is not a render' if m['flat'] else 'looks drawn'
+        print(f'{a.png}  {w}x{h}  ' + ', '.join(bits) + f' — {verdict}')
+        if m['flat']:
+            print('  Mostly one colour, all the content in one band, and nothing drawn wider '
+                  'than a line of text: that is the shape of an error page, not a screen. A '
+                  'screenshot of one is a valid PNG — open the URL in a real browser before '
+                  'blaming the config.')
             return 1
         return 0
     px = lambda x, y: tuple(buf[(y * w + x) * chans:(y * w + x) * chans + 3])
