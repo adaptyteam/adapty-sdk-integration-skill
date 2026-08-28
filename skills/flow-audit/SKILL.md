@@ -87,12 +87,22 @@ defect in one pass over the file already on disk, while `flows config validate` 
 network round trip — running it last means the local checks have already caught
 everything they can before paying for a network call.
 
+`verify-config.py` lives in the **`flow-generator`** skill directory, not this one — resolve
+it there. Both skills ship in the same plugin, so it is always present in a plugin install;
+`$FG` below is that skill's directory (a sibling of this one under `skills/`).
+
 ```bash
-python3 <skill>/references/verify-config.py flow.config.json
+FG="$(dirname "<skill>")/flow-generator"        # sibling skill directory
+python3 "$FG/references/verify-config.py" flow.config.json
 python3 <skill>/references/audit-flow.py flow.config.json --catalog catalog.json \
   --report --name "$NAME" --status "$STATUS" --flow-id "$FLOW"
 $ADAPTY flows config validate "$FLOW" --app "$APP" --config-file flow.config.json --json
 ```
+
+If `verify-config.py` is not at that path, this skill was copied out on its own without
+`flow-generator`. Say so and continue with the other two gates rather than skipping silently —
+it owns checks nothing else here repeats, so its absence narrows the audit and the report must
+admit that.
 
 `verify-config.py` is `flow-generator`'s structural checker (shapes, invariants,
 referential integrity) — run it and report its output, never reimplement any check it
