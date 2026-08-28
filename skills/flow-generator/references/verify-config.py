@@ -40,11 +40,147 @@ it is not a defect this repo introduced by sanitizing.
 Usage: verify-config.py <config.json> [more.json ...]
 Exit 0 if every file is clean (warnings allowed), 1 if any invariant is violated.
 """
-import json, sys, os
+import json, re, sys, os
 
 # The only selectable-group types observed in real exports. A tab group is declared
 # `single_choice`; there is no `tabs` group type. See flow-schema.md, Vocabulary.
 GROUP_TYPES = {'single_choice', 'multi_choice', 'product', 'toggle'}
+
+
+# ---- the transform service's own condition walker, ported --------------------------------
+# `flows config validate` reports ONE fatal per run, so a document with three condition
+# defects costs three network round trips; this names all of them in one local pass. The
+# service validates `props.visibility.condition` and `states[].condition` with a single
+# function (`findInvalidExpressionPath`), which is why two codes share one walker here.
+# Ranked 3rd and 18th among transformer refusals over the 40 days to 2026-08-28.
+EXPR_TYPES = {'const', 'switch', '&&', '||', '==', '!=', 'has', 'notHas', 'empty',
+              'notEmpty', 'in', 'notIn', '>', '<', 'size', 'var', 'assign', 'concat'}
+# `assign` is in the schema's ExpressionType enum and has NO case in the condition walker, so
+# it falls through to `default` and the flow is refused. Legal in a `setVariable` payload,
+# illegal as a condition — hence scoped here and not to expressions generally.
+COND_ILLEGAL_TYPES = {'assign'}
+# A THEME colour must be exactly `#RRGGBB`. Measured against the transform service
+# 2026-08-28: in `theme.colors[].light/dark` a 3-digit, 8-digit, 7-digit, unprefixed or EMPTY
+# hex is refused -- and refused with the location-free `Generated JSON failed schema
+# validation`, which names no field, because `IColorHex` is a bare string with no pattern.
+# The render cannot see it either: `config preview` draws light mode only.
+#
+# POSITION-SCOPED on purpose. In an element position the same service accepts a 3-digit hex,
+# an 8-digit one and an empty string, and real exports carry 8 eight-digit and 16 empty values
+# in `props.fill.color` / `props.color` and validate clean -- so a blanket hex rule would fire
+# on the builder's own output. Theme colours only.
+THEME_HEX = re.compile(r'#[0-9A-Fa-f]{6}\Z')
+_BINARY = {'==', '!=', '>', '<', 'has', 'notHas', 'in', 'notIn'}
+_UNARY = {'empty', 'notEmpty', 'size'}
+
+
+def bad_expr_path(v, path):
+    """Path of the first node the service rejects, or None. Faithful port, including the
+    three collections whose ABSENCE is legal — a stricter rule would fire on valid documents."""
+    if not (isinstance(v, dict) and isinstance(v.get('type'), str)):
+        return path
+    t = v['type']
+    if t in COND_ILLEGAL_TYPES:
+        return f'{path}.type ({t!r} has no case in the condition walker)'
+    if t == 'const':
+        return None
+    if t == 'var':
+        vid = v.get('variableId')
+        return None if isinstance(vid, str) and vid else f'{path}.variableId'
+    if t in _BINARY:
+        return (bad_expr_path(v.get('left'), f'{path}.left')
+                or bad_expr_path(v.get('right'), f'{path}.right'))
+    if t in _UNARY:
+        return bad_expr_path(v.get('left'), f'{path}.left')
+    for key, kind in (('predicates', ('&&', '||')), ('operands', ('concat',))):
+        if t in kind:
+            if key not in v:
+                return None
+            seq = v[key]
+            if not isinstance(seq, list):
+                return f'{path}.{key}'
+            for i, p in enumerate(seq):
+                r = bad_expr_path(p, f'{path}.{key}[{i}]')
+                if r:
+                    return r
+            return None
+    if t == 'switch':
+        if 'cases' not in v:
+            return None
+        cs = v['cases']
+        if not isinstance(cs, list):
+            return f'{path}.cases'
+        for i, c in enumerate(cs):
+            if not (isinstance(c, list) and len(c) == 2):
+                return f'{path}.cases[{i}]'
+            r = (bad_expr_path(c[0], f'{path}.cases[{i}][0]')
+                 or bad_expr_path(c[1], f'{path}.cases[{i}][1]'))
+            if r:
+                return r
+        if 'default' in v:
+            return bad_expr_path(v['default'], f'{path}.default')
+        return None
+    return f'{path}.type'
+
+
+def iter_conditions(d):
+    """(screen_id, element_id, where, tree) for every condition the service compiles.
+
+    Only the two it actually validates: conditional visibility, and a state condition it
+    reads (a `disabled` system state, or any custom state). A `selected`/`focused` condition
+    is overwritten by the service before use, so flagging one would be a false positive.
+    """
+    for s in d.get('screens', []):
+        for eid, e in s.get('elements', {}).get('map', {}).items():
+            vis = (e.get('props') or {}).get('visibility')
+            if isinstance(vis, dict) and vis.get('type') == 'conditional' and vis.get('condition'):
+                yield s.get('id'), eid, 'props.visibility.condition', vis['condition']
+            for i, st in enumerate(e.get('states') or []):
+                if not isinstance(st, dict) or st.get('condition') is None:
+                    continue
+                reads = (st.get('type') == 'custom'
+                         or (st.get('id') == 'disabled' and st.get('type') == 'system'))
+                if reads:
+                    yield s.get('id'), eid, f'states[{i}].condition', st['condition']
+
+
+def all_var_ids(o, out=None):
+    """Every `variableId` anywhere in a subtree — a rich-text variable node and an expression
+    `var` node both carry one, and a product anchor can come from either."""
+    out = set() if out is None else out
+    if isinstance(o, dict):
+        if isinstance(o.get('variableId'), str):
+            out.add(o['variableId'])
+        for v in o.values():
+            all_var_ids(v, out)
+    elif isinstance(o, list):
+        for v in o:
+            all_var_ids(v, out)
+    return out
+
+
+def expr_var_ids(o, out):
+    if isinstance(o, dict):
+        if o.get('type') == 'var' and isinstance(o.get('variableId'), str):
+            out.add(o['variableId'])
+        for v in o.values():
+            expr_var_ids(v, out)
+    elif isinstance(o, list):
+        for v in o:
+            expr_var_ids(v, out)
+    return out
+
+
+# Required payload fields per action type, read off the transform service's own error
+# messages in `compile-actions.ts` rather than from the schema, which is looser than the
+# service on every row. `invalid_action_payload` is one code covering all of them.
+#   (action type) -> (dotted required field, human description)
+ACTION_REQUIRED = {
+    'navigate': ('screen', 'a target screen id'),
+    'openUrl': ('url', 'a URL value'),
+    'selectProduct': ('element', 'a target element id'),
+    'custom': ('id', 'a payload.id value'),
+}
 
 
 def walk(o, fn):
@@ -58,6 +194,12 @@ def walk(o, fn):
 
 def check(path):
     d = json.load(open(path))
+    # `config get` returns an ENVELOPE ({config, remote_configs, status, updated_at}) and every
+    # check below reads a bare config. Unwrapping matches `diff-config.py`, which already takes
+    # either form; without it an envelope died on `KeyError: 'theme'` — a traceback that reads
+    # like a corrupt document rather than like the wrong argument.
+    if isinstance(d, dict) and 'screens' not in d and isinstance(d.get('config'), dict):
+        d = d['config']
     bad, warn = [], []
     els = lambda: ((s, e) for s in d.get('screens', [])
                    for e in s.get('elements', {}).get('map', {}).values())
@@ -808,6 +950,252 @@ def check(path):
             for c in kids:
                 _walk(c)
         _walk(s['elements']['hierarchy'])
+
+    # ---- conditions the transform service compiles: shape, then variable resolution.
+    # Both are hard 422s and neither is visible to any other gate — the schema types a
+    # condition loosely and `config preview` renders the element in whichever state it draws.
+    cond_var_ids = set()
+    for sid, eid, where, tree in iter_conditions(d):
+        expr_var_ids(tree, cond_var_ids)
+        offending = bad_expr_path(tree, f'{eid}.{where}')
+        if offending:
+            bad.append(f'screen {sid}: invalid condition expression at {offending} — refused as '
+                       f'invalid_visibility_condition / invalid_state_condition. Legal types are '
+                       f'{sorted(EXPR_TYPES - COND_ILLEGAL_TYPES)}')
+
+    # An unresolved id is NOT dropped: codegen emits it as a bare identifier into the generated
+    # TypeScript, which fails to compile (`script_type_violation`, TS2304 "Cannot find name").
+    # The same id in rich text renders as its literal token and publishes, which is why that
+    # stays the warning above and this is an error.
+    custom_vars = {v['id'] for v in (d.get('variables') or [])
+                   if isinstance(v, dict) and v.get('id')}
+    all_custom_ids = {(e.get('props') or {}).get('customId')
+                      for _, e in els() if (e.get('props') or {}).get('customId')}
+    for v in sorted(cond_var_ids):
+        head = v.split('.')[0]
+        if (v in custom_vars or head in all_custom_ids or head in group_ids
+                or head in allprod or head in bound_products or head in product_groups):
+            continue
+        bad.append(f'condition variable {v!r} resolves to nothing: no input customId, '
+                   f'selectableGroup, bound product or variables[] entry produces it. The '
+                   f'generated script emits it as a bare identifier and fails to compile '
+                   f'(script_type_violation, TS2304)')
+
+    # ---- action payloads. One code, sixteen required-field checks in the service; these are
+    # the ones a config can be read for. The schema is looser than the service on every row.
+    for s in d.get('screens', []):
+        for eid, e in s['elements']['map'].items():
+            for it in (e.get('interactions') or []):
+                for a in (it.get('actions') or []):
+                    t, pl = a.get('type'), a.get('payload')
+                    if t in ACTION_REQUIRED:
+                        field, human = ACTION_REQUIRED[t]
+                        if not isinstance(pl, dict):
+                            bad.append(f'{eid}: {t} action {a.get("id")!r} has no object '
+                                       f'payload (invalid_action_payload)')
+                        elif not (isinstance(pl.get(field), str) and pl[field]):
+                            bad.append(f'{eid}: {t} action {a.get("id")!r} needs {human} at '
+                                       f'.payload.{field} (invalid_action_payload)')
+                    elif t == 'purchase':
+                        prod = pl.get('product') if isinstance(pl, dict) else None
+                        if not isinstance(pl, dict):
+                            bad.append(f'{eid}: purchase action {a.get("id")!r} has no object '
+                                       f'payload (invalid_action_payload)')
+                        elif not (isinstance(prod, dict)
+                                  and (isinstance(prod.get('type'), str)
+                                       or (isinstance(prod.get('id'), str) and prod['id']))):
+                            bad.append(f'{eid}: purchase action {a.get("id")!r} needs a product '
+                                       f'id at .payload.product.id, or an expression '
+                                       f'(invalid_action_payload)')
+                    elif t == 'setVariable':
+                        if not isinstance(pl, list):
+                            bad.append(f'{eid}: setVariable action {a.get("id")!r} needs an '
+                                       f'ARRAY payload (invalid_action_payload)')
+                        else:
+                            for i, asg in enumerate(pl):
+                                left = asg.get('left') if isinstance(asg, dict) else None
+                                if not (isinstance(left, dict)
+                                        and isinstance(left.get('variableId'), str)
+                                        and left['variableId']):
+                                    bad.append(f'{eid}: setVariable action {a.get("id")!r} '
+                                               f'assignment {i} has no target variable id '
+                                               f'(invalid_action_payload at '
+                                               f'.payload[{i}].left.variableId)')
+                    elif t == 'alert':
+                        if not isinstance(pl, dict):
+                            bad.append(f'{eid}: alert action {a.get("id")!r} has no object '
+                                       f'payload (invalid_action_payload)')
+                        elif not (pl.get('title') or pl.get('message')):
+                            bad.append(f'{eid}: alert action {a.get("id")!r} needs a title or a '
+                                       f'message (invalid_action_payload)')
+                    elif t == 'conditional':
+                        cs = pl.get('cases') if isinstance(pl, dict) else None
+                        if not isinstance(pl, dict) or 'cases' not in pl:
+                            bad.append(f'{eid}: conditional action {a.get("id")!r} needs a '
+                                       f'payload object with cases (invalid_action_payload)')
+                        elif not isinstance(cs, list):
+                            bad.append(f'{eid}: conditional action {a.get("id")!r} needs an '
+                                       f'ARRAY of cases (invalid_action_payload)')
+                        else:
+                            for i, c in enumerate(cs):
+                                if not (isinstance(c, list) and len(c) == 2):
+                                    bad.append(f'{eid}: conditional action {a.get("id")!r} case '
+                                               f'{i} is not a [predicate, value] tuple '
+                                               f'(invalid_action_payload)')
+
+    # ---- a real `carousel` with no slides. The fake-carousel warning above catches the
+    # opposite shape (dots and no carousel); this catches the element with nothing to swipe,
+    # which the service refuses outright ("Carousel element requires at least one child slide").
+    for s in d.get('screens', []):
+        m = s['elements']['map']
+        nodes = {}
+
+        def _idx(n):
+            nodes[n.get('id')] = n
+            for c in n.get('children') or []:
+                _idx(c)
+
+        _idx(s['elements']['hierarchy'])
+        for eid, e in m.items():
+            if e.get('type') != 'carousel':
+                continue
+            node = nodes.get(eid)
+            if node is not None and not (node.get('children') or []):
+                bad.append(f'screen {s["id"]}: carousel {eid} has no slides — refused as '
+                           f'empty_carousel. The slides are its hierarchy children, one per '
+                           f'slide; the dots are its own (props.dots), never children')
+
+    # ---- a tab bar's members must agree on ONE group, and that group must be single_choice.
+    # `missing_tab_selectable_group` is already covered by the groupId check above; these are
+    # the two the service raises that nothing else here sees.
+    for s in d.get('screens', []):
+        m = s['elements']['map']
+        decl = {g['id']: g.get('type') for g in (s.get('selectableGroups') or [])}
+        kids_of = {}
+
+        def _pairs(n):
+            for c in n.get('children') or []:
+                kids_of.setdefault(n.get('id'), []).append(c.get('id'))
+                _pairs(c)
+
+        _pairs(s['elements']['hierarchy'])
+        # The group comes from the TAB BAR's children, not the `tabs` element's -- a real
+        # export nests `tabs` -> [`tab-bar`, `tab-content-wrapper`], and the service reads
+        # `tabBarChildren`. Keying this on `tabs` found no tab-items at all and the check
+        # silently passed its own injected defect.
+        for eid, e in m.items():
+            if e.get('type') != 'tab-bar':
+                continue
+            items = [k for k in kids_of.get(eid, []) if m.get(k, {}).get('type') == 'tab-item']
+            if not items:
+                continue
+            gids = {(m[k].get('props') or {}).get('groupId') or '' for k in items}
+            if len(gids) > 1 or '' in gids:
+                bad.append(f'screen {s["id"]}: tab bar {eid} has tab-items with '
+                           f'{"an empty" if "" in gids else "disagreeing"} groupId '
+                           f'({sorted(gids)}) — refused as mixed_tab_group_ids; every tab-item '
+                           f'under one bar must carry the SAME non-empty groupId')
+            for gid in gids - {''}:
+                if gid in decl and decl[gid] != 'single_choice':
+                    bad.append(f'screen {s["id"]}: tab bar {eid} uses group {gid!r}, declared '
+                               f'{decl[gid]!r} — the service requires single_choice and refuses '
+                               f'anything else with wrong_tab_selectable_group_type')
+
+    # ---- a localizable value the rich-text mapper cannot read. It accepts a STRING or an
+    # ARRAY of paragraphs (`isRichTextValue`), plus a `switch` for conditional copy. Anything
+    # else is refused as invalid_localized_rich_text.
+    #
+    # Scoped to the TEXT-bearing slots by key. A localizable is not always rich text: across
+    # the corpus `content` holds it (172 values, all arrays) while `image` holds an
+    # `{id, url}` object (11) and `placeholder` a bare string (5). Checking every localizable
+    # flagged all 11 image values on two real exports — the first draft of this check did
+    # exactly that.
+    RICH_TEXT_KEYS = ('content', 'placeholder')
+    rich_vals = []
+
+    def _rich(o):
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if (k in RICH_TEXT_KEYS and isinstance(v, dict) and v.get('_localizable')
+                        and isinstance(v.get('values'), dict)):
+                    rich_vals.append((k, v['values']))
+                _rich(v)
+        elif isinstance(o, list):
+            for v in o:
+                _rich(v)
+
+    _rich(d)
+    for key, vals in rich_vals:
+        for code, v in vals.items():
+            if isinstance(v, (str, list)):
+                continue
+            if isinstance(v, dict) and v.get('type') == 'switch':
+                continue
+            bad.append(f'localizable {key} for {code!r} is {type(v).__name__}, not a string, a '
+                       f'block array or a switch — refused as invalid_localized_rich_text')
+
+    # ---- one text may reference ONE product. Two distinct anchors in a single text give the
+    # mapper nothing to resolve `%price%` against and it refuses the flow.
+    for s, e in els():
+        if e.get('type') != 'text':
+            continue
+        for vals in [o['values'] for o in [e.get('props', {}).get('content')]
+                     if isinstance(o, dict) and isinstance(o.get('values'), dict)]:
+            for code, v in vals.items():
+                found = set()
+                for vid in sorted(all_var_ids(v)):
+                    if '.selectedProduct.' in vid or vid.endswith('.selectedProduct'):
+                        head = vid.split('.')[0]
+                        if head in product_groups:
+                            found.add(f'G:{head}')
+                    elif '.prod_' in vid:
+                        head = vid.split('.')[0]
+                        if head in allprod or head in bound_products:
+                            found.add(f'S:{head}')
+                if len(found) > 1:
+                    bad.append(f'{e["id"]}: text content for {code!r} references {len(found)} '
+                               f'distinct product anchors ({sorted(found)}) — refused as '
+                               f'mixed_product_targets_in_text. Split it into one text per '
+                               f'product')
+
+
+    # ---- `<groupId>.selectedOptionId` on a MULTI_CHOICE group. Measured against the transform
+    # service 2026-08-28: the same condition validates on a `single_choice` group and is refused
+    # on `multi_choice` with `Generated scripts failed validation` -- a multi-select exposes no
+    # single selected option for the generated code to read. It matters because
+    # `component-catalog.json`'s `quiz-rating` template declares its group `multi_choice`, is
+    # `agent_allowed`, and `patterns.md` tells an agent to prefer filling a template over
+    # assembling a skeleton -- so the recommended path leads straight into the refusal. Three
+    # agents in one GREEN round hit it independently and worked around it by hand.
+    grp_types = {g['id']: g.get('type')
+                 for s in d.get('screens', [])
+                 for g in (s.get('selectableGroups') or [])}
+    cond_reads = set()
+    for _sid, _eid, _where, _tree in iter_conditions(d):
+        expr_var_ids(_tree, cond_reads)
+    walk(d, lambda o: cond_reads.add(o['variableId'])
+         if isinstance(o.get('variableId'), str) else None)
+    for v in sorted(cond_reads):
+        if not v.endswith('.selectedOptionId'):
+            continue
+        head = v.split('.')[0]
+        if grp_types.get(head) == 'multi_choice':
+            bad.append(f'{v} reads a group declared multi_choice — the transform service '
+                       f'refuses this ("Generated scripts failed validation"); a multi-select '
+                       f'has no single selected option. Declare the group single_choice')
+
+    # ---- theme colour hexes. See THEME_HEX above for why this is theme-scoped.
+    for c in (d.get('theme') or {}).get('colors') or []:
+        for variant in ('light', 'dark'):
+            v = c.get(variant)
+            if not isinstance(v, dict) or 'hex' not in v:
+                continue
+            h = v['hex']
+            if not (isinstance(h, str) and THEME_HEX.match(h)):
+                bad.append(f'theme colour {c.get("id")!r} {variant} hex is {h!r}, not #RRGGBB — '
+                           f'the transform service refuses this with the location-free '
+                           f'"Generated JSON failed schema validation", and neither the schema '
+                           f'check nor the render can see it')
 
     return bad, warn
 

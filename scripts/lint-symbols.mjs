@@ -245,4 +245,52 @@ for (const reference of references) {
   }
 }
 
-process.exit(infraFailed ? 2 : missingFound ? 1 : 0)
+// ---------- scope guard ----------
+// This lint verifies `adapty-integration` only, and that is CORRECT rather than an oversight:
+// it resolves a file's platform from its name (`references/<platform>.md`) and checks symbols
+// against that platform's docs aggregate, and the other four skills have no platform and name
+// no SDK symbols -- measured 2026-08-28, zero matches across all four.
+//
+// But "they name no SDK symbols" is an assumption that rots the moment someone adds one, and a
+// silently-unchecked symbol is exactly what this lint exists to prevent. So check the claim
+// instead of believing it. Requires a capital A, which is what separates an SDK symbol
+// (`AdaptyPaywall`, `Adapty.getPaywall`) from the domain (`adapty.io`) and the CLI (`adapty asa`).
+const OTHER_SKILLS = ['ads-manager', 'flow-audit', 'flow-generator', 'paywall-teardown']
+const SDK_SYMBOL = /\bAdapty[A-Z][A-Za-z0-9_]+|\bAdapty\.[a-z][A-Za-z0-9_]*/g
+const SKILLS_ROOT = join(SCRIPTS_DIR, '..', 'skills')
+
+async function mdFiles(dir) {
+  const out = []
+  for (const entry of await readdir(dir, {withFileTypes: true})) {
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) out.push(...(await mdFiles(path)))
+    else if (entry.name.endsWith('.md')) out.push(path)
+  }
+  return out
+}
+
+let scopeBreach = false
+for (const skill of OTHER_SKILLS) {
+  let files
+  try {
+    files = await mdFiles(join(SKILLS_ROOT, skill))
+  } catch {
+    continue // skill not present in this checkout
+  }
+  for (const file of files) {
+    const text = await readFile(file, 'utf8')
+    for (const [i, lineText] of text.split('\n').entries()) {
+      for (const m of lineText.matchAll(SDK_SYMBOL)) {
+        console.log(
+          `  OUT OF SCOPE  ${m[0]}  (${skill}/${file.split(`/${skill}/`)[1]}:${i + 1}) - an SDK ` +
+            `symbol outside adapty-integration, which this lint does not verify. Either drop it ` +
+            `(these skills delegate SDK code to adapty-integration) or widen the lint to cover it.`,
+        )
+        scopeBreach = true
+      }
+    }
+  }
+}
+if (!scopeBreach) console.log(`scope guard: no SDK symbols in ${OTHER_SKILLS.join(', ')} -> OK`)
+
+process.exit(infraFailed ? 2 : missingFound || scopeBreach ? 1 : 0)

@@ -152,6 +152,11 @@ These already live in `skills/flow-generator/references/verify-config.py`. `flow
 **runs it and reports its output** — a second implementation of any of these inside
 `audit-flow.py` is a defect in this skill, not a redundancy.
 
+The transformer-refusal rows below are why phase 4 runs the local gates *before*
+`flows config validate`: the service reports **one fatal per run**, so a document with several
+of these costs one network round trip each. Measured 2026-08-28 on a real flow with several
+defects injected — `verify-config.py` named 19 in one local pass; `validate` returned 1.
+
 | Check | Owner |
 | :--- | :--- |
 | screens unreachable from `screens[0]` | `verify-config.py` (graph-based, strictly better than a naive "never an explicit `navigate` target" pass — `navigateNext` makes the graph implicit) |
@@ -160,6 +165,12 @@ These already live in `skills/flow-generator/references/verify-config.py`. `flow
 | bound-but-undeclared product, `const`-purchase declaration | `verify-config.py` |
 | conditional-branch parity, variable-node parity, stray locale values | `verify-config.py` |
 | unresolved/un-prefixed timer token name | `verify-config.py` (`ETimerToken` prefix check) — Variables' `variable-no-consumer` deliberately does not restate this |
+| condition expression shape, incl. `assign`-as-a-condition | `verify-config.py` (a port of the transform service's own walker, shared by `invalid_visibility_condition` and `invalid_state_condition`) |
+| condition variable resolving to no producer | `verify-config.py` (`script_type_violation` / TS2304 — an ERROR there, where the same id in rich text is only a warning) |
+| action payload required fields | `verify-config.py` (`invalid_action_payload`, all eight action families) |
+| carousel with no slides; tab-items disagreeing on a group; a tab group that is not `single_choice` | `verify-config.py` (`empty_carousel`, `mixed_tab_group_ids`, `wrong_tab_selectable_group_type`) |
+| a localizable `content`/`placeholder` value that is not a string, block array or switch | `verify-config.py` (`invalid_localized_rich_text`) |
+| one text referencing two distinct product anchors | `verify-config.py` (`mixed_product_targets_in_text`) |
 
 ## Known limitations
 

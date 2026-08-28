@@ -32,6 +32,9 @@ Everything else is reachable: product UUIDs from `adapty products list` (or `pro
 When you do author, [`references/flowkit.py`](references/flowkit.py) owns the mechanical parts —
 the `hierarchy`/`map` split above all — and [patterns.md](references/patterns.md) owns the shapes.
 
+It also covers conditions (`when`/`ref`/`all_`/`not_empty`), all fourteen action types, the
+eight inputs and the tabs composite — each raising on the shape the transform service refuses.
+
 ## What you print
 
 The user reads your messages, not this file. Keep them short.

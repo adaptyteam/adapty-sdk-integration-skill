@@ -425,6 +425,189 @@ def main():
           fk.carousel([fk.stack([]), fk.stack([])], slide_w=340, slide_h=120,
                       dot_color='#101828')['props']['dots']['color']['type'] == 'hex')
 
+    # --- conditions, actions and tabs: the three transformer refusals flowkit could not
+    # express before 2026-08-28. Each raise below is a hard 422 made unrepresentable.
+    check('when() builds the third visibility form',
+          fk.when(fk.not_empty(fk.ref('email.value')))
+          == {'type': 'conditional',
+              'condition': {'type': 'notEmpty',
+                            'left': {'type': 'var', 'variableId': 'email.value'}}})
+    check('a comparison auto-wraps a bare value as a const, which is what the walker wants',
+          fk.eq(fk.ref('g.selectedOptionId'), 'gold')['right']
+          == {'type': 'const', 'value': 'gold'})
+    check('`assign` is refused as a condition (schema-legal, no case in the walker)',
+          raises(lambda: fk.when({'type': 'assign', 'left': fk.ref('a'),
+                                  'right': fk.lit(1)})))
+    check('...but `assign` is exactly what set_variable emits, where it IS legal',
+          fk.set_variable([('a', 1)])['payload'][0]['type'] == 'assign')
+    check('an unknown expression type is refused',
+          raises(lambda: fk.when({'type': 'bogus'})))
+    check('an empty variableId is refused',
+          raises(lambda: fk.when({'type': 'var', 'variableId': ''})))
+    check('a comparison missing an operand is refused',
+          raises(lambda: fk.when({'type': '==', 'left': fk.ref('a')})))
+    check('a bare string where an expression belongs is refused',
+          raises(lambda: fk.when('email.value'), (ValueError, TypeError)))
+    check('predicates ABSENT is accepted, because the service accepts it',
+          fk.when({'type': '&&'})['condition'] == {'type': '&&'})
+    check('ref() refuses an empty id', raises(lambda: fk.ref('')))
+
+    check('open_url refuses an empty url', raises(lambda: fk.open_url('')))
+    check('open_url emits payload.url', fk.open_url('https://a.io/t')['payload']['url']
+          == 'https://a.io/t')
+    check('restore() is restorePurchases and takes no payload',
+          fk.restore() == {'id': 'act_restore', 'type': 'restorePurchases'})
+    check('select_product refuses an empty element id',
+          raises(lambda: fk.select_product('')))
+    check('custom_action refuses an empty payload id', raises(lambda: fk.custom_action('')))
+    check('alert with neither title nor message is refused', raises(lambda: fk.alert()))
+    check('alert with only a message is fine', fk.alert(message='Hi')['payload'] == {'message': 'Hi'})
+    check('set_variable refuses an empty assignment list', raises(lambda: fk.set_variable([])))
+    check('set_variable refuses an assignment with no target',
+          raises(lambda: fk.set_variable([('', 1)])))
+    check('conditional_action refuses an empty case list',
+          raises(lambda: fk.conditional_action([])))
+    check('conditional_action refuses a case that is not a (predicate, actions) pair',
+          raises(lambda: fk.conditional_action([(fk.ref('a'),)]), (ValueError, TypeError)))
+    check('conditional_action emits [predicate, value] tuples',
+          len(fk.conditional_action([(fk.eq(fk.ref('a'), 1), [fk.close()])])
+              ['payload']['cases'][0]) == 2)
+    check('an empty conditional branch becomes the real export\'s no-op, not an omission',
+          fk.conditional_action([(fk.eq(fk.ref('a'), 1), [])])['payload']['default']['value']
+          == [{'id': '', 'type': 'nothing'}])
+
+    def _tabs(**kw):
+        return fk.tabs([fk.tab([fk.text('M')], [fk.text('mp')]),
+                        fk.tab([fk.text('A')], [fk.text('ap')])], **kw)
+
+    check('tabs() stamps ONE group id on every tab-item, so they cannot disagree',
+          {e['props']['groupId'] for e in fk.flatten([_tabs(group_id='g')])[0].values()
+           if e.get('type') == 'tab-item'} == {'g'})
+    check('tabs() emits the five element types a real export uses, not a flat bar',
+          {e['type'] for e in fk.flatten([_tabs(group_id='g')])[0].values()}
+          >= {'tabs', 'tab-bar', 'tab-item', 'tab-content-wrapper', 'tab-content'})
+    check('tabs() pairs each label with its panel, so ordinal linkage cannot drift',
+          len([e for e in fk.flatten([_tabs(group_id='g')])[0].values()
+               if e.get('type') == 'tab-item'])
+          == len([e for e in fk.flatten([_tabs(group_id='g')])[0].values()
+                  if e.get('type') == 'tab-content']))
+    check('tabs() refuses a single tab',
+          raises(lambda: fk.tabs([fk.tab([], [])], group_id='g')))
+    check('tabs() refuses an empty group id', raises(lambda: _tabs(group_id='')))
+    check('tabs() refuses a plain stack as a tab (a stack is never a group member)',
+          raises(lambda: fk.tabs([fk.tab([], []), fk.stack([])], group_id='g'),
+                 (ValueError, TypeError)))
+    check('tabs() refuses two default tabs',
+          raises(lambda: fk.tabs([fk.tab([], [], default=True),
+                                  fk.tab([], [], default=True)], group_id='g')))
+    check('a tab group declared other than single_choice is refused by screen()',
+          raises(lambda: fk.screen('s1', [_tabs(group_id='g')],
+                                   selectable_groups=[{'id': 'g', 'type': 'multi_choice'}])))
+    check('a tab group declared single_choice is accepted',
+          fk.screen('s1', [_tabs(group_id='g')],
+                    selectable_groups=[{'id': 'g', 'type': 'single_choice'}])['id'] == 's1')
+    check('a member whose group is not declared is refused',
+          raises(lambda: fk.screen('s1', [fk.selectable([], group_id='nope')])))
+    check('a group declared with no members is refused',
+          raises(lambda: fk.screen('s1', [fk.text('hi')],
+                                   selectable_groups=[{'id': 'g', 'type': 'toggle'}])))
+    check('a group type outside the four real ones is refused',
+          raises(lambda: fk.screen('s1', [fk.selectable([], group_id='g')],
+                                   selectable_groups=[{'id': 'g', 'type': 'tabs'}])))
+
+    def _cfg(vid, with_input=True):
+        kids = []
+        if with_input:
+            inp = fk.stack([])
+            inp['type'] = 'email-input'
+            inp['props']['customId'] = 'email'
+            kids.append(inp)
+        kids.append(fk.stack([fk.text('Go')], visibility=fk.when(fk.not_empty(fk.ref(vid)))))
+        return fk.config(screens=[fk.screen('scr_a', kids)])
+
+    check('config() accepts a condition variable an input produces', _cfg('email.value')['screens'])
+    check('config() refuses a condition variable nothing produces (TS2304 before this)',
+          raises(lambda: _cfg('emial.value')))
+
+    # --- the input family. `custom_id` is the producer for `<id>.value`, which is what every
+    # conditional gate reads, so the failures here are the same 422 the condition helpers guard.
+    check('email_input reproduces the real export prop set, key for key',
+          set(fk.email_input('email', placeholder='Email', fill_=fk.fill('card'),
+                             border='line',
+                             corner=fk.radius(14), margin=fk.pad(22, 0, 0, 0))['props'])
+          == {'border', 'borderRadius', 'customId', 'fill', 'font', 'height', 'margin',
+              'padding', 'placeholder', 'position', 'validateEmailFormat', 'width'})
+    check('every input type is emitted under its own element type',
+          [fk.text_input('a')['type'], fk.email_input('b')['type'],
+           fk.password_input('c')['type'], fk.number_input('d')['type'],
+           fk.phone_input('e')['type'], fk.date_picker('f')['type'],
+           fk.time_picker('g')['type'], fk.date_time_picker('h')['type']]
+          == list(fk.INPUT_TYPES))
+    check('an input refuses an empty custom_id (it is the producer for <id>.value)',
+          raises(lambda: fk.text_input('')))
+    check('a placeholder is a bare localizable string, not rich text',
+          fk.text_input('a', placeholder='Name')['props']['placeholder']
+          == {'values': {'en': 'Name'}, '_localizable': True})
+    check('passing rich() as a placeholder is refused',
+          raises(lambda: fk.text_input('a', placeholder=fk.rich('Name')),
+                 (ValueError, TypeError)))
+    check('date_picker refuses a format outside the schema enum',
+          raises(lambda: fk.date_picker('d', date_format='dd/mm/yyyy')))
+    check('date_picker accepts the three the schema allows',
+          all(fk.date_picker('d', date_format=f)['props']['dateFormat'] == f
+              for f in fk.DATE_FORMATS))
+    check('time_picker refuses a format outside the enum',
+          raises(lambda: fk.time_picker('t', time_format='24 hour')))
+    check('number_input refuses a format outside the enum',
+          raises(lambda: fk.number_input('n', number_format='float')))
+    check('password_input refuses an unknown requirement key',
+          raises(lambda: fk.password_input('p', requirements={'emoji': True})))
+    check('password_input passes the schema-allowed requirement keys through',
+          fk.password_input('p', requirements={'minLength': 8, 'number': True})
+          ['props']['passwordRequirements'] == {'minLength': 8, 'number': True})
+    # Same parameter name, same meaning, across helpers. An agent in the 2026-08-28 round hit
+    # the version where it did NOT hold and had to repair a bare-string border by hand.
+    check('an input border means what a stack border means (a theme colour id, wrapped)',
+          fk.text_input('x', border='line')['props']['border']
+          == fk.stack([], border='line')['props']['border'])
+    check('an input border refuses a pre-built object, so the two cannot drift apart',
+          raises(lambda: fk.text_input('x', border={'color': 1}), (ValueError, TypeError)))
+    check('border_width carries through on an input as it does on a stack',
+          fk.text_input('x', border='line', border_width=2)['props']['border']['width'] == 2)
+
+    check('email_input validate_format defaults on and is a real boolean',
+          fk.email_input('e')['props']['validateEmailFormat'] is True)
+
+    def _two_inputs(id_a, id_b):
+        return fk.config(screens=[fk.screen('s1', [fk.email_input(id_a), fk.text_input(id_b)])])
+
+    check('config() refuses two inputs sharing one customId', raises(lambda: _two_inputs('x', 'x')))
+    check('config() accepts distinct customIds', bool(_two_inputs('x', 'y')['screens']))
+
+    def _gated(vid):
+        return fk.config(screens=[fk.screen('s1', [
+            fk.email_input('email'),
+            fk.stack([fk.text('Go')], visibility=fk.when(fk.not_empty(fk.ref(vid))))])])
+
+    check('an input PRODUCES the variable a condition consumes', bool(_gated('email.value')))
+    check('...and a typo in that variable is still caught', raises(lambda: _gated('emial.value')))
+
+    # --- theme colour hexes. The accepted/refused split below was measured against the real
+    # transform service on 2026-08-28, and it is POSITION-SCOPED: element colours accept all
+    # of these, theme colours accept only #RRGGBB.
+    def _theme(h):
+        return fk.config(screens=[fk.screen('s1', [fk.text('hi')])],
+                         colors=[('bg', 'Bg', h, '#000000')],
+                         typography=[('body', 'Body', 16, 'regular')])
+
+    for good in ('#FFFFFF', '#ffffff', '#00ff7f'):
+        check(f'theme hex {good} is accepted (service: ACCEPTED)', bool(_theme(good)))
+    for bad_hex in ('#fff', '', 'FFFFFF', '#FFFFFFD9', '#FFFFFFF', 'white'):
+        check(f'theme hex {bad_hex!r} raises (service: REFUSED, and location-free)',
+              raises(lambda h=bad_hex: _theme(h)))
+    check('an ELEMENT colour stays lax — the service accepts a 3-digit hex there',
+          fk.hex_color('#fff')['hex'] == '#fff')
+
     print()
     if FAILURES:
         print(f'{len(FAILURES)} failure(s): ' + ', '.join(FAILURES))

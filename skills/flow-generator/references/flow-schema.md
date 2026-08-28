@@ -628,6 +628,80 @@ Three things to take from that, all observed on a real 422:
   config happily; the transform service refused it. So "it saved" never means "it will publish",
   which is the same lesson trap 10 teaches about rendering, one layer further out.
 
+### 14b. A condition is an expression tree, and `assign` is the one type it may not use
+
+The `conditional` form above carries a JSON expression, and the transform service validates it
+with **one** walker (`findInvalidExpressionPath`) shared by `props.visibility.condition` and
+`states[].condition` — which is why the two codes it raises, `invalid_visibility_condition` and
+`invalid_state_condition`, are one construct rather than two. Between them they were the **3rd
+most common transformer refusal in production** over the 40 days to 2026-08-28.
+
+The published schema's `ExpressionType` enum has **eighteen** members:
+
+```
+const  var  ==  !=  >  <  has  notHas  in  notIn  empty  notEmpty  size  &&  ||  concat  switch  assign
+```
+
+**Seventeen of them have a case in the condition walker. `assign` does not**, so it falls
+through to `default` and the flow is refused. It is schema-legal, and it is genuinely legal
+inside a `setVariable` payload — it is illegal only *as a condition*. Same class as `IColorHex`
+being typed a bare string: an enum the schema declares and a consumer does not honour, so
+neither the schema check nor `config preview` objects. 0 of 8 real exports use it anywhere.
+
+Shape rules, all enforced by that walker:
+
+| type | what must be there |
+|---|---|
+| `var` | a non-empty string `variableId` |
+| `==` `!=` `>` `<` `has` `notHas` `in` `notIn` | **both** `left` and `right`, each itself an expression |
+| `empty` `notEmpty` `size` | `left` |
+| `&&` `\|\|` | `predicates` **an array** if present |
+| `concat` | `operands` **an array** if present |
+| `switch` | `cases` an array of `[predicate, value]` **pairs**; `default` recursed if the key is present |
+| `const` | anything |
+
+The three "if present" rows are load-bearing in the other direction: an **absent** `predicates`,
+`operands` or `cases` is accepted, so a checker stricter than this refuses documents the service
+takes. Measured against the real service on a live v10 flow — `assign`, an unknown type, a
+comparison missing `right`, a non-array `predicates` and a non-pair case were each refused with
+`Visibility condition must be a valid JSON expression` and the path of the offending node.
+
+**A variable named in a condition must resolve to something the document produces.** An id that
+resolves to nothing is not dropped — the code generator emits it as a **bare identifier** into
+the generated TypeScript, which then fails to compile: `script_type_violation`, `TS2304: Cannot
+find name 'email'`, the 4th most common refusal. The same id in **rich text** is a different
+severity and renders as its literal token instead, which is wrong but publishes — so
+`verify-config.py` errors on the condition case and only warns on the rich-text one.
+
+`flowkit` builds these with `ref`/`lit`/`eq`/`neq`/`all_`/`any_`/`not_empty`/`when`, raises on
+every row above, and `config()` resolves each condition variable against the document, so the
+whole family is unrepresentable rather than merely detectable. A bare Python value in a
+comparison is auto-wrapped as a `const`, because the un-wrapped string is exactly what the
+walker rejects.
+
+### 14c. Every action payload has a required field, and one code covers all of them
+
+`invalid_action_payload` was the **5th most common refusal** (208 failed requests in the same
+window) and is a single code standing in for sixteen distinct required-field checks. The
+payload *shapes* are tabulated in the request map below; these are the fields whose **absence**
+is a hard 422, read off the service's own error strings rather than from the schema, which is
+looser than the service on every row:
+
+| action | required | service message |
+|---|---|---|
+| `navigate` | `.payload.screen` | Navigate action requires a target screen id |
+| `openUrl` | `.payload.url` | Open URL action requires a URL value |
+| `selectProduct` | `.payload.element` — an **element** id, not a product or group id | SelectProduct action requires a target element id |
+| `custom` | `.payload.id` | Custom action requires a payload.id value |
+| `alert` | a `title` **or** a `message` | Alert action requires a title or message value |
+| `setVariable` | an **array** payload; each entry needs `left.variableId` | SetVariable action requires an array payload |
+| `conditional` | an object payload with a `cases` **array** of `[predicate, value]` tuples | Conditional action requires an array of cases |
+| `purchase` | `.payload.product` is either an **expression** or a record with a non-empty `.id` | Purchase action requires a product id |
+
+The `purchase` row is the one worth reading twice: the service accepts *any* object carrying a
+string `type` without looking further, which is why the `var` form every real export uses passes
+untouched, and why a check that demands `.id` unconditionally is a false positive.
+
 ### 15. Stale and degenerate sizing values persist, and the transformer believes them
 
 The editor does not clear a numeric size when its mode changes, so a fetched config can carry
@@ -672,6 +746,28 @@ is inert twice over: the transform service reports
 produced a **byte-identical render**. Authoring it buys one warning per text element and nothing
 else, so **do not add it to text you create**. Leave it where you found it — stripping a key you
 did not add is an unrequested edit — but there is no reason to write a new one.
+
+### A theme colour must be exactly `#RRGGBB` — and only a theme colour
+
+`theme.colors[].light.hex` / `.dark.hex` accept **six hex digits behind a `#`, either case, and
+nothing else**. Measured against the transform service on 2026-08-28, every one of these is
+refused there: `#fff`, `#FFFFFFD9`, `#FFFFFFF`, `FFFFFF`, and the empty string.
+
+It is refused with **`Generated JSON failed schema validation` and no path**, so the message
+names no field and you are bisecting a whole document to find one character. Two gates that
+would normally save you are both blind: `IColorHex` is typed as a bare `string` with no
+pattern, so the schema check passes it, and `config preview` **draws light mode only**, so a
+broken `dark` value renders perfectly.
+
+**The rule is position-scoped, and inverting that would be worse than having no rule.** In an
+*element* position — `props.fill.color`, `props.color`, `props.clearButtonColor` — the same
+service accepts a 3-digit hex, an 8-digit `#RRGGBBAA` and an empty string. This is not a
+guess: real exports carry **8** eight-digit and **16** empty values in element positions and
+validate clean, and `tests/fixtures/onboarding-quiz-paywall.json` (which holds both) returns
+`valid: true`. A blanket hex rule would reject the builder's own output.
+
+`flowkit.config()` raises on a bad theme hex and leaves element colours alone;
+`verify-config.py` errors on the same thing, calibrated silent on all 12 real configs.
 
 ### `theme.colors` and `theme.typography` share ONE id namespace
 
@@ -1291,7 +1387,7 @@ never treat its absence here as evidence the file is invalid.
 | `purchase` `payload.product` | `{"type": "var", "variableId": "<groupId>.selectedProduct"}` when the screen has a product group, **or** `{"type": "const", "value": {"id": "<productUUID>", "offerId"?}}` when it does not | The `const` form is what a paywall with a single implied plan uses — one CTA, no product cards, no `_meta.screens` entry needed. Do not add an empty product group to satisfy the `var` form. A `payload.type` of `"native"` also appears alongside `product`; it is optional in practice |
 | interaction `trigger` | `tap` | the only trigger in all three |
 | `conditional` `payload.type` | `switch` | `quiz` only. `cases` is an array of `[predicate, {type: "const", value: [actions]}]` pairs, plus a `default` in the same value shape. Actions nested inside a case carry `"id": ""`, not an `act_` id — including the `navigate` that a screen deletion has to repair, which is why a dangling target can sit two levels down inside a `default` branch |
-| predicate operators | `&&` (grouping), `==` (comparison) | `quiz` only |
+| predicate operators | `&&` (grouping), `==` (comparison) | `quiz` only. These are the two this corpus happens to use, **not** the vocabulary — there are 18 expression types and one of them (`assign`) is refused as a condition. See trap 14b |
 | `width` / `height` `type` | `fill`, `hug`, `fixed`, `auto` | first three in all; `auto` in `timer` only |
 | `position.type` | `relative`, `absolute`, `fixed` | first two in all; `fixed` in `timer` only; `relative` on 234 of 246 elements. `type` is the only guaranteed key — offset keys (`top`, `right`, `bottom`, `left`) are added as needed, and **which** offsets a non-`relative` element needs is a constraint, not a style choice: see trap 9 |
 | `fill` container | **object OR array.** The three exports carry `fill: {…}`; a current working config carries `fill: [{…}]` — an array of fill layers — on both screen `props.fill` and element `props.fill`. Read which form the input uses and keep it; do not convert between them |
