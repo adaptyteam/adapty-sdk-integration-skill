@@ -31,7 +31,28 @@ import argparse, collections, struct, sys, zlib
 # exists to reject is Chrome's own error screen, which measured 99.7% there. Re-measured
 # 2026-08-26 on five DNS-error screenshots from a GREEN round: 97.7-98.0% one colour with
 # 217-228 distinct colours -- so a colour COUNT cannot catch this and the share can.
-MAX_DOMINANT_SHARE = 0.92
+MAX_DOMINANT_SHARE = 0.95
+# ...but flatness ALONE cannot separate the two classes, and shipping it alone was a real
+# false-positive source: four agents in one GREEN round (2026-08-28) had good renders renamed
+# `NOT-A-RENDER-*`. Re-measured over 15 real renders and 4 error pages, the ranges OVERLAP --
+# real renders run 0.502-0.991 one colour and error pages 0.976-1.000, so a sparse light signup
+# screen (0.991) is FLATTER than the DNS-error page the guard exists to catch (0.976).
+#
+# What does separate them is WHERE the ink sits. An error page is one clump of text in the
+# middle of an empty viewport; an app screen distributes content down the frame. `ink span` is
+# the vertical extent from the first inked row to the last, over the height:
+#
+#     error pages   n=4   span 0.000-0.332      (blank page is 0.000)
+#     real renders  n=15  span 0.211-1.000
+#
+# Those overlap too -- a one-section carousel render is legitimately 0.211 -- so NEITHER axis
+# works alone and the gate needs BOTH: flag only what is very flat AND confined to a band.
+# Against that rule the full set is 19/19 correct, with the nearest real render 0.057 clear on
+# flatness (0.893 where 0.95 is needed) and 0.155 clear on span (0.655 where < 0.50 is needed).
+MIN_INK_SPAN = 0.50
+# A pixel counts as ink at this Manhattan distance from the dominant colour -- above
+# antialiasing, below any real content.
+INK_DELTA = 60
 
 
 def read_png(path):
@@ -122,12 +143,35 @@ def main():
                 i = row + x * chans
                 counts[buf[i:i + 3]] += 1
         total = sum(counts.values()) or 1
-        dom = counts.most_common(1)[0][1] / total
-        verdict = 'FLAT — this is not a render' if dom > MAX_DOMINANT_SHARE else 'looks drawn'
-        print(f'{a.png}  {w}x{h}  {len(counts)} colours, {dom:.1%} one colour — {verdict}')
+        bg, n = counts.most_common(1)[0]
+        dom = n / total
+        # The span pass runs only for an image that is already suspiciously flat, so the
+        # common case still costs one pass over the pixels.
+        span = None
         if dom > MAX_DOMINANT_SHARE:
-            print('  A screenshot of an error page is a valid PNG. Open the URL in a real '
-                  'browser before blaming the config.')
+            first = last = None
+            for y in range(0, h, 3):          # same subsampling as the colour pass above
+                row, hit = y * w * chans, 0
+                for x in range(0, w, 3):
+                    i = row + x * chans
+                    if (abs(buf[i] - bg[0]) + abs(buf[i + 1] - bg[1])
+                            + abs(buf[i + 2] - bg[2])) > INK_DELTA:
+                        hit += 1
+                        if hit >= 3:
+                            break
+                if hit >= 3:
+                    first = y if first is None else first
+                    last = y
+            span = 0.0 if first is None else (last - first + 3) / h
+        flat = span is not None and span < MIN_INK_SPAN
+        detail = '' if span is None else f', ink spans {span:.0%} of the height'
+        verdict = 'FLAT — this is not a render' if flat else 'looks drawn'
+        print(f'{a.png}  {w}x{h}  {len(counts)} colours, {dom:.1%} one colour'
+              f'{detail} — {verdict}')
+        if flat:
+            print('  Mostly one colour AND all the content in one band: that is the shape of an '
+                  'error page, not a screen. A screenshot of one is a valid PNG — open the URL '
+                  'in a real browser before blaming the config.')
             return 1
         return 0
     px = lambda x, y: tuple(buf[(y * w + x) * chans:(y * w + x) * chans + 3])

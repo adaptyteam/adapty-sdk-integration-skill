@@ -94,7 +94,9 @@ for s in $SCREENS; do
     # GREEN round, each handed a valid 430x900 screenshot of DNS_PROBE_FINISHED_NXDOMAIN. Every
     # one of them caught it by LOOKING at the file, which is luck, not a check: the same page
     # false-passed `render-check.py` on its 216 antialiasing colours until a dominant-share
-    # guard was added. Same guard, same threshold, now on the path the skill actually runs.
+    # guard was added. That guard then over-fired -- four agents in the 2026-08-28 round had
+    # GOOD renders renamed, because a sparse light screen is flatter than a DNS-error page.
+    # `--sanity` now needs flatness AND the ink confined to one band; see render-measure.py.
     if python3 "$HERE/render-measure.py" --sanity "$png" >/dev/null 2>&1; then
       echo "   rendered $s -> $(basename "$png")"
       shots="$shots $png"; n=$((n+1))
