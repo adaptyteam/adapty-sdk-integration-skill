@@ -360,6 +360,96 @@ def footer(children=(), *, fill_=None, padding=None, gap=16, direction='vertical
     return node
 
 
+def _is_dotlike(node):
+    """The hand-built indicator dot: a tiny childless square `stack` with a corner radius.
+
+    Deliberately the same predicate `verify-config.py` warns on, so the helper refuses at author
+    time what the checker would flag afterwards.
+    """
+    if node.get('type') != 'stack' or node.get('_children'):
+        return False
+    pr = node.get('props') or {}
+    w, h = pr.get('width') or {}, pr.get('height') or {}
+    wv, hv = w.get('value'), h.get('value')
+    return (w.get('type') == 'fixed' and h.get('type') == 'fixed'
+            and wv == hv and isinstance(wv, (int, float)) and wv <= 12
+            and bool(pr.get('borderRadius')))
+
+
+def _dot_color(value, default):
+    """A dot colour: a theme colour id, a literal '#hex', or an already-built colour dict.
+
+    `IDots.color`/`activeColor` are `IColor`, which accepts a `color-style` reference — so the
+    dots CAN follow the theme, and usually should. Measured: the real export's hardcoded white
+    dots are invisible on a light screen, and the preview draws light mode only, so a hex dot
+    that looks fine in the export is a dot nobody sees. Pass a theme colour id.
+    """
+    if value is None:
+        return default
+    if isinstance(value, dict):
+        return value
+    return hex_color(value) if value.startswith('#') else color(value)
+
+
+def carousel(slides=(), *, slide_w, slide_h, height=None, gap=12, width='fill',
+             dots=True, dot_size=6, dot_gap=6, dot_color=None, dot_active_color=None,
+             fill_=None, padding=None, corner=None, position=None, visibility=None,
+             node_id=None, **kw):
+    """A swipeable `carousel`. Reviews, testimonials, sliders, swipeable cards, cards with dots.
+
+    Reach for this whenever the design shows more than one card the user is meant to move
+    between. The lookalike -- one static card plus a row of decorative dot `stack`s -- screenshots
+    identically and ships **one frozen slide with dead dots**, the same class of defect as the
+    fake footer and the fake spinner, and `config preview` cannot tell you apart because the
+    preview never swipes. Before this helper existed there was nothing here to reach for, which is
+    the mechanical reason the fake got built: an author reaches for what the helper exposes.
+
+    **The dots are the element's own.** `props.dots` is schema-confirmed (`IDots`) and renders the
+    indicator row for you -- never add dot children. All four of `color`, `activeColor`, `size`
+    and `gap` are REQUIRED by `IDots`, so they are always emitted together; pass `dots=False` for
+    the one-full-slide layout that shows none. `dot_color`/`dot_active_color` take a THEME COLOUR
+    ID (preferred -- the dots then follow light/dark), a literal `'#hex'`, or a built colour; they
+    default to the real export's white, which is invisible on a light screen.
+
+    **Fixed geometry or nothing.** `slide_w`/`slide_h` are required numbers because a `hug` slide
+    is dropped on device (support-channel, device-verified -- see `patterns.md`). `height`
+    defaults to the slide height. The SDK supports exactly two layouts: adjacent-slide peek, or
+    one full slide with neighbours invisible.
+
+    Note there is no `layout` prop on a carousel (schema-confirmed: `ICarouselElementProps` has
+    none) -- `gap` is the whole spacing story, and the slides are its `children`, one per slide.
+    """
+    slides = list(slides)
+    if len(slides) < 2:
+        raise ValueError(
+            f'carousel() needs at least 2 slides, got {len(slides)}. A single slide is the FROZEN '
+            'SLIDE this helper exists to replace — it renders in the preview and never moves. If '
+            'you genuinely want one static card, use stack() and do not draw dots under it.')
+    dotty = sorted(s['id'] for s in slides if _is_dotlike(s))
+    if dotty:
+        raise ValueError(
+            f'carousel() was passed {len(dotty)} dot-like stack(s) as slides ({", ".join(dotty)}). '
+            'The indicator dots are the element\'s own — they come from props.dots. Pass one '
+            'stack per SLIDE (the card itself) and let the carousel draw the dots.')
+    props = {
+        'gap': gap,
+        'width': size(width),
+        'height': size('fixed', slide_h if height is None else height),
+        'slideWidth': size('fixed', slide_w),
+        'slideHeight': size('fixed', slide_h),
+    }
+    if dots:
+        props['dots'] = {
+            'gap': dot_gap, 'size': dot_size,
+            'color': _dot_color(dot_color, hex_color('#FFFFFF', 30)),
+            'activeColor': _dot_color(dot_active_color, hex_color('#FFFFFF', 95))}
+    if fill_ is not None:      props['fill'] = fill_
+    if padding is not None:    props['padding'] = padding
+    if corner is not None:     props['borderRadius'] = corner
+    if position is not None:   props['position'] = position
+    if visibility is not None: props['visibility'] = visibility
+    return _node('carousel', props, children=slides, node_id=node_id, **kw)
+
 def text(content, *, preset='body', color_id=None, align='left', width='fill',
          margin=None, position=None, **kw):
     props = {'font': {'preset': preset}, 'align': align,

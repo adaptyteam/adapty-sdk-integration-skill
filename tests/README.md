@@ -6,7 +6,7 @@ check it. The skills themselves are prose; testing those means running agents ag
 
 ## The corpus
 
-`fixtures/` holds four sanitized flow configs plus one shape fixture, all tracked. The raw exports
+`fixtures/` holds four sanitized flow configs plus two shape fixtures, all tracked. The raw exports
 stay gitignored in `fixtures-raw/` because they carry real product UUIDs and real
 `public-media.adapty.io` URLs.
 
@@ -17,6 +17,7 @@ stay gitignored in `fixtures-raw/` because they carry real product UUIDs and rea
 | `vpn-timer-draft.json` | countdown timer, four uploaded custom fonts, no products |
 | `tabs-paywall.json` | the five-element tabs composite, three `const` product purchases — **confirmed to render** |
 | `timeline-anchored.json` | the stretch-between-anchors form — `absolute` with `top`+`bottom`, `height: auto`, negative `zIndex` — **confirmed to render**, and the calibration target for the two checks that guard it |
+| `reviews-carousel.json` | the real `carousel` — three slides, adjacent-slide peek, indicator dots from `props.dots` — **confirmed to render**, and the fixture that exercises the fake-carousel check's exemption branch |
 
 **`timeline-anchored.json` is a hybrid and is excluded from the census.** Its screen is a real
 builder export (element ids and all), but the theme comes from `onboarding-quiz-paywall.json`, the
@@ -27,6 +28,20 @@ file and two deliberately broken copies of it. Do **not** fold it into the count
 `flow-schema.md` ("234 of 246 positions are relative" and the rest): those are over the four
 exports, and a hybrid would quietly move numbers the skill presents as measurements of real
 builder output.
+
+**`reviews-carousel.json` is hand-authored and is excluded from the census too.** It was written
+with `flowkit.carousel()` rather than exported from the builder, so it is weaker evidence than
+every other fixture here — tier 3 on the skill's own ordering (a rendering flow > a real export > a
+minimized fixture). **If a real carousel export can be sanitized, it should replace this file.**
+What it is good for in the meantime is narrow and real: it is the only tracked artifact containing
+a `carousel` at all, so it is what proves the element's `props.dots` draws the indicator row
+(confirmed in `config preview` — the dots are visible under the slides, and no dot `stack` exists
+anywhere in the file), and it is the only fixture that reaches the `carousel` exemption inside
+`verify-config.py`'s fake-carousel check. That branch was calibrated against it in both directions:
+adding three dot-like sibling stacks to this screen stays **silent** (the real `carousel` exempts
+it), and downgrading that one element's `type` to `stack` makes the same file **fire**. Its dot
+colours are theme colour ids, not the real export's hardcoded white — white dots are invisible on a
+light screen and the preview draws light mode only, which is how that was noticed.
 
 **Why these are tracked and not gitignored.** The shipped skill never reads them at runtime — its
 references cite them only as provenance for a claim, never as a file to open or a script to run —

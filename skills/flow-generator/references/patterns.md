@@ -168,7 +168,13 @@ the condition — team-verified in preview, unconfirmed on device.
 
 ### A progress bar
 
-Lives in `components`, not on a screen, and is switched on per screen.
+Lives in `components`, not on a screen, and is switched on per screen. **It is a real element,
+not a drawing** — never fake it with a static filled `stack` (a partial bar) or a hand-built row of
+step `stack`s. A lookalike renders in the preview but **does not advance** across screens and is not
+wired to `props.progressBar`, so it silently ships a dead indicator — the same mistake as the
+[fake carousel](#a-carousel--the-real-carousel-element-never-a-static-card-with-dots) and the fake
+footer. If step dots are what the design shows, that is still this component (segmented template),
+not a row of dot stacks. `verify-config.py` warns on the dot-row shape.
 
 ```json
 "components": {"pb_…": {
@@ -303,8 +309,51 @@ chip, the bare ones stay `Unknown`. **`component-catalog.json`'s four timer temp
 lift a timer from a template, prefix the tokens. `flowkit.timer()` + `flowkit.timer_digits()` emit
 the correct ids, and `verify-config.py` now warns on any un-prefixed `token`.
 
-### A carousel — fixed geometry or nothing
+### A carousel — the real `carousel` element, never a static card with dots
 
+A row of testimonials with a peek, or **any set of swipeable cards with indicator dots**, is the
+`carousel` **element** — not a stack you dress up to look like one. This is the shape most often
+faked, because a static card renders in the preview and a screenshot of it looks finished. It is
+not: on the device it shows **one frozen slide**, it does not swipe, and the dots do nothing. That
+is the [fake-footer](#a-bar-that-stays-at-the-bottom-use-footer) /
+[fake-spinner](#a-loading-screen--fill-the-loader-spinner-label-template-never-fake-the-spinner)
+mistake wearing a slider, and **no local gate but `verify-config.py` sees it** (it warns on ≥3
+dot-like leaf stacks with no `carousel` on the screen). The request map in
+[flow-schema.md](flow-schema.md#from-what-the-user-asks-for-to-what-the-json-calls-it) routes the
+request here for the same reason the video row exists.
+
+**You almost never build one from scratch — the seed flow usually already has it.** A `carousel`
+lifts cleanly (element `type` + nesting are safe, [What is safe to lift](#what-is-safe-to-lift-and-what-breaks));
+copy the element and its slide subtrees, swap the copy, keep the shape. A real reviews carousel from
+one export, for reference:
+
+```json
+{"id": "el_…", "type": "carousel", "caption": "Reviews",
+ "props": {"gap": 12, "width": {"type": "fill"},
+           "height": {"type": "fixed", "value": 120},
+           "slideWidth": {"type": "fixed", "value": 340},
+           "slideHeight": {"type": "fixed", "value": 120},
+           "dots": {"gap": 6, "size": 6,
+                    "color":       {"type": "hex", "hex": "#FFFFFF", "opacity": 30},
+                    "activeColor": {"type": "hex", "hex": "#FFFFFF", "opacity": 95}}}}
+```
+
+Its `hierarchy` children are **one node per slide** (each a `stack` holding the avatar, name, stars
+and body). **The dots come from `props.dots` — do not add your own dot `stack`s**; that is exactly
+the fake this section exists to stop.
+
+**Authoring one: `flowkit.carousel(slides, slide_w=…, slide_h=…)`.** It emits exactly the shape
+above and enforces the three things that turn a carousel back into the fake: fewer than two slides
+raises (that *is* the frozen slide), a dot-like `stack` passed as a slide raises (the dots are the
+element's own), and the slide geometry is a required number because a `hug` slide is dropped on
+device. All four of `color`, `activeColor`, `size` and `gap` are **required** by the schema's
+`IDots`, so the helper always writes them together — a partial `dots` object fails the schema
+check. Prefer a **theme colour id** for the dots (`dot_color='muted'`): `IDots.color` is an
+`IColor`, so it accepts a `color-style`, and the hardcoded white above is invisible on a light
+screen. `tests/fixtures/reviews-carousel.json` is a rendered example — the dots draw, and the file
+contains no dot `stack` at all.
+
+Now the SDK limitations, which shape the *geometry* of a real carousel — not whether to use one.
 Support-channel distilled (2026-08, team-stated and device-verified). The carousel supports exactly
 **two layouts**: adjacent-slide peek (the standard Apple layout), or one full slide with neighbours
 invisible. Anything else is an SDK limitation, not a config error, and a true infinite loop is
