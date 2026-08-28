@@ -139,12 +139,15 @@ only what it measurably *passes*.
 | `placeholder-copy` — anchored match on `lorem ipsum`, `your … here`, a bare `text`/`title`/`subtitle`/`button`/`label`/`heading`/`placeholder`, `TODO`/`TBD`/`FIXME`, or `placeholder text` | risk | unfinished copy shipping to users | **0 false positives over 5 live flows / 169 localizable fields** and over all six tracked fixtures; fires on injection (`Lorem ipsum…`, `TODO write this`, `Your headline here`) — not yet proven to fire on a real flow |
 | `flow-untitled` — the flow's dashboard name is `Untitled`/`Untitled flow`/`New flow`/blank | question | usually means the flow was never named | fires on one live flow; silent once the name is anything else |
 | `publication-failed` — the flow's dashboard `--status` is `publication_failed` | question | the flow failed to publish and no local check here explains why; never invents a cause | fires on any `--status publication_failed` run (measured against `df730155`); silent on every other status |
+| `fake-carousel` — a hand-built indicator row (dot `stack`s, a pill active dot, small `Circle`/`DotOutline` icons, or a text node of bullet glyphs) with no `carousel` on the screen; or, dotless, a horizontal row of equal fixed-width cards wider than 430pt | risk | a slider faked as a static card ships one frozen slide, does not swipe, and the dots never move — it publishes, renders and passes every other gate | silent on all 12 real configs (7 tracked + 5 raw) and on `reviews-carousel.json` itself; fires on all 7 fake shapes rebuilt from that fixture (`tests/test-fake-carousel.py`) |
 
 ### False-positive trap — Placeholders
 
 | Trap | What would have shipped |
 | :--- | :--- |
 | A bare word match instead of an anchored one | "Sample a new workout every week" is legitimate copy — `sample` alone cannot be a signal. The vocabulary is anchored (`lorem ipsum` as a phrase, `your … here` as a phrase, whole-word `TODO`/`TBD`/`FIXME`, and a handful of bare structural nouns matched only as the **entire** stripped string) so a real sentence containing one of those words in passing never matches. |
+| Keying a dot on `width == height` | The **active** dot is very often drawn as a wider pill. With one pill among three, only two equal dots remain — which is how the shape in the original bug report passed a check written against three identical dots. Height anchors the test instead, and width may run to 3× it. |
+| Counting any small icon as a dot | `ue-review` ships a five-`Star` rating row, so a size-only test would fire on every review card in the corpus. The icon test is name-scoped to `Circle`/`Dot`/`DotOutline`. |
 
 ## Delegated, not reimplemented
 

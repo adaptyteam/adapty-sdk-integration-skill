@@ -910,43 +910,142 @@ def check(path):
                             f'full scroll); see patterns.md')
 
     # A FAKE CAROUSEL or FAKE PROGRESS BAR: a slider or a step indicator faked as a static card
-    # plus a row of decorative dot `stack`s. The real `carousel` is swipeable and renders its OWN
-    # dots (props.dots: {size, color, activeColor}); the real `progress-bar` is a `components`
-    # entry wired per screen via props.progressBar — both advance, hand-built dots do not (one
+    # plus a hand-built indicator row. The real `carousel` is swipeable and renders its OWN dots
+    # (props.dots: {size, color, activeColor}); the real `progress-bar` is a `components` entry
+    # wired per screen via props.progressBar -- both advance, hand-built dots do not (one
     # slide/step ever shows and the dots are inert). Same class as the fake footer and the fake
-    # spinner, and no other gate sees it. Heuristic, hence a warning.
+    # spinner, and no other gate sees it.
     #
-    # Keyed on dot-like SIBLINGS -- >=3 tiny equal rounded leaf stacks that are direct children
-    # of ONE parent, which is the shape of an indicator row. Screen-wide counting tripped on
-    # list bullet dots (one dot per list row, each in its own parent), a real false positive
-    # measured against a live flow; requiring one shared parent drops those and still catches
-    # the indicator row, whose dots are always siblings.
-    def _dotlike(e):
+    # WIDENED 2026-08-28, after a report that the previous check did not stop the fake. It keyed
+    # on ONE shape -- >=3 leaf `stack`s, both axes fixed and EQUAL, <=12, rounded -- and seven
+    # fakes rebuilt from `tests/fixtures/reviews-carousel.json` measured 1/7 caught. The six
+    # misses were all natural authoring choices, not exotic ones: an active dot drawn as a wider
+    # PILL (the commonest indicator design, and the shape in the reported screenshot), dots drawn
+    # as small phosphor `Circle` ICONS (natural in a catalog carrying 61 phosphor icons), dots as
+    # one TEXT node of bullet glyphs, dots one size over the <=12 cap, a two-slide carousel, and
+    # -- with no dots at all to key on -- a horizontal row of fixed-width cards wider than the
+    # screen, which is the "swipeable cards" ask faked as a static row.
+    #
+    # Severity is an ERROR for the indicator-row families, raised from a warning: prose has now
+    # failed this trap twice (the SKILL.md rule, then the narrow warning), which is this repo's
+    # own trigger for escalating a rule to a mechanical guard. The message names the two legal
+    # alternatives, so it is actionable rather than merely disapproving. The overflow-row family
+    # stays a WARNING -- it is the one family whose fix may legitimately be a layout change
+    # rather than a carousel.
+    DOT_GLYPHS = set('•‣●○▪▫⚫⚪·∙‧・')
+    DOT_ICONS = {'circle', 'dot', 'dotoutline'}
+    VIEWPORT_PT = 430          # the widest common device; a row past this overflows everywhere
+
+    def _sz(pr, axis):
+        v = (pr.get(axis) or {})
+        return v.get('value') if v.get('type') == 'fixed' else None
+
+    def _dot_stack(e):
+        """A leaf stack small and round enough to be an indicator dot.
+
+        Height is the anchor and width is allowed to run to 3x it, because the ACTIVE dot is
+        very often drawn as a pill. Requiring width == height is what let the reported shape
+        through: with one pill among three dots only two equal dots remain, and the old
+        `>= 3` count never fired.
+        """
         if e.get('type') != 'stack' or e.get('children'):
             return False
         pr = e.get('props') or {}
-        w, h = pr.get('width') or {}, pr.get('height') or {}
-        wv, hv = w.get('value'), h.get('value')
-        return (w.get('type') == 'fixed' and h.get('type') == 'fixed'
-                and wv == hv and isinstance(wv, (int, float)) and wv <= 12
-                and bool(pr.get('borderRadius')))
+        w, h = _sz(pr, 'width'), _sz(pr, 'height')
+        if not isinstance(w, (int, float)) or not isinstance(h, (int, float)):
+            return False
+        return (h <= 14 and w <= max(3 * h, 12) and bool(pr.get('borderRadius')))
+
+    def _dot_icon(e):
+        if e.get('type') != 'icon' or e.get('children'):
+            return False
+        ic = (e.get('props') or {}).get('icon') or {}
+        return (str(ic.get('name', '')).lower() in DOT_ICONS
+                and (ic.get('size') or 0) <= 16)
+
+    def _dot_text(e):
+        """A whole text node whose visible characters are only bullet glyphs -- `● ○ ○`."""
+        if e.get('type') != 'text':
+            return False
+        chars = []
+
+        def _grab(o):
+            # ONLY the `text` key of a span, never every string in the subtree: a rich-text
+            # node carries 'paragraph' and 'text' as TYPE names, and collecting those made
+            # every dot row look like ordinary prose.
+            if isinstance(o, dict):
+                if isinstance(o.get('text'), str):
+                    chars.append(o['text'])
+                for v in o.values():
+                    _grab(v)
+            elif isinstance(o, list):
+                for v in o:
+                    _grab(v)
+
+        content = (e.get('props') or {}).get('content')
+        if isinstance(content, str):        # catalog templates use a bare string
+            chars.append(content)
+        else:
+            _grab(content)
+        s = ''.join(chars)
+        visible = [c for c in s if not c.isspace()]
+        return len(visible) >= 3 and all(c in DOT_GLYPHS for c in visible)
+
+    def _dotlike(e):
+        return _dot_stack(e) or _dot_icon(e) or _dot_text(e)
+
     for s in d.get('screens', []):
         m = s['elements']['map']
         if any(e.get('type') == 'carousel' for e in m.values()):
             continue
-        # walk the hierarchy; at every node, look at its DIRECT children for a dot-indicator row
+        # Walk the hierarchy; at every node look at its DIRECT children. Screen-wide counting
+        # tripped on list bullet dots (one dot per list row, each in its own parent), a real
+        # false positive measured against a live flow; requiring one shared parent drops those
+        # and still catches the indicator row, whose dots are always siblings.
         def _walk(n):
             kids = n.get('children') or []
-            sib_dots = sorted(c['id'] for c in kids
-                              if not c.get('children') and _dotlike(m.get(c['id'], {})))
-            if len(sib_dots) >= 3:
-                warn.append(
-                    f'screen {s["id"]}: {len(sib_dots)} dot-like sibling stacks ({sib_dots}) '
-                    f'under one parent and no `carousel` element — likely a FAKE CAROUSEL or '
-                    f'progress indicator (a static card/row with decorative dots). Use the real '
-                    f'`carousel` (swipeable, renders its own dots via props.dots) or the '
-                    f'`progress-bar` component; never hand-build one from dot stacks. See '
+            leaves = [(c['id'], m.get(c['id'], {})) for c in kids if not c.get('children')]
+            dots = sorted(i for i, e in leaves if _dotlike(e))
+            # One text node of bullet glyphs IS the whole indicator row, so it counts alone.
+            solo_text = any(_dot_text(e) for _, e in leaves)
+            # TWO is the floor, not three: a two-slide carousel gets two dots, and the old
+            # `>= 3` let that through. Measured silent at this threshold on all 12 real configs
+            # (7 tracked fixtures + 5 raw exports), so the looser count costs no false positive.
+            if len(dots) >= 2 or solo_text:
+                bad.append(
+                    f'screen {s["id"]}: {len(dots)} hand-built indicator dot(s) ({dots}) under '
+                    f'one parent and no `carousel` element — a FAKE CAROUSEL or fake progress '
+                    f'indicator (a static card/row with decorative dots). It shows ONE frozen '
+                    f'slide, does not swipe, and the dots never move. Use the real `carousel` '
+                    f'(swipeable, and it draws its own dots from props.dots — delete these) or '
+                    f'the `progress-bar` component. `component-catalog.json` has a filled '
+                    f'`reviews-carousel` template and `flowkit.carousel()` builds one. See '
                     f'patterns.md')
+            # No dots to key on: a horizontal row of equal fixed-width cards WIDER than the
+            # screen is the peek layout of a carousel, hand-built. There is no horizontal
+            # scroll container in this format, so an overflowing fixed row is clipped content
+            # whichever way you read it.
+            pn = m.get(n.get('id'), {})
+            # `props.layout` is NOT always an object: on a `text` element it is the bare string
+            # 'auto-height'. Assuming a dict here crashed the whole checker on every real config.
+            lay = (pn.get('props') or {}).get('layout')
+            lay = lay if isinstance(lay, dict) else {}
+            if lay.get('direction') == 'horizontal':
+                cards = [(c['id'], m.get(c['id'], {})) for c in kids]
+                widths = [_sz((e.get('props') or {}), 'width') for _, e in cards
+                          if e.get('type') == 'stack']
+                widths = [w for w in widths if isinstance(w, (int, float))]
+                dist = lay.get('distribution')
+                gap = (dist.get('gap') if isinstance(dist, dict) else lay.get('gap')) or 0
+                if (len(widths) >= 2 and len(set(widths)) == 1
+                        and sum(widths) + gap * (len(widths) - 1) > VIEWPORT_PT):
+                    warn.append(
+                        f'screen {s["id"]}: {n.get("id")} is a horizontal row of {len(widths)} '
+                        f'equal fixed-width cards ({widths[0]}pt each) totalling more than the '
+                        f'{VIEWPORT_PT}pt viewport, on a screen with no `carousel` — that is a '
+                        f'swipeable row hand-built as a static one, and the overflow is simply '
+                        f'clipped (there is no horizontal scroll container). Use the real '
+                        f'`carousel`; see patterns.md')
             for c in kids:
                 _walk(c)
         _walk(s['elements']['hierarchy'])

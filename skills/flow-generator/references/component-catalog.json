@@ -690,6 +690,912 @@
       }
     },
     {
+      "id": "reviews-carousel",
+      "caption": "Reviews carousel",
+      "keywords": [
+        "carousel",
+        "slider",
+        "reviews",
+        "testimonials",
+        "swipe",
+        "swipeable",
+        "dots",
+        "social proof"
+      ],
+      "agent_allowed": true,
+      "insertion_policy": null,
+      "slots": {
+        "review_1_title": {
+          "kind": "text",
+          "path": [
+            "children",
+            0,
+            "children",
+            1,
+            "props",
+            "content"
+          ]
+        },
+        "review_1_text": {
+          "kind": "text",
+          "path": [
+            "children",
+            0,
+            "children",
+            2,
+            "props",
+            "content"
+          ]
+        },
+        "review_1_author": {
+          "kind": "text",
+          "path": [
+            "children",
+            0,
+            "children",
+            3,
+            "props",
+            "content"
+          ]
+        },
+        "review_2_title": {
+          "kind": "text",
+          "path": [
+            "children",
+            1,
+            "children",
+            1,
+            "props",
+            "content"
+          ]
+        },
+        "review_2_text": {
+          "kind": "text",
+          "path": [
+            "children",
+            1,
+            "children",
+            2,
+            "props",
+            "content"
+          ]
+        },
+        "review_2_author": {
+          "kind": "text",
+          "path": [
+            "children",
+            1,
+            "children",
+            3,
+            "props",
+            "content"
+          ]
+        },
+        "review_3_title": {
+          "kind": "text",
+          "path": [
+            "children",
+            2,
+            "children",
+            1,
+            "props",
+            "content"
+          ]
+        },
+        "review_3_text": {
+          "kind": "text",
+          "path": [
+            "children",
+            2,
+            "children",
+            2,
+            "props",
+            "content"
+          ]
+        },
+        "review_3_author": {
+          "kind": "text",
+          "path": [
+            "children",
+            2,
+            "children",
+            3,
+            "props",
+            "content"
+          ]
+        }
+      },
+      "template": {
+        "type": "carousel",
+        "caption": "Reviews",
+        "props": {
+          "position": {
+            "type": "relative"
+          },
+          "width": {
+            "type": "fill"
+          },
+          "height": {
+            "type": "fixed",
+            "value": 238
+          },
+          "slideWidth": {
+            "type": "fixed",
+            "value": 300
+          },
+          "slideHeight": {
+            "type": "fixed",
+            "value": 210
+          },
+          "gap": 12,
+          "dots": {
+            "gap": 6,
+            "size": 6,
+            "color": {
+              "type": "color-style",
+              "colorId": "gray-300"
+            },
+            "activeColor": {
+              "type": "color-style",
+              "colorId": "gray-800"
+            }
+          },
+          "margin": {
+            "bottom": 12
+          }
+        },
+        "children": [
+          {
+            "type": "stack",
+            "caption": "Review",
+            "props": {
+              "position": {
+                "type": "relative"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fill"
+              },
+              "layout": {
+                "direction": "vertical",
+                "alignH": "start",
+                "alignV": "start",
+                "distribution": {
+                  "type": "gap",
+                  "gap": 12
+                }
+              },
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "white"
+                  }
+                }
+              ],
+              "border": {
+                "width": 1,
+                "color": {
+                  "type": "color-style",
+                  "colorId": "gray-200"
+                },
+                "style": "solid"
+              },
+              "borderRadius": {
+                "tl": 12,
+                "tr": 12,
+                "bl": 12,
+                "br": 12
+              },
+              "padding": {
+                "top": 16,
+                "right": 16,
+                "bottom": 16,
+                "left": 16
+              }
+            },
+            "children": [
+              {
+                "type": "stack",
+                "caption": "Stars",
+                "props": {
+                  "position": {
+                    "type": "relative"
+                  },
+                  "width": {
+                    "type": "hug"
+                  },
+                  "height": {
+                    "type": "hug"
+                  },
+                  "layout": {
+                    "direction": "horizontal",
+                    "alignH": "start",
+                    "alignV": "start",
+                    "distribution": {
+                      "type": "gap",
+                      "gap": 0
+                    }
+                  }
+                },
+                "children": [
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "props": {
+                  "position": {
+                    "type": "relative"
+                  },
+                  "width": {
+                    "type": "fill"
+                  },
+                  "height": {
+                    "type": "hug"
+                  },
+                  "align": "left",
+                  "verticalAlign": "top",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "gray-800"
+                  },
+                  "decoration": "none",
+                  "layout": "auto-height",
+                  "content": "Absolutely worth it",
+                  "font": {
+                    "preset": "h3"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "props": {
+                  "position": {
+                    "type": "relative"
+                  },
+                  "width": {
+                    "type": "fill"
+                  },
+                  "height": {
+                    "type": "hug"
+                  },
+                  "align": "left",
+                  "verticalAlign": "top",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "gray-800"
+                  },
+                  "decoration": "none",
+                  "layout": "auto-height",
+                  "content": "A solid, well-built app that delivers great value. Highly recommended for anyone looking for quality and reliability.",
+                  "font": {
+                    "preset": "body"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "props": {
+                  "position": {
+                    "type": "relative"
+                  },
+                  "width": {
+                    "type": "fill"
+                  },
+                  "height": {
+                    "type": "hug"
+                  },
+                  "align": "left",
+                  "verticalAlign": "top",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "gray-500"
+                  },
+                  "decoration": "none",
+                  "layout": "auto-height",
+                  "content": "Sam Taylor, Canada",
+                  "font": {
+                    "preset": "caption"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "stack",
+            "caption": "Review",
+            "props": {
+              "position": {
+                "type": "relative"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fill"
+              },
+              "layout": {
+                "direction": "vertical",
+                "alignH": "start",
+                "alignV": "start",
+                "distribution": {
+                  "type": "gap",
+                  "gap": 12
+                }
+              },
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "white"
+                  }
+                }
+              ],
+              "border": {
+                "width": 1,
+                "color": {
+                  "type": "color-style",
+                  "colorId": "gray-200"
+                },
+                "style": "solid"
+              },
+              "borderRadius": {
+                "tl": 12,
+                "tr": 12,
+                "bl": 12,
+                "br": 12
+              },
+              "padding": {
+                "top": 16,
+                "right": 16,
+                "bottom": 16,
+                "left": 16
+              }
+            },
+            "children": [
+              {
+                "type": "stack",
+                "caption": "Stars",
+                "props": {
+                  "position": {
+                    "type": "relative"
+                  },
+                  "width": {
+                    "type": "hug"
+                  },
+                  "height": {
+                    "type": "hug"
+                  },
+                  "layout": {
+                    "direction": "horizontal",
+                    "alignH": "start",
+                    "alignV": "start",
+                    "distribution": {
+                      "type": "gap",
+                      "gap": 0
+                    }
+                  }
+                },
+                "children": [
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "props": {
+                  "position": {
+                    "type": "relative"
+                  },
+                  "width": {
+                    "type": "fill"
+                  },
+                  "height": {
+                    "type": "hug"
+                  },
+                  "align": "left",
+                  "verticalAlign": "top",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "gray-800"
+                  },
+                  "decoration": "none",
+                  "layout": "auto-height",
+                  "content": "Better every week",
+                  "font": {
+                    "preset": "h3"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "props": {
+                  "position": {
+                    "type": "relative"
+                  },
+                  "width": {
+                    "type": "fill"
+                  },
+                  "height": {
+                    "type": "hug"
+                  },
+                  "align": "left",
+                  "verticalAlign": "top",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "gray-800"
+                  },
+                  "decoration": "none",
+                  "layout": "auto-height",
+                  "content": "I use it every single day. The updates keep getting better and support actually answers when you write in.",
+                  "font": {
+                    "preset": "body"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "props": {
+                  "position": {
+                    "type": "relative"
+                  },
+                  "width": {
+                    "type": "fill"
+                  },
+                  "height": {
+                    "type": "hug"
+                  },
+                  "align": "left",
+                  "verticalAlign": "top",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "gray-500"
+                  },
+                  "decoration": "none",
+                  "layout": "auto-height",
+                  "content": "Alex Moreau, France",
+                  "font": {
+                    "preset": "caption"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "stack",
+            "caption": "Review",
+            "props": {
+              "position": {
+                "type": "relative"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fill"
+              },
+              "layout": {
+                "direction": "vertical",
+                "alignH": "start",
+                "alignV": "start",
+                "distribution": {
+                  "type": "gap",
+                  "gap": 12
+                }
+              },
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "white"
+                  }
+                }
+              ],
+              "border": {
+                "width": 1,
+                "color": {
+                  "type": "color-style",
+                  "colorId": "gray-200"
+                },
+                "style": "solid"
+              },
+              "borderRadius": {
+                "tl": 12,
+                "tr": 12,
+                "bl": 12,
+                "br": 12
+              },
+              "padding": {
+                "top": 16,
+                "right": 16,
+                "bottom": 16,
+                "left": 16
+              }
+            },
+            "children": [
+              {
+                "type": "stack",
+                "caption": "Stars",
+                "props": {
+                  "position": {
+                    "type": "relative"
+                  },
+                  "width": {
+                    "type": "hug"
+                  },
+                  "height": {
+                    "type": "hug"
+                  },
+                  "layout": {
+                    "direction": "horizontal",
+                    "alignH": "start",
+                    "alignV": "start",
+                    "distribution": {
+                      "type": "gap",
+                      "gap": 0
+                    }
+                  }
+                },
+                "children": [
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "icon",
+                    "props": {
+                      "position": {
+                        "type": "relative"
+                      },
+                      "icon": {
+                        "type": "phosphor",
+                        "name": "Star",
+                        "size": 24,
+                        "weight": "fill",
+                        "color": {
+                          "type": "hex",
+                          "hex": "#FBC54D"
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "props": {
+                  "position": {
+                    "type": "relative"
+                  },
+                  "width": {
+                    "type": "fill"
+                  },
+                  "height": {
+                    "type": "hug"
+                  },
+                  "align": "left",
+                  "verticalAlign": "top",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "gray-800"
+                  },
+                  "decoration": "none",
+                  "layout": "auto-height",
+                  "content": "Paid for itself",
+                  "font": {
+                    "preset": "h3"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "props": {
+                  "position": {
+                    "type": "relative"
+                  },
+                  "width": {
+                    "type": "fill"
+                  },
+                  "height": {
+                    "type": "hug"
+                  },
+                  "align": "left",
+                  "verticalAlign": "top",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "gray-800"
+                  },
+                  "decoration": "none",
+                  "layout": "auto-height",
+                  "content": "I was sceptical about subscribing, but it replaced three other apps I was paying for. No regrets at all.",
+                  "font": {
+                    "preset": "body"
+                  }
+                }
+              },
+              {
+                "type": "text",
+                "props": {
+                  "position": {
+                    "type": "relative"
+                  },
+                  "width": {
+                    "type": "fill"
+                  },
+                  "height": {
+                    "type": "hug"
+                  },
+                  "align": "left",
+                  "verticalAlign": "top",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "gray-500"
+                  },
+                  "decoration": "none",
+                  "layout": "auto-height",
+                  "content": "Priya Nair, Singapore",
+                  "font": {
+                    "preset": "caption"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "list-icons",
       "caption": "Icon List",
       "keywords": [

@@ -1132,6 +1132,116 @@ def check_variables(config):
     return out
 
 
+# --- the FAKE CAROUSEL. A swipeable row of cards with indicator dots is the `carousel`
+# element, which is swipeable and draws its OWN dots from `props.dots`. Hand-built as a
+# static card plus a row of decorative dot `stack`s it screenshots identically and is
+# inert on the device: one frozen slide, no swipe, dots that never move. Nothing else in
+# this audit sees it -- it publishes, it renders, and every other gate passes it.
+#
+# Ported from `flow-generator`'s `verify-config.py` after a user reported the fake
+# shipping despite the guidance, and calibrated the same way: the seven fake shapes
+# rebuilt from a real carousel export must all be caught, and all 12 real configs in the
+# corpus must stay clean. Severity is `risk`, not `blocker` -- the flow sells and
+# publishes fine, so this is a quality defect shown to paying users rather than a reason
+# to hold the release.
+DOT_GLYPHS = set('•‣●○▪▫⚫⚪·∙‧・')
+DOT_ICON_NAMES = {'circle', 'dot', 'dotoutline'}
+VIEWPORT_PT = 430          # the widest common device; a fixed row past this overflows everywhere
+
+
+def _fixed(props, axis):
+    v = (props.get(axis) or {})
+    return v.get('value') if v.get('type') == 'fixed' else None
+
+
+def _dot_stack(e):
+    """A leaf stack small and round enough to be an indicator dot.
+
+    Height anchors the test and width may run to 3x it, because the ACTIVE dot is very
+    often a pill. Requiring width == height is what let the reported shape through.
+    """
+    if e.get('type') != 'stack':
+        return False
+    pr = e.get('props') or {}
+    w, h = _fixed(pr, 'width'), _fixed(pr, 'height')
+    if not isinstance(w, (int, float)) or not isinstance(h, (int, float)):
+        return False
+    return h <= 14 and w <= max(3 * h, 12) and bool(pr.get('borderRadius'))
+
+
+def _dot_icon(e):
+    if e.get('type') != 'icon':
+        return False
+    ic = (e.get('props') or {}).get('icon') or {}
+    return str(ic.get('name', '')).lower() in DOT_ICON_NAMES and (ic.get('size') or 0) <= 16
+
+
+def _dot_text(e, locale=None):
+    """A text node whose visible characters are only bullet glyphs -- `● ○ ○`."""
+    if e.get('type') != 'text':
+        return False
+    txt = flat_text((e.get('props') or {}).get('content'), locale) or ''
+    visible = [c for c in txt if not c.isspace()]
+    return len(visible) >= 3 and all(c in DOT_GLYPHS for c in visible)
+
+
+def check_fake_carousel(config):
+    out = []
+    dl = default_locale(config)
+    for s in config.get('screens') or []:
+        m = ((s.get('elements') or {}).get('map') or {})
+        if any(e.get('type') == 'carousel' for e in m.values()):
+            continue
+        hierarchy = (s.get('elements') or {}).get('hierarchy') or {}
+
+        def walk(node):
+            kids = node.get('children') or []
+            leaves = [(c.get('id'), m.get(c.get('id'), {}))
+                      for c in kids if not c.get('children')]
+            dots = sorted(i for i, e in leaves if _dot_stack(e) or _dot_icon(e)
+                          or _dot_text(e, dl))
+            # A single text node of bullet glyphs IS the whole indicator row, so it
+            # counts alone; two is the floor otherwise, because a two-slide carousel
+            # gets exactly two dots.
+            if len(dots) >= 2 or any(_dot_text(e, dl) for _, e in leaves):
+                out.append(finding(
+                    'risk', 'placeholders', 'fake-carousel',
+                    f'{len(dots)} hand-built indicator dot(s) under one parent and no '
+                    f'`carousel` element on this screen — a slider faked as a static '
+                    f'card with decorative dots. It shows one frozen slide, does not '
+                    f'swipe, and the dots never move.',
+                    'Replace it with the real `carousel` element and delete the dot '
+                    'elements — the carousel draws its own dots from props.dots.',
+                    s.get('id'), dots[0] if dots else None))
+            parent = m.get(node.get('id'), {})
+            # `props.layout` is a bare STRING ('auto-height') on a text element, so it
+            # cannot be assumed to be an object.
+            lay = (parent.get('props') or {}).get('layout')
+            lay = lay if isinstance(lay, dict) else {}
+            if lay.get('direction') == 'horizontal':
+                widths = [_fixed(m.get(c.get('id'), {}).get('props') or {}, 'width')
+                          for c in kids
+                          if m.get(c.get('id'), {}).get('type') == 'stack']
+                widths = [w for w in widths if isinstance(w, (int, float))]
+                dist = lay.get('distribution')
+                gap = (dist.get('gap') if isinstance(dist, dict) else lay.get('gap')) or 0
+                if (len(widths) >= 2 and len(set(widths)) == 1
+                        and sum(widths) + gap * (len(widths) - 1) > VIEWPORT_PT):
+                    out.append(finding(
+                        'risk', 'placeholders', 'fake-carousel',
+                        f'a horizontal row of {len(widths)} equal fixed-width cards '
+                        f'({widths[0]}pt each) totals more than the {VIEWPORT_PT}pt '
+                        f'viewport on a screen with no `carousel` — a swipeable row '
+                        f'built as a static one, so the overflow is simply clipped.',
+                        'Use the real `carousel` element, which scrolls its slides.',
+                        s.get('id'), node.get('id')))
+            for c in kids:
+                walk(c)
+
+        walk(hierarchy)
+    return out
+
+
 def audit(config, catalog=None, stores=None):
     findings = []
     findings += check_triggers(config)
@@ -1141,6 +1251,7 @@ def audit(config, catalog=None, stores=None):
     findings += check_price_integrity(config, catalog)
     findings += check_localization(config)
     findings += check_placeholders(config)
+    findings += check_fake_carousel(config)
     findings += check_variables(config)
     return findings
 
@@ -1552,6 +1663,7 @@ CHECK_TO_GROUP = {
     'locale-entirely-empty': GROUP_FLOW,
     'untranslated': GROUP_OPTIONAL,
     'placeholder-copy': GROUP_FLOW,
+    'fake-carousel': GROUP_FLOW,
     'variable-no-consumer': GROUP_FLOW,
     'flow-untitled': GROUP_DASHBOARD,
     'publication-failed': GROUP_DASHBOARD,

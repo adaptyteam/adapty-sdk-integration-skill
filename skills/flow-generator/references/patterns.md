@@ -317,12 +317,23 @@ faked, because a static card renders in the preview and a screenshot of it looks
 not: on the device it shows **one frozen slide**, it does not swipe, and the dots do nothing. That
 is the [fake-footer](#a-bar-that-stays-at-the-bottom-use-footer) /
 [fake-spinner](#a-loading-screen--fill-the-loader-spinner-label-template-never-fake-the-spinner)
-mistake wearing a slider, and **no local gate but `verify-config.py` sees it** (it warns on ≥3
-dot-like leaf stacks with no `carousel` on the screen). The request map in
+mistake wearing a slider, and **no local gate but `verify-config.py` sees it** — it **errors** on
+a hand-built indicator row with no `carousel` on the screen, and the row is recognised in every
+form it has been seen in: round dot `stack`s, a wider *pill* for the active one, small phosphor
+`Circle`/`DotOutline` icons, and a lone text node of bullet glyphs. With no dots at all to key on
+it still warns on the other half of the fake — a horizontal row of equal fixed-width cards wider
+than the viewport, which is the peek layout hand-built as a static row. The request map in
 [flow-schema.md](flow-schema.md#from-what-the-user-asks-for-to-what-the-json-calls-it) routes the
 request here for the same reason the video row exists.
 
-**You almost never build one from scratch — the seed flow usually already has it.** A `carousel`
+**Start from the catalog: `reviews-carousel` is a filled template** — a real `carousel` with
+`props.dots` already set and three review slides to overwrite. Its slots are
+`review_N_{title,text,author}`. Reach for it before assembling anything, for the reason the
+`loader-spinner-label` row gives: the template's internal wiring is already correct. It exists
+because the catalog previously offered `ue-review` — **one static card** — and nothing else, so
+"add reviews" led straight to a single frozen slide with dots added by hand.
+
+**And the seed flow usually already has one.** A `carousel`
 lifts cleanly (element `type` + nesting are safe, [What is safe to lift](#what-is-safe-to-lift-and-what-breaks));
 copy the element and its slide subtrees, swap the copy, keep the shape. A real reviews carousel from
 one export, for reference:
@@ -337,6 +348,19 @@ one export, for reference:
                     "color":       {"type": "hex", "hex": "#FFFFFF", "opacity": 30},
                     "activeColor": {"type": "hex", "hex": "#FFFFFF", "opacity": 95}}}}
 ```
+
+**`height` is the whole box, dots included, and the next element starts immediately after it**
+— measured 2026-08-28 by rendering one template at two heights and scanning the column through
+the dot row: at `height == slideHeight` the 6px dot band occupies y 324-329 with the following
+element at y 330, and at `slideHeight + 30` it sits at 354-359 with the next element at 360. The
+band is always the last few pixels of the box, so **the dots collide with whatever follows**
+unless you leave room: at `height == slideHeight` the measured clearance to the next element is
+**0px**, and against a CTA the dots merge into the button's top edge. Real exports and
+`tests/fixtures/reviews-carousel.json` set the two equal — which is fine only because nothing
+follows the carousel on those screens, so do not read them as the recipe. The working shape,
+measured, is `height = slideHeight + ~28` for the dot band plus `margin.bottom` for clearance
+(12px measured); `reviews-carousel` in the catalog ships exactly that. Note that `height` is the
+one number a longer translation cannot fix, since slides have no auto-height.
 
 Its `hierarchy` children are **one node per slide** (each a `stack` holding the avatar, name, stars
 and body). **The dots come from `props.dots` — do not add your own dot `stack`s**; that is exactly
