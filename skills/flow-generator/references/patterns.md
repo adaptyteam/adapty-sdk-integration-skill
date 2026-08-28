@@ -723,6 +723,15 @@ true` sets the initial *selection*, not the styling. Give every card the same ne
 stays there forever while only the indicator moves, which reads as "selection is broken on every
 other card". Measured on a shipped flow, from a build that had the skeleton above in front of it.
 
+**This paragraph was read past and the defect shipped again (2026-08-28), so it is now checked
+rather than only stated**: `flowkit.on_selected()` emits the `states` + `propsByState.selected`
+pair — on the member, on any descendant whose colour follows, or both — and `verify-config.py`
+**errors** when a group's members differ in their base props with no `propsByState.selected`
+anywhere in them. It is worth knowing why prose lost: the failure mode is *copying a reference
+screenshot*, which can only ever show one card selected, so a literal transcription bakes that
+frame in. No other gate sees it — validate passes, the schema passes, and the render draws one
+frame in which the baked look and the state-driven look are identical.
+
 The radio indicator is **two nested stacks, and the inner one has no fill at all** until selected.
 Getting this wrong is what makes every card look selected at once:
 

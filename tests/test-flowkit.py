@@ -608,6 +608,31 @@ def main():
     check('an ELEMENT colour stays lax — the service accepts a 3-digit hex there',
           fk.hex_color('#fff')['hex'] == '#fff')
 
+    # --- on_selected(): the capability whose ABSENCE shipped a broken paywall (2026-08-28).
+    # Without it there was no way to express "selected" from this module, so the look got baked
+    # into whichever card started selected and tapping changed nothing on screen.
+    _card = fk.on_selected(fk.product([], product_id='p1', group_id='plans', default=True),
+                           fill=fk.fill('planOn'), padding=fk.pad(16, 16, 16, 16))
+    check('on_selected declares the system selected state on a group member',
+          _card['states'] == [{'id': 'selected', 'type': 'system'}])
+    check('on_selected puts the overrides under propsByState.selected',
+          sorted(_card['propsByState']['selected']) == ['fill', 'padding'])
+    _txt = fk.on_selected(fk.text(fk.rich('Annual'), preset='plan'), color=fk.color('ink'))
+    check('on_selected works on a descendant too — a text carries the override',
+          _txt['propsByState']['selected']['color']['colorId'] == 'ink')
+    check('...and does NOT declare states on a non-member element', _txt.get('states') == [])
+    check('on_selected with no overrides raises (it would silently do nothing)',
+          raises(lambda: fk.on_selected(fk.text(fk.rich('x')))))
+
+    # --- carousel margin: the dot band is the last few px of the carousel's own box and the
+    # next element starts immediately after, so clearance is a margin and nothing else.
+    _c = fk.carousel([fk.stack([]), fk.stack([])], slide_w=300, slide_h=100,
+                     margin={'bottom': 12})
+    check('carousel() accepts a margin', _c['props']['margin'] == {'bottom': 12})
+    check('carousel() without one writes no margin key',
+          'margin' not in fk.carousel([fk.stack([]), fk.stack([])],
+                                      slide_w=300, slide_h=100)['props'])
+
     print()
     if FAILURES:
         print(f'{len(FAILURES)} failure(s): ' + ', '.join(FAILURES))
