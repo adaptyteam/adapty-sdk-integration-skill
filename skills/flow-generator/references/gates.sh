@@ -34,7 +34,14 @@ md5="$( { md5 -q "$CFG" 2>/dev/null || md5sum "$CFG" | cut -d' ' -f1; } )"
 echo "== gates over $CFG  (md5 ${md5:0:12})"
 
 echo "-- 1/3 structure (verify-config.py)"
-if python3 "$HERE/verify-config.py" "$CFG"; then :; else fail=1; fi
+# BASELINE does double duty: the schema step uses it to suppress a v9 flow's pre-existing
+# findings, and verify-config.py uses it to tell a price THIS draft invented from one the flow
+# already had. Both are already absolute (see above), and this runs before any `cd`.
+if [ -n "${BASELINE:-}" ] && [ -f "$BASELINE" ]; then
+  if python3 "$HERE/verify-config.py" --baseline "$BASELINE" "$CFG"; then :; else fail=1; fi
+else
+  if python3 "$HERE/verify-config.py" "$CFG"; then :; else fail=1; fi
+fi
 
 echo "-- 2/3 schema shape (ADVISORY — does not decide the verdict)"
 # --config, not a positional. Pass BASELINE=flow.backup.json when editing a fetched config, or a

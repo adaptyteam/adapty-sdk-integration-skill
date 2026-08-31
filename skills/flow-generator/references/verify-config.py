@@ -24,12 +24,15 @@ them real everywhere.
 Checks, in order: map keys match element ids; hierarchy references resolve;
 navigate targets resolve; product elements AND `const` purchase targets are
 declared in _meta.screens;
-price variables reference declared products; selectableGroups and groupId agree
+price variables name a field in the closed product set and reference declared
+products, across all three families (prod_/offer_/is_); selectableGroups and groupId agree
 both ways; font.preset and colorId resolve in the file's own theme;
 font.family resolves in _meta.fonts; every icon used appears in _meta.icons;
 image elements carry a bound asset with a string id, since neither publish-time
 gate looks at an image at all; no id is declared twice in any id-keyed
-collection, and theme colour and typography ids do not collide.
+collection, and theme colour and typography ids do not collide; element types the transform
+service has no mapper for; a "$X.XX" template placeholder left in visible copy; and text that
+cannot be told apart from its own background, in BOTH appearance variants.
 Unreferenced components are reported as warnings, because real exports have them.
 
 Severity rule: an ERROR is a publish blocker or a corrupt document; a WARNING is something
@@ -37,7 +40,13 @@ that publishes cleanly and renders wrong. A `const` matching no selection and a 
 no producer are both the latter -- and the first of those is present in a real raw export, so
 it is not a defect this repo introduced by sanitizing.
 
-Usage: verify-config.py <config.json> [more.json ...]
+Usage: verify-config.py [--baseline <config.json>] <config.json> [more.json ...]
+
+`--baseline` additionally reports prices, discounts and durations written as literal text that
+the baseline does not contain. It is off by default because real exports legitimately carry
+hand-typed ones -- only a literal a document ADDS is evidence of a fabricated claim. Pass the
+config you fetched (phase 2's backup) when checking a draft you are about to write.
+
 Exit 0 if every file is clean (warnings allowed), 1 if any invariant is violated.
 """
 import json, re, sys, os
@@ -45,6 +54,78 @@ import json, re, sys, os
 # The only selectable-group types observed in real exports. A tab group is declared
 # `single_choice`; there is no `tabs` group type. See flow-schema.md, Vocabulary.
 GROUP_TYPES = {'single_choice', 'multi_choice', 'product', 'toggle'}
+
+# Element types the published schema flags `"x-supported": false` AND that no real export uses.
+# The flag means the extractor found no per-element mapper handler in the transform service, so
+# the SDK payload may never carry the element even though the schema, `flows config validate`
+# and `config preview` all accept it — which is exactly the observed `old-price` behaviour: it
+# draws a struck price in the CLI preview and is simply absent on a device.
+#
+# This is deliberately NOT the whole `x-supported: false` set. The progress-bar family carries
+# the same flag and appears in REAL exports (`onboarding-quiz-paywall`, `vpn-timer-draft` — 2 of
+# the corpus's 7 distinct flows), because the transformer handles progress bars in a registry pass the
+# extractor cannot see. So the flag is a signal to verify, never a verdict — these are the
+# types where the flag and the corpus agree. See flow-schema.md, `x-supported`.
+UNMAPPED_ELEMENT_TYPES = {
+    'old-price': 'draws in `flows config preview` and NOT on a device — measured',
+}
+
+# The closed set of product-variable fields, from the public docs page the skill already links
+# (adapty.io/docs/onboarding-variables.md). A field outside it is refused by the transform
+# service as `unknown_product_field` -- which the service treats as the author's own typo, i.e.
+# fixable, unlike the product-registry codes beside it. Verified closed against the corpus: the
+# 15 distinct variableIds there use only `prod_price`, `prod_price_per_month` and
+# `prod_price_per_year`, and nothing product-shaped that this set lacks.
+PRODUCT_FIELDS = {
+    'prod_title', 'prod_price',
+    'prod_price_per_day', 'prod_price_per_week', 'prod_price_per_month', 'prod_price_per_year',
+    'offer_price', 'offer_billing_period', 'offer_full_duration',
+    'is_free_trial', 'is_pay_up_front', 'is_pay_as_you_go',
+}
+
+# ---- prices, discounts and durations written as literal text -----------------------------
+# The failure this exists for is the one this repo already shipped: `patterns.md` carried a
+# retired rule telling agents to write prices as plain text, and an agent following it produced
+# a paywall that rendered perfectly and showed a FABRICATED price. Nothing objects — the
+# document is well formed, `validate` is happy, and the render looks finished.
+#
+# Two regexes below are corrected against the versions they were adapted from, both found by
+# running them over the corpus:
+#   * the percent pattern needs `.`/`,` in its lookbehind, or "fees of 1.99%" matches as "99%"
+#     (a real string in `tabs-paywall.json`, and a pure false positive);
+#   * the currency pattern must NOT require a non-alphanumeric before the symbol, or every
+#     prefixed currency is missed — "S$1.49" (also in `tabs-paywall.json`), "US$50", "A$12.00".
+# The `[Xx]+` branch is the template stub — "$X.XX" — which is never a real price.
+PLACEHOLDER_PRICE = re.compile(r'[$€£¥]\s?[Xx]+(?:[.,][Xx]{1,2})?(?![A-Za-z0-9])')
+CURRENCY_LITERAL = re.compile(
+    r'(?:[$€£¥]\s?(?:\d+(?:[.,]\d{1,2})?|[Xx]+(?:[.,][Xx]{1,2})?)'
+    r'|(?<![A-Za-z0-9])\d+(?:[.,]\d{1,2})?\s?(?:USD|EUR|GBP|JPY))(?![A-Za-z0-9])')
+PERCENT_LITERAL = re.compile(r'(?<![A-Za-z0-9.,])(?:%\s?\d{1,3}|\d{1,3}\s?%)(?![A-Za-z0-9])')
+DURATION_LITERAL = re.compile(
+    r'(?<![A-Za-z0-9])\d+\s?(?:days?|weeks?|months?|years?)(?![A-Za-z0-9])', re.IGNORECASE)
+# Absolute checking is NOT viable for the last three and the corpus is why: real exports carry
+# `$59.99 / year`, `Save 75%` and `Best value — 12 months`, all typed by a human who knew the
+# offer. Only a NEW literal — one the baseline did not have — is evidence of fabrication, so
+# they are reported only under `--baseline`. The placeholder form needs no baseline: 0 of the
+# 12 real configs contain one, and nobody intends to ship "$X.XX".
+BASELINE_ONLY_LITERALS = (('price', CURRENCY_LITERAL),
+                          ('discount', PERCENT_LITERAL),
+                          ('duration', DURATION_LITERAL))
+
+# ---- is this text effectively invisible against its own background? ----------------------
+# NOT an accessibility check, and calling it one would overclaim: WCAG AA wants 4.5 (3.0 for
+# large text) and 13% of the text in real builder exports is already below 4.5 — auditing a
+# designer's palette is not this tool's job. This catches the *construction* defect: a fill
+# recoloured (or a screen repainted dark) with the text colour left behind, so the text lands
+# on a background it cannot be told apart from. Measured over the corpus, the gap between the
+# two is wide and empty: real accent-on-card text bottoms out at 1.89 (amber stars on a light
+# card, a deliberate rating visual) and the next value down is 1.08 (near-white on white).
+MIN_LEGIBLE_CONTRAST = 1.5
+# Below this a fill does not establish a background at all — what shows through is whatever is
+# behind it, which may be an image or a gradient we cannot resolve. Unresolvable means SKIP,
+# never report: the flow's own designer chose that scrim, and a whole-document checker that
+# guessed would be noise. (An edit-time guard can afford to reject instead; this is not one.)
+MIN_OPAQUE_ALPHA = 0.8
 
 
 # ---- the transform service's own condition walker, ported --------------------------------
@@ -192,14 +273,149 @@ def walk(o, fn):
         for v in o:
             walk(v, fn)
 
-def check(path):
-    d = json.load(open(path))
-    # `config get` returns an ENVELOPE ({config, remote_configs, status, updated_at}) and every
-    # check below reads a bare config. Unwrapping matches `diff-config.py`, which already takes
-    # either form; without it an envelope died on `KeyError: 'theme'` — a traceback that reads
-    # like a corrupt document rather than like the wrong argument.
+# ---- colour resolution, for the legibility check. See MIN_LEGIBLE_CONTRAST above. --------
+
+def as_alpha(op):
+    """An `opacity` field to 0..1. Real exports write BOTH scales — `{"opacity": 20}` meaning
+    20% and `{"opacity": 1}` meaning fully opaque — which is why this cannot just divide."""
+    if not isinstance(op, (int, float)) or isinstance(op, bool):
+        return 1.0
+    return max(0.0, min(1.0, op / 100.0 if op > 1 else float(op)))
+
+def palette(d, variant):
+    """theme colour id -> (hex, alpha) for one appearance variant.
+
+    A token with no `dark` falls back to its `light` — that is the runtime's own behaviour, and
+    it is the mechanism behind a half-finished dark palette rendering light text on a light
+    background. The alpha is the TOKEN's: `vpn-timer-draft`'s `clr_2MZWrBUc` is `#FFFFFF` at
+    opacity 20, a scrim, and reading only the hex turns it into an opaque white card.
+    """
+    out = {}
+    for t in (d.get('theme') or {}).get('colors') or []:
+        if not isinstance(t, dict) or not isinstance(t.get('id'), str):
+            continue
+        v = t.get(variant) if isinstance(t.get(variant), dict) else t.get('light')
+        if isinstance(v, dict) and isinstance(v.get('hex'), str):
+            out[t['id']] = (v['hex'], as_alpha(v.get('opacity')))
+    return out
+
+def parse_hex(v):
+    """`#rgb`, `#rrggbb` or `#rrggbbaa` -> ((r, g, b), alpha). None if it is not one of those."""
+    if not isinstance(v, str):
+        return None
+    s = v.strip().lstrip('#')
+    if len(s) == 3:
+        s = ''.join(c * 2 for c in s)
+    if len(s) not in (6, 8):
+        return None
+    try:
+        rgb = (int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16))
+        a = int(s[6:8], 16) / 255 if len(s) == 8 else 1.0
+    except ValueError:
+        return None
+    return rgb, a
+
+def resolve_color(c, pal):
+    """An `IColor` -> ((r, g, b), alpha), or None when it is not a resolvable solid colour.
+
+    Alpha multiplies three independent sources — an 8-digit hex's own alpha, the referencing
+    colour's `opacity`, and (for a token) the token's `opacity`. All three occur in the corpus.
+    """
+    if not isinstance(c, dict):
+        return None
+    ref_a = as_alpha(c.get('opacity'))
+    if c.get('type') == 'hex':
+        got, tok_a = parse_hex(c.get('hex')), 1.0
+    elif c.get('type') == 'color-style':
+        entry = pal.get(c.get('colorId'))
+        if entry is None:
+            return None
+        got, tok_a = parse_hex(entry[0]), entry[1]
+    else:
+        return None
+    if got is None:
+        return None
+    rgb, hex_a = got
+    return rgb, max(0.0, min(1.0, ref_a * hex_a * tok_a))
+
+def solid_fill(fill):
+    """The `IColor` inside a solid fill, taking the v9 object and the v10 one-layer array alike.
+
+    A multi-layer array is deliberately unresolvable: 0 of the real exports contain one, and the
+    one this project shipped reached a device with the tint missing (see flow-schema.md).
+    """
+    if isinstance(fill, list):
+        if len(fill) != 1:
+            return None
+        fill = fill[0]
+    if isinstance(fill, dict) and fill.get('type') == 'color' and isinstance(fill.get('color'), dict):
+        return fill['color']
+    return None
+
+def luminance(rgb):
+    def lin(c):
+        c /= 255
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = (lin(x) for x in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+def contrast(a, b):
+    """WCAG 2.x contrast ratio between two opaque colours (>= 1.0)."""
+    hi, lo = luminance(a), luminance(b)
+    if lo > hi:
+        hi, lo = lo, hi
+    return (hi + 0.05) / (lo + 0.05)
+
+def composite(rgb, alpha, bg):
+    """A translucent foreground flattened onto an opaque background."""
+    return tuple(round(f * alpha + b * (1 - alpha)) for f, b in zip(rgb, bg))
+
+def iter_visible_text(d):
+    """Yield (screen_id, element_id, locale, text) for every visible string in the config.
+
+    Only the `text` key of a rich-text span is collected, never every string in the subtree: a
+    rich-text node carries 'paragraph' and 'text' as TYPE names, and grabbing those turns every
+    node into prose. A `variable` node contributes nothing, which is the point — copy that binds
+    its price has no literal to find.
+    """
+    for s in d.get('screens', []):
+        for eid, e in s.get('elements', {}).get('map', {}).items():
+            content = (e.get('props') or {}).get('content')
+            if isinstance(content, str):          # catalog templates use a bare string
+                yield s.get('id'), eid, None, content
+                continue
+            if not isinstance(content, dict):
+                continue
+            values = content.get('values') if content.get('_localizable') else {None: content}
+            for locale, value in (values or {}).items():
+                chars = []
+
+                def grab(o):
+                    if isinstance(o, dict):
+                        if isinstance(o.get('text'), str):
+                            chars.append(o['text'])
+                        for v in o.values():
+                            grab(v)
+                    elif isinstance(o, list):
+                        for v in o:
+                            grab(v)
+
+                grab(value)
+                joined = ' '.join(chars).strip()
+                if joined:
+                    yield s.get('id'), eid, locale, joined
+
+def unwrap(d):
+    """`config get`/`config update` return an ENVELOPE ({config, remote_configs, status,
+    updated_at}) and every check reads a bare config. Matches `diff-config.py`, which already
+    takes either form; without it an envelope died on `KeyError: 'theme'` — a traceback that
+    reads like a corrupt document rather than like the wrong argument."""
     if isinstance(d, dict) and 'screens' not in d and isinstance(d.get('config'), dict):
-        d = d['config']
+        return d['config']
+    return d
+
+def check(path, baseline_text=None):
+    d = unwrap(json.load(open(path)))
     bad, warn = [], []
     els = lambda: ((s, e) for s in d.get('screens', [])
                    for e in s.get('elements', {}).get('map', {}).values())
@@ -587,7 +803,18 @@ def check(path):
     walk(d, lambda o: vids.append(o['variableId'])
          if isinstance(o.get('variableId'), str) else None)
     for v in sorted(set(vids)):
-        if '.prod_' not in v:
+        field = v.rsplit('.', 1)[-1]
+        # Widened from a `.prod_` substring test, which skipped every `offer_*` and `is_*`
+        # variable entirely -- head included. Measured: `<bogus-uuid>.offer_price` passed
+        # silently. The field families are the discriminator, and they do not collide with the
+        # other variable shapes in the corpus (`email.value`, `plans.selectedProduct`,
+        # `quiz.selectedOptionId`).
+        if not field.startswith(('prod_', 'offer_', 'is_')):
+            continue
+        if field not in PRODUCT_FIELDS:
+            bad.append(f'{v}: {field!r} is not a product variable field — the transform service '
+                       f'refuses it (`unknown_product_field`). The set is closed: '
+                       f'{", ".join(sorted(PRODUCT_FIELDS))}')
             continue
         head = v.split('.')[0]
         if '.selectedProduct.' in v:
@@ -1363,6 +1590,78 @@ def check(path):
                        f'refuses this ("Generated scripts failed validation"); a multi-select '
                        f'has no single selected option. Declare the group single_choice')
 
+    # ---- element types the transform service has no mapper handler for. Every other gate
+    # passes these: the schema declares them, `validate` accepts them, and the preview page
+    # reads the config directly so it DRAWS them. The device does not, because the SDK gets
+    # the transformer's output. See UNMAPPED_ELEMENT_TYPES for why the list is this short.
+    for s in d.get('screens', []):
+        for eid, e in s['elements']['map'].items():
+            why = UNMAPPED_ELEMENT_TYPES.get(e.get('type'))
+            if why:
+                warn.append(f'{s["id"]}/{eid} is a `{e["type"]}` element, which the published '
+                            f'schema flags "x-supported": false and no real export uses — '
+                            f'{why}. Do not lay out around it without a device check')
+
+    # ---- money, discounts and durations written as literal text. See PLACEHOLDER_PRICE.
+    # The placeholder form is always reported: no real config contains one and nobody means to
+    # ship it. The other three are reported only against a --baseline, because real exports
+    # legitimately carry hand-typed prices and plan labels; what is evidence of fabrication is
+    # a literal THIS document introduced. Set difference over visible strings, so an unchanged
+    # line that merely moved between elements is not a finding.
+    for sid, eid, locale, text in iter_visible_text(d):
+        where = f'{sid}/{eid}' + (f' [{locale}]' if locale else '')
+        for m in set(PLACEHOLDER_PRICE.findall(text)):
+            warn.append(f'{where}: {m!r} is a template placeholder, not a price — bind the '
+                        f'product price variable instead. It renders exactly like this to a '
+                        f'paying user, and no publish gate objects')
+        if baseline_text is None:
+            continue
+        for label, rx in BASELINE_ONLY_LITERALS:
+            for m in set(rx.findall(text)):
+                if any(m in old for old in baseline_text):
+                    continue
+                warn.append(f'{where}: {m!r} is a new hardcoded {label} this document adds — '
+                            f'the baseline has no such text. If it is not derived from a real '
+                            f'product, it is a claim nobody can check; bind a variable or drop '
+                            f'the number')
+
+    # ---- text that cannot be told apart from its own background. See MIN_LEGIBLE_CONTRAST.
+    # Both appearance variants, because `config preview` draws LIGHT ONLY — a dark palette that
+    # was never finished is invisible to every other check this repo has. The corpus says why
+    # that matters for authored work specifically: all 11 genuine exports bind the screen fill
+    # to a theme token or an image, so their background and text move together, while an
+    # authored screen that hardcodes `fill: #FFFFFF` under a dark-capable theme does not.
+    for variant in ('light', 'dark'):
+        pal = palette(d, variant)
+        for s in d.get('screens', []):
+            emap = s['elements']['map']
+            screen_bg = resolve_color(solid_fill((s.get('props') or {}).get('fill')), pal)
+            root_bg = screen_bg[0] if screen_bg and screen_bg[1] >= MIN_OPAQUE_ALPHA else None
+
+            def legible(node, bg):
+                e = emap.get(node.get('id'))
+                if e:
+                    own = resolve_color(solid_fill((e.get('props') or {}).get('fill')), pal)
+                    if own and own[1] >= MIN_OPAQUE_ALPHA:
+                        bg = own[0]          # this element establishes the background below it
+                    if e.get('type') == 'text' and bg is not None:
+                        fg = resolve_color((e.get('props') or {}).get('color'), pal)
+                        if fg:
+                            ink = composite(fg[0], fg[1], bg) if fg[1] < 1.0 else fg[0]
+                            ratio = contrast(ink, bg)
+                            if ratio < MIN_LEGIBLE_CONTRAST:
+                                warn.append(
+                                    f'{s["id"]}/{node["id"]}: text is {ratio:.2f}:1 against its '
+                                    f'background in {variant} mode (#{"%02X%02X%02X" % ink} on '
+                                    f'#{"%02X%02X%02X" % bg}) — effectively invisible. '
+                                    + ('`config preview` draws light only, so nothing else here '
+                                       'can see this' if variant == 'dark' else
+                                       'Recolour the text, not just the fill'))
+                for c in node.get('children') or []:
+                    legible(c, bg)
+
+            legible(s['elements']['hierarchy'], root_bg)
+
     # ---- theme colour hexes. See THEME_HEX above for why this is theme-scoped.
     for c in (d.get('theme') or {}).get('colors') or []:
         for variant in ('light', 'dark'):
@@ -1378,9 +1677,23 @@ def check(path):
 
     return bad, warn
 
+args = sys.argv[1:]
+# --baseline <config> turns on the price/discount/duration comparison: literals already in the
+# baseline are the flow's own copy, only NEW ones are reported. Pass the config you fetched
+# (phase 2's backup) when checking a draft you are about to write.
+baseline_text = None
+if '--baseline' in args:
+    i = args.index('--baseline')
+    if i + 1 >= len(args):
+        sys.exit('verify-config.py: --baseline needs a config path')
+    baseline_text = {t for _, _, _, t in iter_visible_text(unwrap(json.load(open(args[i + 1]))))}
+    del args[i:i + 2]
+if not args:
+    sys.exit('usage: verify-config.py [--baseline <config.json>] <config.json> [more.json ...]')
+
 rc = 0
-for path in sys.argv[1:]:
-    bad, warn = check(path)
+for path in args:
+    bad, warn = check(path, baseline_text)
     print(f'{os.path.basename(path):34} {"OK" if not bad else "VIOLATIONS"}')
     for b in bad:
         print(f'   ERROR:   {b}')

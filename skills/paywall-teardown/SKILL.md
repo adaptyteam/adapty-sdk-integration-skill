@@ -218,7 +218,7 @@ the patterns that depend on them must name that in **Needs from you**:
 | Pattern | Buildable in the config | What has to come from the user |
 | --- | --- | --- |
 | Comparison table, badge, plan hierarchy, CTA, legal collapse, transparent billing, results/outcome framing | Yes, entirely | — (icons must be real SVG in `_meta.icons`, never fabricated markup) |
-| Annual savings visualization | Strikethrough yes — it's the `old-price` element with a `multiplier` | A "Save X%" figure, unless it follows from prices already in the flow |
+| Annual savings visualization | **Not the strikethrough.** The `old-price` element draws in `flows config preview` and is absent on a real device — measured, and the schema flags it unsupported. Say the saving in copy, or price two plans side by side | A "Save X%" figure, unless it follows from prices already in the flow |
 | Social proof | Element yes | The real rating and volume — and the real testimonials, verbatim; an invented quote is a fabricated proof number wearing a person's name |
 | Social proof, **several testimonials on one screen** | Yes — the `carousel` element, which swipes and draws its own indicator dots | The quotes. Never a static card with hand-built dots: it ships one frozen slide and dots that do nothing, and it screenshots identically to the real thing |
 | Results/proof with real data | Element yes | The real outcome data — otherwise drop to outcome *framing*, which is a copy-tier change |

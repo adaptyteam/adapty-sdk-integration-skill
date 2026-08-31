@@ -136,6 +136,11 @@ one it shows that is not there:
   element looks correct here and ships broken. Treat an element you have only ever seen in this
   renderer as unproven no matter how right it looks — see
   [flow-schema.md](flow-schema.md#old-price-a-real-element-that-does-not-draw-on-device).
+  **The mechanism is knowable without a device**, which narrows this blindness usefully: this page
+  renders the config, a device renders the *transformer's output*, so an element the transform
+  service has no mapper for can only ever appear here. The schema flags those — `old-price` is one
+  — so check [`x-supported`](flow-schema.md#the-schema-tells-you-what-the-transformer-handles-x-supported)
+  before you trust this renderer on an element type you have not shipped before.
 - **Selection in a `toggle` or a `multi_choice` group — but `single_choice` and `product` DO
   draw.** The boundary is per group type, and it is narrower than "not a product group". Measured:
   a `product` group's `default` renders selected (the chosen plan card shows its selected

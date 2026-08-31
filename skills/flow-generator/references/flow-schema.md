@@ -272,10 +272,37 @@ Do not add a `preset` to the second form to make it look like the first.
 | `<groupId>.selectedOptionId` | a `selectableGroups` entry plus its member `customId`s |
 | `<groupId>.selectedProduct` | the `product`-typed selectable group of that id |
 | `<groupId>.selectedProduct.<field>` | the same group, extended by a product field — resolve the head against `selectableGroups`, **not** against the product list |
-| `<productUUID>.prod_price_per_{day,week,month,year}`, and the rest of the product set | a product declared in `_meta.screens` |
+| `<productUUID>.<field>`, `<field>` from the product set below | a product declared in `_meta.screens` |
 | `<inputCustomId>.value` | a `text-input`'s `customId` |
 
 Adding any of them to `variables[]` is wrong.
+
+**The product field set, from [Element variables](https://adapty.io/docs/onboarding-variables.md).**
+Worth having in full, because it is the answer to "what do I bind instead of typing the number":
+
+| field | is |
+|---|---|
+| `prod_title` | the localized product title |
+| `prod_price` | the price for one billing period |
+| `prod_price_per_{day,week,month,year}` | that price converted; empty for non-subscriptions |
+| `offer_price` | the intro/promo offer price |
+| `offer_billing_period` | the offer's billing period |
+| `offer_full_duration` | the offer's full length — **this is the trial-length one** |
+| `is_free_trial`, `is_pay_up_front`, `is_pay_as_you_go` | booleans, for conditional visibility |
+
+Two things to carry with them. **Every `offer_*` field is empty when the user is not eligible for
+an offer**, so a line built around one silently loses its number for everyone else — gate it on
+`is_free_trial` rather than assuming it renders. And `offer_billing_period` equals
+`offer_full_duration` for trial and pay-upfront offers but *not* for pay-as-you-go (1 week versus
+3 weeks in the docs' own example), so they are not interchangeable.
+
+A boolean is for visibility, never for text: the transform service refuses one inside rich text
+(`boolean_product_var_in_text`).
+
+**The set is closed.** A field outside those twelve is refused as `unknown_product_field` — and the
+service treats that as the author's own typo rather than a registry problem, so it is on you to get
+right. `verify-config.py` errors on one, and on a bad product id in *any* of the three families
+(`prod_*`, `offer_*`, `is_*`), which is wider than it used to check.
 
 The group id is not fixed at `products` — it is whatever that screen's `selectableGroups`
 declares. The corpus uses `products`; a live builder screen used `products2`. Read it from the
@@ -557,6 +584,22 @@ reference (`{"type": "color-style", "colorId": "clr_X"}`) carries no `opacity`; 
 translucency you need the `hex` form, and then the percentage applies. And `hex` accepts an 8-digit
 value (`#FFFFFFD9`) carrying its own alpha, seen in a real export with no `opacity` key beside it.
 
+**But the TOKEN it points at can be translucent, and that is where a resolver goes wrong.** The
+reference carries no `opacity`; the token's *definition* does — `vpn-timer-draft`'s `clr_2MZWrBUc`
+is `{"hex": "#FFFFFF", "opacity": 20}`, a 20% white scrim over a background image. So the effective
+alpha of any colour is the product of **three independent sources**, and all three occur in the
+corpus:
+
+| source | example | where it lives |
+|---|---|---|
+| an 8-digit hex's own alpha | `#FFFFFFD9` | the colour value |
+| the referencing colour's `opacity` | `{"type": "hex", "hex": "#E8553C", "opacity": 20}` | the reference (`hex` form only) |
+| **the token's `opacity`** | `clr_2MZWrBUc` = `#FFFFFF` @ 20 | `theme.colors[].light` / `.dark` |
+
+Read only the token's `hex` and a scrim becomes an opaque card. That is not hypothetical: it is the
+bug the first draft of `verify-config.py`'s legibility check had, and it invented a white-on-white
+finding on a real export until the token's own alpha was multiplied in.
+
 ### 12. A gradient that ends on the page colour shortens the element
 
 A fade-out gradient whose last stop *is* the background makes the element's tail invisible, so it
@@ -769,6 +812,33 @@ validate clean, and `tests/fixtures/onboarding-quiz-paywall.json` (which holds b
 `flowkit.config()` raises on a bad theme hex and leaves element colours alone;
 `verify-config.py` errors on the same thing, calibrated silent on all 12 real configs.
 
+### A screen background is bound to a token in every real export — never a literal hex
+
+Measured across the corpus: of the 11 genuine exports, **every screen fill is either a theme
+token or an image. Not one is a literal hex.** The single exception is
+`tests/fixtures/timeline-anchored.json`, which this repo hand-assembled from a real screen and a
+borrowed theme.
+
+That is not a style preference, and the reason only shows up in the variant the render cannot
+draw. A token has a `light` and an optional `dark`, and **a token with no `dark` falls back to its
+`light`** — that is the runtime's behaviour, not a defect. So when the background is a token, the
+background and the text move together between appearances. Hardcode the background instead, under
+a theme whose text tokens *do* define `dark`, and dark appearance gives you near-white text on a
+background that stayed white. Every gate is blind to it: the document is well-formed, `validate`
+returns valid, and `config preview` **draws light mode only**.
+
+This matters for *authored* work specifically. The builder does not produce the shape; `flowkit`
+easily can, because writing `fill` with a hex is the obvious thing to do. `verify-config.py` warns
+when text drops below 1.5:1 against its own background **in either variant**, which is what makes
+the dark half checkable at all — with the scope limit below.
+
+> Not an accessibility audit, and it must not be described as one. WCAG AA wants 4.5 (3.0 large),
+> and **13% of the text in real builder exports is already below 4.5** — a designer's palette is
+> not this tool's business. The check asks only whether text can be told apart from its background
+> at all. The corpus separates the two questions cleanly: the lowest *deliberate* value measured is
+> **1.89** (amber stars on a light card) and the next one down is **1.08** (near-white on white),
+> so the threshold sits in an empty gap. Raising it to 3.0 fires on a real fixture — measured.
+
 ### `theme.colors` and `theme.typography` share ONE id namespace
 
 Reuse an id across the two and the **device SDK fails to decode the flow at all**:
@@ -799,17 +869,49 @@ does (0 of 8) but which only collides if the consumer keys icons by name alone.
 Calibrated both directions: silent on all 8 corpus files (sanitized and raw), and each check
 fires on its own injected duplicate.
 
-### The schema tells you which actions are supported: `x-supported`
+### The schema tells you what the transformer handles: `x-supported`
 
-Every `IAction*` definition carries an **`x-supported`** boolean. Checked across all 16:
-**`selectProduct` is the only `false`** — everything else (`purchase`, `openUrl`,
-`restorePurchases`, `navigate`, `conditional`, `showElement`/`hideElement`, `alert`, `custom`,
-`setVariable`, `closeFlow`, `navigateBack`/`navigateNext`, `nothing`) is `true`. Read the flag
-before authoring an action you have not used before; it is cheaper than a device round trip, and
-it is the only place this is written down.
+**47 definitions carry an `x-supported` boolean** — 15 `IAction*` and 34 `*Element` — each paired
+with an `x-type-literal` giving the `type` string you actually write. `true` means the transform
+service has a **mapper handler** for that variant. It is generated by a static extractor over the
+transformer source, which is what makes it cheap and what limits it (see the false negative
+below). Grep it with `jq`, never by reading the file:
 
-Same caution as everywhere else, though: the flag is *schema* metadata, so `validate` still
-outranks it. Grep it with `jq`, never by reading the file.
+```bash
+jq -r '.["$defs"] | to_entries[] | select(.value["x-supported"] == false) | .value["x-type-literal"]' "$SCHEMA"
+```
+
+**Six are `false`.** One action and five elements:
+
+Corpus column = how many of the **7 distinct real flows** carry one (the 12 config files are those
+7 plus the 5 raw originals of the sanitized copies, so counting files would double them):
+
+| literal | family | in the corpus | read |
+|---|---|---|---|
+| `selectProduct` | action | 0 | see the toggle table above — a toggle cannot move a product group's selection |
+| `old-price` | element | 0 | **the mapper is why it draws in preview and not on device** — see its own section |
+| `header` | element | 0 | flagged and unused; no device evidence either way. Verify before relying on it |
+| `progress-bar` | element | **2** | **false negative** — see below |
+| `progress-bar-loader` | element | **2** | **false negative** |
+| `progress-bar-segment` | element | **1** | **false negative** |
+
+Everything else is `true`, actions included (`purchase`, `openUrl`, `restorePurchases`,
+`navigate`, `conditional`, `showElement`/`hideElement`, `alert`, `custom`, `setVariable`,
+`closeFlow`, `navigateBack`/`navigateNext`, `nothing`) and `footer` among the elements.
+
+> **The flag is a signal to verify, not a verdict — the progress-bar family proves it.** All three
+> progress-bar types are flagged `false` and all three appear in **real builder exports**:
+> `progress-bar` and `progress-bar-loader` in both `onboarding-quiz-paywall` and
+> `vpn-timer-draft`, `progress-bar-segment` in the former. The transformer handles progress bars in a
+> *registry* pass rather than a per-element mapper, and a static extractor cannot see that. So the
+> flag means "no per-element handler was detected", which is not the same claim as "unsupported".
+> Evidence ordering is unchanged and it is what saves you here: **a real export outranks a schema
+> annotation, and `validate` outranks both.** Use the flag to decide what to check, never as the
+> answer.
+
+`verify-config.py` warns on the one type where the flag and the corpus agree *and* the failure is
+measured — `old-price`. It deliberately does not warn on the whole `false` set, because that would
+fire on real builder output.
 
 ### Which group types a conditional can read — and the one action that does not work
 
@@ -1125,13 +1227,26 @@ on screen where users are.**
 Do not author `old-price` expecting a visible strikethrough, and never lay out a price row around
 one you have only seen in the CLI preview.
 
-The likely reason, **untested**: the multiplier scales a prior price that has to exist independently,
-and with no intro or offer price on the product there is nothing to scale. That would partially
-reinstate an earlier conclusion recorded during this project — that a strikethrough needs either
-`offer_price` or an annual-versus-monthly pair — but note the distinction that made that conclusion
-wrong the first time: it was a claim about faking a strikethrough with a *`text` element and a price
-variable*, not about this element. Binding a product that really has an offer price and re-checking
-on device is what would settle it.
+**The reason is in the schema we already fetch: `old-price` is flagged `"x-supported": false`** —
+the transform service has no mapper handler for it. That predicts exactly what was measured, and
+it predicts it for the whole element rather than for one prop: the CLI preview reads the config
+directly, so it draws the element; a device reads the *transformer's output*, which never carries
+it. Two further signals agree — **0 of the 12 real exports contain an `old-price`**, and no
+component-catalog template uses one. `verify-config.py` warns when a config carries one.
+
+This supersedes the earlier hypothesis recorded here — that `multiplier` scales a prior price that
+has to exist independently, so a product with no intro or offer price has nothing to scale. That
+was never tested, and it is now unnecessary: a missing mapper explains the absence without
+requiring the multiplier to behave any particular way. It is not *disproved*, though, and one
+observation still belongs to it: unattached, the element renders the literal words "Old price" in
+the preview, so the preview-side renderer does something with the element that the multiplier
+hypothesis would also allow. Binding a product that really has an offer price and re-checking on
+device would settle whether anything reaches the SDK at all — but do not spend that round trip to
+decide whether to *use* the element. Do not use it.
+
+Same caveat as everywhere the flag appears: `x-supported: false` is a signal, not a verdict, and
+the progress-bar family is a live false negative. What makes `old-price` different is that the
+flag, the corpus and a device measurement all point the same way.
 
 **The methodological lesson is the durable part.** This section said "measured" and "confirmed in a
 render", and the render was `flows config preview` — the *weakest* of the four preview surfaces. A
@@ -1143,12 +1258,17 @@ nothing more; for anything about whether users see it, that surface does not qua
 - **34 element types**, not the handful these exports use: `bottom-sheet`, `carousel`,
   `date-picker`, `date-time-picker`, `divider`, `email-input`, `footer` (**pinned** — see
   [patterns.md](patterns.md); its props are the plain container set, so the schema cannot tell you
-  it behaves differently from a `stack`), `header`, `icon`, `image`,
-  `loader`, `number-input`, `old-price`, `password-input`, `phone-input`, `product`, `progress-bar`,
-  `progress-bar-loader`, `progress-bar-segment`, `selectable`, `spinner`, `stack`, `tab-bar`,
+  it behaves differently from a `stack`), `header` ⚠, `icon`, `image`,
+  `loader`, `number-input`, `old-price` ⚠, `password-input`, `phone-input`, `product`, `progress-bar` ⚠,
+  `progress-bar-loader` ⚠, `progress-bar-segment` ⚠, `selectable`, `spinner`, `stack`, `tab-bar`,
   `tab-content`, `tab-content-wrapper`, `tab-item`, `tabs`, `text`, `text-input`, `time-picker`,
   `timer`, `video`.
-- **15 action types**, adding `selectProduct` to the list below.
+  **⚠ = flagged `"x-supported": false`** — read [`x-supported`](#the-schema-tells-you-what-the-transformer-handles-x-supported)
+  before authoring one. Being listed here means the schema permits it, never that it reaches a
+  device: `old-price` is measured absent on device, while the three progress-bar types are a known
+  false negative and do appear in real exports.
+- **15 action types**, adding `selectProduct` to the list below — which is the one action flagged
+  `"x-supported": false`.
 - **Group types are a closed enum**: `product`, `single_choice`, `multi_choice`, `toggle` — so trap
   10's rule is confirmed, not inferred.
 - `_meta.screens[].products[]` requires `flowProductId`, matching the publish 422 from the other
