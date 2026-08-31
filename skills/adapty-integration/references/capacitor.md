@@ -4,10 +4,14 @@ Platform: Capacitor · Language: TypeScript / JavaScript · Targets: iOS + Andro
 
 ## Prerequisites
 
-- Capacitor 8+ (SDK 3.16.0+) or Capacitor 7 (SDK 3.15)
-- iOS 15.0+ (for Paywall Builder); iOS 14.0+ (core only)
+- `@adapty/capacitor` **4.1+** for Flow Builder. 4.1 is the first stable 4.x release; a project that cannot meet the requirements below must stay on 3.x, which has no Flow Builder
+- **Capacitor 8** for SDK 4.1+ and 3.16+. Capacitor 7 works only with SDK 3.15; Capacitor 6 and below are unsupported
+- iOS 15.0+ and Android minSdk 24
+- **Xcode 26 or later** to build for iOS on SDK 4.x — the native iOS SDK is built with Swift tools 6.2. This is a build-machine requirement, so check it before promising a v4 upgrade
 - Android with Google Play Billing Library up to 8.x
 - npm or yarn
+
+**On SDK 4.x the iOS install is Swift Package Manager only** — the `AdaptyCapacitor.podspec` is gone, there is no Podfile, and the app's iOS project must use Capacitor's SPM integration. Any guidance about editing `ios/App/Podfile` applies to 3.x alone.
 
 ---
 
@@ -42,7 +46,8 @@ npx cap run android
 **`npx cap sync` fails:**
 - "Package not found" or missing plugin errors → `npm install @adapty/capacitor` was not run, or `node_modules` is out of sync; run `npm install` then `npx cap sync` again
 - Gradle errors on Android → check `android/app/build.gradle` for conflicting dependency versions; Adapty requires Google Play Billing Library up to 8.x
-- iOS Podfile errors about minimum version → update `ios/App/Podfile` to `platform :ios, '15.0'` (or `'14.0'` for core-only builds without Paywall Builder)
+- iOS Podfile errors about minimum version → **SDK 3.x only.** Update `ios/App/Podfile` to `platform :ios, '15.0'`. On SDK 4.x there is no Podfile: set the deployment target to 15.0 in Xcode instead, and if the error is that the Adapty package cannot be resolved at all, the iOS project is not on Capacitor's SPM integration
+- iOS build fails on Swift language/tools version → SDK 4.x needs **Xcode 26+**; an older Xcode cannot build the bundled native SDK
 
 **App launches but crashes immediately:**
 - Check native logs — iOS: Xcode console or `npx cap run ios` output; Android: `adb logcat` or Android Studio
@@ -236,20 +241,23 @@ Then guide the user through each step explicitly.
 ### Step 1: Install the npm package and sync native platforms
 
 ```bash
-npm install @adapty/capacitor
+npm install @adapty/capacitor@latest
 npx cap sync
+```
+
+Confirm the installed major version before writing any Stage 2 code — the fetch API differs between 3.x and 4.x, and `package.json` may carry a caret range that resolved to either:
+
+```bash
+npm ls @adapty/capacitor
 ```
 
 `npx cap sync` is mandatory — it copies the native plugin code into `ios/` and `android/` directories. Skipping it means the native modules won't be available.
 
-**Capacitor-specific note:** Both iOS and Android targets are installed with the single `@adapty/capacitor` package. No separate package is needed for AdaptyUI (Paywall Builder) — it is automatically activated alongside the core module.
+**Capacitor-specific note:** Both iOS and Android targets are installed with the single `@adapty/capacitor` package. No separate package is needed for the builder's renderer — it is activated alongside the core module.
 
-**Checkpoint:** `npx cap sync` completes without errors. If there are iOS Podfile version errors, update `ios/App/Podfile`:
-```ruby
-platform :ios, '15.0'   # Required for Paywall Builder
-# platform :ios, '14.0' # Use if NOT using Paywall Builder
-```
-Then run `npx cap sync ios` again.
+**Checkpoint:** `npx cap sync` completes without errors, and `npm ls @adapty/capacitor` reports the version you intended.
+
+**iOS on SDK 4.x:** the SDK installs through Swift Package Manager only, so there is no `Podfile` to edit — set the deployment target to **15.0** in Xcode, and make sure the iOS project uses Capacitor's SPM integration. Building requires **Xcode 26+**. (On SDK 3.x the CocoaPods path still applies: set `platform :ios, '15.0'` in `ios/App/Podfile`, then `npx cap sync ios` again.)
 
 ### Step 2: Add activation code
 
@@ -292,7 +300,7 @@ Call `activateAdapty()` as early as possible in the app lifecycle — before any
 
 Choose the section matching the user's paywall approach.
 
-### Paywall Builder
+### Flow Builder
 
 Read before writing code:
 ```
@@ -303,48 +311,63 @@ curl -s https://adapty.io/docs/capacitor-handling-events.md
 curl -s https://adapty.io/docs/capacitor-handle-paywall-actions.md
 ```
 
+**v4 API names.** Flow Builder uses `getFlow` / `AdaptyFlow` / `createFlowView` / `FlowViewController` / `FlowEventHandlers`. The same APIs also render existing Paywall Builder paywalls — no dashboard changes are needed for a user moving from Paywall Builder. `getPaywall` and `createPaywallView` do not exist on 4.x; they were removed, not deprecated. Three specific traps when porting v3 code: `getFlow` takes **no `locale`** (pass it to `createFlowView` instead), **`hasViewConfiguration` was removed from the model** — do not check it, `createFlowView` throws instead — and the handler interface is `FlowEventHandlers`, with `onRenderingFailed` renamed to `onError`. Products are still `AdaptyPaywallProduct` and `getPaywallProducts` keeps its name, now taking `{ flow }`.
+
 **Key flow:**
 
-1. Fetch the paywall by placement ID:
+1. Fetch the flow by placement ID:
 ```typescript
-import { adapty, createPaywallView } from '@adapty/capacitor';
+import { adapty, createFlowView } from '@adapty/capacitor';
 import { PLACEMENT_ID } from './adapty/constants';
 
-const paywall = await adapty.getPaywall({
-  placementId: PLACEMENT_ID,
-  locale: 'en',
-});
+const flow = await adapty.getFlow({ placementId: PLACEMENT_ID });
 ```
 
-2. Check if it has a view configuration (Paywall Builder paywalls do; remote config paywalls don't):
+2. Create a view, register handlers, present it. `createFlowView` throws when the flow has no view configured, so there is nothing to check first — wrap the whole sequence:
 ```typescript
-if (paywall.hasViewConfiguration) {
-  const view = await createPaywallView(paywall);
-  
-  view.setEventHandlers({
-    onUrlPress(url) {
-      window.open(url, '_blank');
-      return false;
+try {
+  const view = await createFlowView(flow);
+
+  // setEventHandlers resolves to an unsubscribe function — capture it if the view
+  // outlives the screen that created it, otherwise dismiss() is enough.
+  await view.setEventHandlers({
+    // Defaults keep the flow OPEN after a purchase. Close it once the user has access.
+    onPurchaseCompleted(purchaseResult, product) {
+      return purchaseResult.type === 'success';
     },
   });
 
   await view.present();
-} else {
-  // Fall back to your custom paywall UI
+} catch (error) {
+  // No view configured for this flow, or presentation failed
 }
 ```
 
-3. Each `view` instance can only be used once. Call `createPaywallView` again if you need to re-present the paywall.
+3. Each `view` instance can only be used once. Call `createFlowView` again if you need to re-present the flow.
 
-**Android dialog note:** On Android, use `view.showDialog()` instead of native `alert()` when the paywall is visible — native alerts appear behind the paywall view.
+**The v4 defaults changed and none of it is a type error — verify by running the flow, not by reading the diff.** Only `onCloseButtonPress` and `onError` close the view by default; every other handler keeps it open. Returning `true` from a handler closes the view, `false` keeps it open. Specifically:
 
-**iOS presentation style:** Configure with `await view.present({ iosPresentationStyle: 'page_sheet' })` if you want a sheet instead of full screen.
+| Handler | v3 default | v4 default | Return to restore v3 |
+|---|---|---|---|
+| `onPurchaseCompleted` | closed unless cancelled | **stays open** | `purchaseResult.type !== 'user_cancelled'` |
+| `onRestoreCompleted` | closed on success | **stays open** | `true` |
+| `onAndroidSystemBack` | closed the view | **stays open** | `true` |
 
-**Checkpoint:** Paywall appears on screen with configured products. Tapping a product triggers the sandbox purchase dialog. Purchases complete without errors.
+Leave `onAndroidSystemBack` at its default only if the flow has its own Close button — otherwise the flow is a dead end on Android.
 
-**Gotcha:** Blank paywall or `getPaywall` returns an error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned.
+**`onUrlPress` now has a working default** that opens the URL natively and honours the in-app vs external browser setting from the dashboard. Do not re-add a `window.open(url, '_blank')` handler out of habit — overriding `onUrlPress` discards that dashboard setting. Override it only if the app genuinely needs to intercept links.
 
-**Gotcha:** `hasViewConfiguration` is `false` even though you designed it in Paywall Builder → the **Show on device** toggle is not enabled in the paywall builder.
+**Android dialog note:** On Android, use `view.showDialog()` instead of native `alert()` when the flow is visible — native alerts appear behind the flow view.
+
+**iOS presentation style:** `await view.present({ iosPresentationStyle: 'page_sheet' })` for a sheet instead of full screen. Android is always a full-screen activity and ignores this.
+
+**Checkpoint:** Flow appears on screen with configured products. Tapping a product triggers the sandbox purchase dialog, and the flow closes after a successful purchase rather than sitting there.
+
+**Gotcha:** Blank flow or `getFlow` returns an error → placement ID doesn't match the dashboard exactly (case-sensitive), or the placement has no audience assigned.
+
+**Gotcha:** `createFlowView` throws where `getFlow` succeeded → the **Show on device** toggle is off for that flow in the Flow Builder.
+
+**Gotcha:** `paywall.hasViewConfiguration` is `undefined` → that property was removed from `AdaptyFlow` in v4. TypeScript catches it; plain JavaScript silently reads `undefined` and skips the paywall forever.
 
 ### Custom paywall (manual)
 
@@ -364,11 +387,10 @@ curl -s https://adapty.io/docs/capacitor-restore-purchase.md
 import { adapty } from '@adapty/capacitor';
 import { PLACEMENT_ID } from './adapty/constants';
 
-const paywall = await adapty.getPaywall({
-  placementId: PLACEMENT_ID,
-  locale: 'en',
-});
-const products = await adapty.getPaywallProducts({ paywall });
+// v4 note: even a hand-built paywall fetches with getFlow — the fetch call follows the
+// SDK major version, not the paywall approach. Products are still AdaptyPaywallProduct.
+const flow = await adapty.getFlow({ placementId: PLACEMENT_ID });
+const products = await adapty.getPaywallProducts({ flow });
 ```
 
 2. Make a purchase when the user taps a product:
@@ -416,10 +438,10 @@ const result = await adapty.makePurchase({
 
 ### Observer mode *(not recommended)*
 
-> **When to use:** Only if replacing the existing purchase infrastructure is not feasible (e.g., deeply embedded legacy code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new projects or projects where purchases aren't yet implemented, use Paywall Builder or Custom paywall instead.
+> **When to use:** Only if replacing the existing purchase infrastructure is not feasible (e.g., deeply embedded legacy code). Observer mode gives you analytics and integrations, but you lose paywall management, A/B testing, and Adapty-driven paywalls entirely. For new projects or projects where purchases aren't yet implemented, use Flow Builder or Custom paywall instead.
 >
 > **Limitations:**
-> - No paywall management or Paywall Builder support
+> - No paywall management, Flow Builder, or Paywall Builder support
 > - No A/B testing on paywalls or offers
 > - Transactions must be manually reported to Adapty after each purchase
 > - Subscription events depend on server notifications being configured for both App Store and Google Play
@@ -502,7 +524,9 @@ curl -s https://adapty.io/docs/<slug>.md
 curl -s https://adapty.io/docs/<slug>.md
 ```
 
-**Capacitor note:** Attribution integrations require passing attribution data to Adapty via `adapty.updateAttribution()`. The native attribution SDK (AppsFlyer, Adjust, etc.) runs on the native layer — check whether a Capacitor plugin exists for that SDK, or whether attribution data must be captured natively and bridged.
+**Capacitor note:** Attribution integrations require passing attribution data to Adapty via `adapty.updateExternalAttribution()` (renamed from `updateAttribution` in SDK 4.1, with its `source` option renamed to `provider`; there is no deprecated alias, so a v3 call site stops working). The native attribution SDK (AppsFlyer, Adjust, etc.) runs on the native layer — check whether a Capacitor plugin exists for that SDK, or whether attribution data must be captured natively and bridged.
+
+**Adapty Attribution is off by default from SDK 4.1** (it was automatic below 4.1). If the user relies on Adapty's own install attribution, pass `adaptyAttributionEnabled: true` in the `activate()` params — without it the SDK registers no installs and delivers no installation details, silently. Two related renames land in the same release: `AttributionSource` → `AdaptyExternalAttributionProvider`, and `AdaptyProfile.appliedAttributionSources` → `appliedExternalAttributionProviders`.
 
 ### Messaging / CRM integrations
 
@@ -558,11 +582,11 @@ userStorage.clearUserId();
 
 - For apps where users can purchase before logging in: no extra setup needed. Adapty handles profile merging automatically when `identify()` is called after an anonymous purchase.
 
-**Order matters:** `activate()` → `identify()` → `getPaywall()`. If `identify()` is called after `getPaywall()`, the purchase may be attributed to the anonymous profile.
+**Order matters:** `activate()` → `identify()` → `getFlow()`. If `identify()` is called after `getFlow()`, the purchase may be attributed to the anonymous profile.
 
 **Checkpoint:** After calling `adapty.identify("your-user-id")`, the Adapty dashboard **Profiles** section shows the custom user ID on the profile.
 
-**Gotcha:** Profile shows an anonymous ID even after `identify()` → `identify()` was called after `getPaywall()`. Ensure the order is `activate()` → `identify()` → `getPaywall()`.
+**Gotcha:** Profile shows an anonymous ID even after `identify()` → `identify()` was called after `getFlow()`. Ensure the order is `activate()` → `identify()` → `getFlow()`.
 
 ---
 
@@ -610,7 +634,7 @@ The full checklist covers:
 **iOS (App Store Connect + Adapty Dashboard):**
 1. Create products in App Store Connect — use the exact product IDs from Phase 3
 2. Connect App Store to Adapty: App settings → iOS SDK → enter Bundle ID, upload In-App Purchase Key, configure Server Notifications URL
-3. If using Paywall Builder: design the paywall in the Adapty Dashboard, enable the **Show on device** toggle
+3. If using Flow Builder: design the flow in the Adapty Dashboard, enable the **Show on device** toggle
 4. Create a sandbox tester account in App Store Connect
 5. On the test device: Settings → App Store → Sandbox Account → sign in with the sandbox tester
 6. Make a test purchase and verify it appears in the Adapty dashboard **Event Feed**
@@ -665,7 +689,7 @@ After the basics are working, use `AskUserQuestion` to present this menu. Keep i
 > 1. **Fallback paywalls** — show a cached paywall if the user is offline or Adapty is unreachable
 > 2. **Custom user attributes** — tag users with properties (plan, country, cohort) to enable segmentation and A/B testing
 > 3. **Promotional offers** — set up subscription discounts and win-back offers for lapsed subscribers
-> 4. **Onboardings** — add interactive onboarding flows powered by Adapty's builder
+> 4. **Onboardings** — build them as flows in Flow Builder. On SDK 4.x the legacy `getOnboarding` API still works but is deprecated in favour of `getFlow` and will be removed
 > 5. **Kids mode** — COPPA/COPPA-compliant mode that disables IDFA and ad data collection
 > 6. **A/B testing** — run experiments on paywalls and offers from the dashboard without app updates
 > 7. **Custom access levels** — set up multiple subscription tiers (e.g. `basic` vs `pro`) if different products unlock different features
@@ -678,7 +702,8 @@ For each item the user picks, fetch the relevant doc and implement it:
 | Fallback paywalls | `capacitor-use-fallback-paywalls` |
 | Custom user attributes | `capacitor-setting-user-attributes` |
 | Promotional offers | `app-store-offers`, `create-offer` |
-| Onboardings | `capacitor-get-onboardings`, `capacitor-present-onboardings`, `capacitor-handling-onboarding-events` |
+| Onboardings (Flow Builder) | `capacitor-quickstart-paywalls`, `adapty-flow-builder` |
+| Flow screen-view analytics | `capacitor-flow-screen-views` |
 | Kids mode | `kids-mode-capacitor` |
 | A/B testing | `ab-tests`, `run_stop_ab_tests` |
 | Custom access levels | `create-access-level`, `assigning-access-level-to-a-product` |
