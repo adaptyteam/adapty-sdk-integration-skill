@@ -77,6 +77,10 @@ python3 tests/test-flowkit.py                                            # the a
 python3 tests/test-diff-config.py                                        # the diff's two directions
 python3 tests/test-snippet.py                                            # extract/plan/graft
 python3 tests/test-audit-flow.py                                         # the audit's checks, both directions
+python3 tests/test-unmapped-elements.py                                  # x-supported: the guarded set vs the corpus
+python3 tests/test-legibility.py                                         # text-vs-background, both appearance variants
+python3 tests/test-price-literals.py                                     # placeholder + baseline-relative price literals
+python3 tests/test-product-fields.py                                     # the closed product-variable field set
 python3 tests/mobile-preview-check.py                                    # the device-preview link, over the corpus
 ```
 
