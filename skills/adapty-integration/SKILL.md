@@ -205,7 +205,7 @@ npx adapty@latest paywalls list --app <APP_ID>
 npx adapty@latest placements list --app <APP_ID>
 ```
 
-**Note for `paywallApproach == "flow_builder"`:** the CLI's `paywalls list` does not return Flow Builder flows — flows are dashboard-only. An empty `paywalls list` does **not** mean nothing is set up. In Step 5, the dashboard path will confirm directly with the user whether a flow + placement already exists. `placements list` still works and is the source of truth for placement developer IDs.
+**Note for `paywallApproach == "flow_builder"`:** flows are their own CLI topic, not paywalls — `paywalls list` never returns them, so an empty `paywalls list` does **not** mean nothing is set up. List them with `npx adapty@latest flows list --app <APP_ID>` instead of asking. What the CLI has no command for is *publishing* a flow or attaching one to a placement, so a flow it lists may still be an unpublished draft that no placement points at; Step 5 settles that with the user. `placements list` is the source of truth for placement developer IDs.
 
 Use this to determine the path through Steps 4 and 5:
 
@@ -306,15 +306,42 @@ Then branch by `paywallApproach`:
 
 #### `paywallApproach == "flow_builder"` (Flow Builder) — dashboard path
 
-The CLI cannot create flows or attach them to placements — Flow Builder is dashboard-only. Skip the CLI commands below. For each confirmed location, the user creates a flow and attaches it to a placement in the dashboard.
+The CLI cannot publish a flow or attach one to a placement — both are dashboard-only. Skip the CLI commands below. It *can* build the flow itself: the **`flow-generator`** skill authors the config and saves it as a draft. So the division on this path is fixed and does not depend on who builds the flow — **you or the user can produce it; only the user can publish it and create the flow placement.**
 
 **Create no placement with the CLI on this path — not even as a stopgap, and not "so the code has an ID to point at".** A placement carries a type — flow, paywall, or onboarding — fixed at creation and not convertible afterwards; the CLI creates paywall placements only (an audience entry requires a `paywall_id`); and a developer ID cannot be changed or reused. So a placement created here permanently blocks the flow placement with that ID: the user has to invent a different ID in the dashboard and you have to edit the code to match. This is the same reservation `references/migration.md` section 3 applies to a source's visual-builder paywalls, reached from the greenfield side. When this step is deferred for missing products (see the prerequisite above), the deferred sequence carries the `products create` commands only — no `paywalls create`, no `placements create` — and the flow placement stays a dashboard step in `ADAPTY_SETUP.md`, written with the exact developer ID the code uses.
 
 Ask the user via `AskUserQuestion`:
 
 > "For each location, have you already created a flow in the Adapty Dashboard and attached it to a placement?"
+> - **Build one with me now** — I'll generate the flow from your description or a reference image
 > - **Yes, already set up** — I'll ask for your placement ID(s)
-> - **No, walk me through it** — I'll guide you in the dashboard
+> - **No, walk me through it** — I'll guide you through building it yourself in the dashboard
+
+**If build one with me now: stop the setup interview here.** Ask one thing and nothing else — no template questions, no screen-count questions, no product re-confirmation:
+
+> "Describe the flow you want, or give me a visual reference — a screenshot, a design, a paywall whose look you want. Whatever you already know helps: how many screens, what it should say, which plans it offers."
+
+Then invoke the **`flow-generator`** skill with that answer, once per confirmed location. It owns everything from there — authenticating, creating the flow, binding the products from Step 4, previewing it for the user's approval, and saving. Do not author flow JSON yourself and do not answer its questions on the user's behalf.
+
+**If `flow-generator` is not among your available skills, install it — never hand-author the config instead.** It ships in the same package as this skill, so it is usually already present, possibly namespaced (`adapty-skills:flow-generator`); check both names before concluding it is missing. If it really is absent, get the user's yes via `AskUserQuestion` — this writes to their agent's skill directory — and then run one:
+
+```bash
+# any agentic CLI (Claude Code, Cursor, Copilot, Codex, Gemini CLI, Zed, Amp)
+npx skills add adaptyteam/adapty-skills --skill flow-generator
+
+# Claude Code plugin — installs every skill in the package at once
+claude plugin marketplace add adaptyteam/adapty-skills   # skip if already added
+claude plugin install adapty-skills@adapty
+```
+
+The flow config carries traps that cost real money when they are got wrong — a plan card whose selected state is baked in, a footer that vanishes on device, a carousel that does not swipe — and that skill is where every one of them is checked. If the user declines the install, say so plainly and take the walk-me-through branch below instead.
+
+**`flow-generator` stops at a saved draft, and that is the reason this path stays a dashboard step.** There is no publish command and no way to create a flow placement from the CLI, so when it hands back, the user does both — confirm each with `AskUserQuestion` before moving on:
+
+1. **Publish the flow** — the button at the **top right of the builder**. Until they publish, the SDK gets nothing.
+2. **Create the placement** at [Adapty Dashboard → Placements](https://app.adapty.io/placements) — **Create placement**, set a **Developer ID** (e.g. `main`, `onboarding`, `settings`, the exact string the SDK uses in `Adapty.getFlow`), attach the flow under the **All Users** audience, save.
+
+Then collect the **placement developer ID(s)** via `AskUserQuestion` and continue to Phase 4.
 
 **If already set up:** collect the **placement developer ID** for each location (the user finds it at [Adapty Dashboard → Placements](https://app.adapty.io/placements) — the **Developer ID** column). Set as placement ID(s) and continue to Phase 4.
 
