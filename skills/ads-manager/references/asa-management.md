@@ -20,7 +20,7 @@ Every `list` and `get` command in this file returns metadata only, no metrics. E
 | `asa whoami` | Company, how access was granted, Apple connection state. Run this first. No connected Apple Ads account or no active Ads Manager subscription answers `402 ads_manager_subscription_required` on every other `asa` command. |
 | `asa connect [--no-wait]` | Prints the Apple authorization link and waits for the link to be completed; `--no-wait` returns immediately instead of waiting. |
 | `asa apps list` | Apps promoted in Apple Search Ads; pagination only. Its rows supply `--adam-id` for `campaigns create`. |
-| `asa orgs list` | Apple Search Ads organizations; pagination only. Each row carries two identifiers, not interchangeable: `internal_id` (a UUID) and `org_id` (Apple's numeric id). `--org` on `campaigns create` takes `internal_id` — passing the numeric `org_id` fails with "Invalid org ID format." |
+| `asa orgs list` | Apple Search Ads organizations; pagination only. Each row carries two identifiers, not interchangeable: `internal_id` (a UUID) and `org_id` (Apple's numeric id). `--org` on `campaigns create` takes `internal_id` — passing the numeric `org_id` fails with "Invalid org ID format." Each row also carries `payment_model` (`LOC`/`PAYG`), which tells you whether campaigns in that organization need Invoicing Options — see [Line of credit](#line-of-credit-organizations). |
 
 ## Campaigns
 
@@ -28,8 +28,73 @@ Every `list` and `get` command in this file returns metadata only, no metrics. E
 |---|---|---|
 | `asa campaigns list` | scope filters only | Metadata only. |
 | `asa campaigns get <id>` | positional UUID | Metadata only. |
-| `asa campaigns create` | `--org`, `--name`, `--adam-id`, `--country` (repeatable), `--daily-budget`; optional `--status` (`ENABLED`/`PAUSED`, no default), `--budget` (lifetime), `--target-cpa`, `--bidding-strategy`, `--supply-source` (repeatable, default `APPSTORE_SEARCH_RESULTS`), `--billing-event` (`IMPRESSIONS`/`TAPS`, default `TAPS`), `--ad-channel-type` (`DISPLAY`/`SEARCH`, default `SEARCH`) | `--org` takes the UUID (`internal_id`) from `asa orgs list`, not that row's numeric `org_id`; `--adam-id` comes from `asa apps list`. `--status` has no default — pass `--status PAUSED` to launch without spending until you enable it. |
-| `asa campaigns update <id>` | at least one of `--name`, `--status`, `--country`, `--daily-budget`, `--budget`, `--target-cpa`, `--bidding-strategy` | |
+| `asa campaigns create` | `--org`, `--name`, `--adam-id`, `--country` (repeatable), `--daily-budget`; optional `--status` (`ENABLED`/`PAUSED`, no default), `--budget` (lifetime), `--target-cpa`, `--bidding-strategy`, `--supply-source` (repeatable, default `APPSTORE_SEARCH_RESULTS`), `--billing-event` (`IMPRESSIONS`/`TAPS`, default `TAPS`), `--ad-channel-type` (`DISPLAY`/`SEARCH`, default `SEARCH`), and the five `--invoice-*` flags together (`--invoice-advertiser`, `--invoice-order-number`, `--invoice-contact-name`, `--invoice-contact-email`, `--invoice-billing-email`) | `--org` takes the UUID (`internal_id`) from `asa orgs list`, not that row's numeric `org_id`; `--adam-id` comes from `asa apps list`. `--status` has no default — pass `--status PAUSED` to launch without spending until you enable it. `--target-cpa` must be lower than `--daily-budget`. The response carries `serving_status` and `serving_state_reasons`; on `NOT_RUNNING` the command prints the reason and the command that fixes it — see [Max Conversions](#max-conversions-campaigns) and [Line of credit](#line-of-credit-organizations). |
+| `asa campaigns update <id>` | at least one of `--name`, `--status`, `--country`, `--daily-budget`, `--budget`, `--target-cpa`, `--bidding-strategy`, or the five `--invoice-*` flags together | The `--invoice-*` flags replace the stored Invoicing Options as a whole — pass all five, since a partial set exits `2` before anything reaches Apple. |
+| `asa campaigns bulk-create` | exactly one of `--file` (JSON structure, `-` for stdin) or `--from-file` (Apple Ads template); `--org-id` required with `--from-file`; optional `--preview`, `--no-wait`, `--poll-interval` (default `5`), `--timeout` (default `900`) | Creates a whole structure as one queued operation — see [Bulk operations](#bulk-operations). |
+| `asa campaigns bulk-status <operation-id>` | positional UUID, printed by `bulk-create`; pagination flags page the per-object log | One operation's counts and the per-object log, each failure with its reason. |
+| `asa campaigns bulk-list` | optional `--status` (`pending`/`running`/`success`/`partial`/`failed`, repeatable), `--app` (UUID), `--created-from`/`--created-to` (`YYYY-MM-DD`); pagination | This company's bulk operations, newest first, one row per operation with its verdict — no per-object detail. Use it to recover an `operation_id` you lost, then read it with `bulk-status`. A cheap catalog read. |
+
+### Bulk operations
+
+`bulk-create` replaces a loop over `campaigns create` + `ad-groups create` + `keywords add`. The
+structure nests: `campaigns[]`, each with `negative_keywords[]` and `ad_groups[]`, and each ad group
+with `keywords[]`, `negative_keywords[]` and `ads[]`. The command counts those nodes and shows the
+counts in its confirmation prompt, so read that line before answering.
+
+Two inputs, and they take different org identifiers. `--file` is the JSON structure — the request body
+itself — and `--file -` reads it from stdin. `--from-file` takes a native Apple Ads template
+(`Campaign_And_Adgroup_Template.xlsx` or a keywords `.csv`), converts it server-side first, and needs
+`--org-id`: **the numeric `org_id`, not the `internal_id` UUID that `campaigns create --org` takes.**
+That is the one place in this file where a command wants Apple's number. Conversion problems print with
+their sheet, row and column; an error there exits `2` and creates nothing.
+
+`--preview` prints the converted structure and stops without creating anything. Preview every template
+before submitting it: a bulk operation has no undo, and there is no delete in the `asa` topic, so a
+structure that is half wrong leaves objects you cannot remove. The printed preview is also the fastest
+way to get a starting JSON file — save it, edit it, submit it with `--file`.
+
+By default the command polls until the operation reaches `success`, `partial`, or `failed`, printing
+progress as the counts change. `partial` lists every object that was not created with Apple's reason,
+and the objects that did succeed stay. `--no-wait` prints the `operation_id` and returns, for a
+structure too large to sit through. `--timeout` (default `900` s) only ends the *polling* — the
+operation keeps running on the server, and the command tells you to read it later with `bulk-status`.
+A timeout is therefore not a failure and not a reason to resubmit.
+
+The 15-item practice for `keywords add` does not govern a bulk structure, which is one operation with
+per-object failure reporting rather than an all-or-nothing batch. What replaces it is the preview.
+
+### Max Conversions campaigns
+
+A campaign created with `--bidding-strategy MAX_CONVERSIONS` succeeds and then sits at
+`serving_status: NOT_RUNNING`, `serving_state_reasons: ["AUTOMATED_KEYWORDS_REQUIRED_AD_GROUP_MISSING"]`,
+until it owns an **automated ad group**. The two writes are one unit — never create the campaign alone:
+
+```sh
+adapty asa campaigns create --org <org-uuid> --name <name> --adam-id <adam-id> --country <code> --daily-budget <amount> --bidding-strategy MAX_CONVERSIONS --idempotency-key <run>-camp
+adapty asa ad-groups create --campaign <campaign-uuid> --name <name> --automated --idempotency-key <run>-ag
+```
+
+`--automated` sends `automated_keywords_required: true` and `automated_keywords_opt_in: true`, so it
+cannot be combined with `--automated-keywords`. Apple schedules and runs that ad group itself: it sends
+no `start_time` (`--start-time` alongside it exits `2`), it must stay `ENABLED` (`--status PAUSED` exits
+`2` — pause the campaign instead), and `--default-bid` becomes optional. A plain ad group does not
+satisfy the requirement, not even with `--automated-keywords`.
+
+### Line of credit organizations
+
+When an organization's `payment_model` is `LOC` it bills by line of credit, and Apple requires
+Invoicing Options on every campaign in it. Without them the campaign is created and sits at
+`serving_status: NOT_RUNNING`, `serving_state_reasons: ["MISSING_BO_OR_INVOICING_FIELDS"]`. Pass all
+five flags in one call — a partial set exits `2` before anything reaches Apple:
+
+```sh
+adapty asa campaigns create --org <org-uuid> --name <name> --adam-id <adam-id> --country <code> --daily-budget <amount> --invoice-advertiser <advertiser> --invoice-order-number <number> --invoice-contact-name <name> --invoice-contact-email <email> --invoice-billing-email <email> --idempotency-key <run>-camp
+```
+
+The same five flags on `campaigns update <id>` set the Invoicing Options on a campaign that already
+exists. They map to `loc_invoice_details`: advertiser → `client_name`, order number → `order_number`,
+contact name → `buyer_name`, contact email → `buyer_email`, billing email → `billing_contact_email`.
+Read `payment_model` from `orgs list` before a launch; do not assume `PAYG`.
 
 ## Ad groups
 
@@ -37,7 +102,7 @@ Every `list` and `get` command in this file returns metadata only, no metrics. E
 |---|---|---|
 | `asa ad-groups list` | scope filters only | Metadata only. |
 | `asa ad-groups get <id>` | positional UUID | Metadata only. |
-| `asa ad-groups create` | `--campaign`, `--name`, `--default-bid` | Apple also requires a pricing model and a start time; the CLI defaults `--pricing-model` to `CPC` (the only other option is `CPM`) and `--start-time` to today if you don't pass them. |
+| `asa ad-groups create` | `--campaign`, `--name`, `--default-bid` (optional with `--automated`); optional `--automated` | Apple also requires a pricing model and a start time; the CLI defaults `--pricing-model` to `CPC` (the only other option is `CPM`) and `--start-time` to today if you don't pass them. `--automated` creates the automated ad group a Max Conversions campaign needs — see [Max Conversions](#max-conversions-campaigns). |
 | `asa ad-groups update <id>` | at least one field | The campaign is resolved server-side and is never passed on update. |
 
 ## Ads
@@ -135,6 +200,7 @@ Every `asa` command is rate limited per company, not per token:
 | catalog lists and gets, automation reads | 120/min |
 | `keywords list` | 30/min, burst 5 per 10s, its own 2-concurrent pool, 60s server timeout |
 | all writes | 20/min |
+| template conversion (`bulk-create --from-file`) | 10/min, one conversion at a time |
 | `whoami` | 60/min |
 
 `keywords list` is the heaviest metadata read in the surface — its own budget is on top of
