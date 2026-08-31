@@ -99,7 +99,7 @@ Use `AskUserQuestion` for all three together in one call:
 
 1. **Paywall approach** — which do they want?
    - **Paywall Builder** (recommended): Adapty renders paywalls in a no-code visual editor; no paywall UI to build
-     - **iOS, Android, React Native, Flutter, and Kotlin Multiplatform:** Present this option as **Flow Builder** instead. Flow Builder is the v4 successor to Paywall Builder and also supports onboarding flows. The `paywallApproach` state value for this choice on these platforms is `flow_builder`. Note: Flow Builder requires the platform SDK **v4+**; see Stage 1 in `references/ios.md`, `references/android.md`, `references/react-native.md`, `references/flutter.md`, or `references/kmp.md`.
+     - **Every platform** — iOS, Android, React Native, Flutter, Kotlin Multiplatform, Unity, and Capacitor: Present this option as **Flow Builder** instead. Flow Builder is the v4 successor to Paywall Builder and also supports onboarding flows. The `paywallApproach` state value for this choice is `flow_builder`. Note: Flow Builder requires the platform SDK **v4+**; see Stage 1 in `references/<platform>.md` for that platform's version floor and its build requirements, which on Unity and Capacitor changed in v4 (Swift Package Manager instead of CocoaPods on iOS).
    - **Custom paywall**: User builds their own paywall UI; Adapty fetches products and handles purchases
    - **Observer mode** *(not recommended for new projects)*: Keep existing StoreKit/Billing purchase infrastructure unchanged; Adapty only tracks events. Limitations: no paywall management, no A/B testing, manual transaction reporting required. Only suitable if replacing a purchase system is not feasible.
 
@@ -121,7 +121,7 @@ Use `AskUserQuestion` for all three together in one call:
 
 **Some apps show no paywall at all.** If the app only ever *reads* entitlement state — access is bought on the user's website, granted by their backend, or sold through a channel outside the app — then none of the three approaches applies, and forcing one produces a placement and paywall nobody will ever fetch. Set `paywallApproach` to `none` in that case, skip the paywall and placement work in Phase 3 (Steps 4 and 5) and the paywall stage in Phase 4, and record in `ADAPTY_SETUP.md` that no paywall was set up and why. Everything else still applies — activation, identity, entitlement checks, and the store connections. Confirm it with the user before concluding it rather than inferring it from an absent paywall screen, since a paywall that simply has not been built yet is a different situation. On a migration run this is also a signal to read `references/migration.md` section 5 subsection 8: an app that sells outside the stores usually has a backend granting access through the source's API, and that path does not move itself.
 
-**State update:** Set `paywallApproach` to `paywall_builder` (or `flow_builder` on iOS, Android, React Native, Flutter, or Kotlin Multiplatform), `custom`, `observer`, or `none`. Set `integrations` to the array of selected integration keys (e.g. `["amplitude", "appsflyer"]`), or `[]` if none. Set `appPreference` to `existing` or `new`. Set `phasesCompleted = 2`.
+**State update:** Set `paywallApproach` to `flow_builder` (the value on every platform for the builder-rendered choice; `paywall_builder` survives only as the state value a run that predates Flow Builder support may still carry), `custom`, `observer`, or `none`. Set `integrations` to the array of selected integration keys (e.g. `["amplitude", "appsflyer"]`), or `[]` if none. Set `appPreference` to `existing` or `new`. Set `phasesCompleted = 2`.
 
 Use `AskUserQuestion` for any other quick clarifications throughout the integration (e.g., "Did the build succeed?", "What's your App Store product ID?"). Never ask for values that can be retrieved via CLI.
 
@@ -362,7 +362,7 @@ If the user says they'd rather do it manually, walk them through these five step
 | 1. Connect store | App settings → General | App Store or Google Play connected |
 | 2. Copy Public SDK key | App settings → General → API keys | The key string for `Adapty.activate()` |
 | 3. Create product(s) | Products page | At least one product created |
-| 4. Create paywall/flow + placement | Paywalls or Flows page, then Placements page | Placement ID for `getFlow()` — or `getPaywall()` on Capacitor and Unity, where it takes `getFlow`'s place. The fetch call depends on the **platform**, not on the paywall approach: a custom paywall on a `getFlow` platform still uses `getFlow`. `references/<platform>.md` Stage 2 is authoritative |
+| 4. Create paywall/flow + placement | Paywalls or Flows page, then Placements page | Placement ID for `getFlow()`. Every platform's v4 SDK fetches with `getFlow`, and the fetch call depends on the **platform SDK major version**, not on the paywall approach: a custom paywall on v4 still uses `getFlow`, and only a project pinned to a v3 SDK still uses `getPaywall`. `references/<platform>.md` Stage 2 is authoritative |
 | 5. Assign access level to product | Products page | Default `"premium"` works for most apps |
 
 Full dashboard walkthrough: `https://adapty.io/docs/quickstart.md`
@@ -470,5 +470,5 @@ Example with real values:
 ```bash
 curl -s -X POST "https://feedback-endpoint-eandreeva-twrs-projects.vercel.app/api/sdk-integration-feedback" \
   -H "Content-Type: application/json" \
-  -d '{"platform": "ios", "paywall_approach": "paywall_builder", "integrations": "amplitude, appsflyer", "phases_completed": 4, "checkpoints_passed": 5, "friction_rounds": 0, "sentiment": "positive", "rating": 4, "app_id": "a1b2c3d4", "migration_source": null, "slack_text": "[ios · paywall_builder] Phase 4 ✓ · Rating: 4/5 · Sentiment: positive · 0 friction rounds · App: a1b2c3d4"}'
+  -d '{"platform": "ios", "paywall_approach": "flow_builder", "integrations": "amplitude, appsflyer", "phases_completed": 4, "checkpoints_passed": 5, "friction_rounds": 0, "sentiment": "positive", "rating": 4, "app_id": "a1b2c3d4", "migration_source": null, "slack_text": "[ios · flow_builder] Phase 4 ✓ · Rating: 4/5 · Sentiment: positive · 0 friction rounds · App: a1b2c3d4"}'
 ```
