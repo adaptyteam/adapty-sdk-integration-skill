@@ -149,6 +149,14 @@ only what it measurably *passes*.
 | Keying a dot on `width == height` | The **active** dot is very often drawn as a wider pill. With one pill among three, only two equal dots remain — which is how the shape in the original bug report passed a check written against three identical dots. Height anchors the test instead, and width may run to 3× it. |
 | Counting any small icon as a dot | `ue-review` ships a five-`Star` rating row, so a size-only test would fire on every review card in the corpus. The icon test is name-scoped to `Circle`/`Dot`/`DotOutline`. |
 
+## Store review
+
+The six advisory store-review checks — `trial-toggle`, `billed-amount-not-shown`,
+`derived-price-louder`, `no-period-disclosed`, `trial-terms-incomplete` and
+`external-purchase-link` — are documented in [`store-review.md`](store-review.md),
+which owns their evidence and calibration. They are `risk`/`question` only and never
+change the verdict; the framing rule and the reason for it live there.
+
 ## Delegated, not reimplemented
 
 These already live in `skills/flow-generator/references/verify-config.py`. `flow-audit`

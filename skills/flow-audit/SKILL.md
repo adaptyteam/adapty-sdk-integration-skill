@@ -110,6 +110,19 @@ already owns. `audit-flow.py` is this skill's own script: the six completeness f
 (triggers, store compliance, products, variables, localization, placeholders). Both are
 stdlib-only and take the bare config, never the envelope.
 
+`audit-flow.py` also runs six **store-review** checks — `trial-toggle`,
+`billed-amount-not-shown`, `derived-price-louder`, `no-period-disclosed`,
+`trial-terms-incomplete` and `external-purchase-link` — which ask whether this paywall
+carries a shape that has actually drawn a store rejection. **Their findings are
+advisory: they never change the verdict.** They are `risk`/`question` only, they are
+printed in their own section, and **every `question` among them is excluded from the
+pending count** — `external-purchase-link` always asks one, and
+`billed-amount-not-shown` degrades to one when a catalogued product's row states no
+billing period, so "the one question" is two checks, not one. A store-review section
+can be full and the verdict can still read a clean `READY FOR PRODUCTION` — that is
+correct, not a bug. Evidence and calibration:
+`references/store-review.md`.
+
 `flows config validate` takes `--config-file`, **not** `--config` (that flag wants a
 literal JSON string and fails with `Invalid --config JSON` on a file path). It also
 rejects the envelope — pass the same `flow.config.json` extracted in Phase 3.
@@ -137,6 +150,23 @@ and neither gets its own section:
 There is no separate "gates" heading anywhere in the output. A client reading the report
 should never see the names `verify-config.py`, `flows config validate`, or
 `audit-flow.py` — only what they mean.
+
+If any store-review check fired, the report carries a `STORE REVIEW — ADVISORY` section
+with a **fixed disclaimer** printed under it. **Report it as printed.** Never paraphrase
+the disclaimer away, and never restate a store-review risk as a blocker or as a reason
+the flow is not ready — those findings are hazards, not verdicts, and the verdict line
+above them already accounts for everything that gates a release. Its checks and the
+reason they are advisory are in `references/store-review.md`.
+
+**Hand the user one link alongside that section** —
+`https://adapty.io/docs/prepare-your-app-for-store-review` — as the page to read next.
+Every finding in the section cites its own guideline number (`App Store 3.1.1`,
+`App Store 3.1.2`), which is what a developer pastes into an appeal, but a bare
+guideline number sends them to a wall of policy text; that page covers what an Adapty
+app actually has to get right. The link lives here, in the report instruction, rather
+than inside the findings' own `fix` strings on purpose: `scripts/lint-links.mjs` walks
+`.md` files only, so a URL written into `audit-flow.py` would be unlinted and would rot
+silently the next time the docs are reorganised.
 
 The report ends in `BEFORE YOU SHIP` and then, whenever at least one finding fired, a
 **`WHAT TO DO NEXT`** section — printed by `audit-flow.py --report` itself, nothing
@@ -199,6 +229,16 @@ prints raw findings, no flag prints a plain list. Exit 0 no blockers, 1 at least
 blocker, 2 usage/unreadable input. Every check is calibrated in both directions against
 `tests/fixtures/` and five real flows in `app_finance` — see the script's own docstrings
 for the traps each one closes; most were wrong on first contact with real data.
+
+`references/checks.md` — per-check evidence for every completeness check: what it looks
+at, its severity and why, its calibration in both directions, and the false-positive trap
+it closes. Read it before changing a check.
+
+`references/store-review.md` — the same contract for the six advisory store-review
+checks: the two rejection notices verbatim with their dates, the evidence tiers, the
+framing rule and why it is a rule, per-check calibration and negative-test outcomes, the
+two accepted false-negative classes, the blind spots, and what was ruled out (so nobody
+re-adds it from the guideline text).
 
 ## Boundaries
 
