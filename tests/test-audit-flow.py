@@ -86,9 +86,16 @@ check('a config path equal to the catalog path still parses (exit code)',
 # the `products` family (every bound product now reports product-not-in-catalog
 # against an empty catalog) without meaning the parser mis-resolved the positional --
 # so compare everything else, and pin the products-family fallout separately.
+# `billed-amount-not-shown` is ALSO catalog-dependent (an empty catalog means every
+# bound product is missing from it, which both removes the `period` the risk form
+# needs and puts the product in `check_price_prominence`'s `already_reported` set, so
+# the check goes SILENT rather than firing either form -- see that function), so it
+# gets the same carve-out as the products family.
 check('a config path equal to the catalog path still parses (same non-products findings)',
-      [f for f in (findings_eq or []) if f['family'] != 'products'] ==
-      [f for f in (findings or []) if f['family'] != 'products'],
+      [f for f in (findings_eq or [])
+       if f['family'] != 'products' and f['check'] != 'billed-amount-not-shown'] ==
+      [f for f in (findings or [])
+       if f['family'] != 'products' and f['check'] != 'billed-amount-not-shown'],
       'non-products findings differ when config path == catalog path')
 _n_bound = sum(
     1 for s in load()['screens']
@@ -1514,7 +1521,17 @@ check('a clean run offers no fix -- nothing to fix', 'Want me to fix' not in r2.
 # Built directly rather than relying on a fixture: a selling screen with a working
 # restorePurchases action and both legal links present (so none of those fire), but
 # no closeFlow/navigateBack anywhere in the flow, which is exactly what makes
-# `no-escape-in-flow` a QUESTION rather than a blocker.
+# `no-escape-in-flow` a QUESTION rather than a blocker. The bare "Continue" CTA states
+# no period, so `check_disclosure` (Task 4/5) also fires `no-period-disclosed` here --
+# left in place, not edited away, because it gives this fixture double duty. Before
+# Task 7 this was the only place in the suite that exercised a `question` and a
+# `risk` finding together in one report; Task 7's partition pulls `no-period-
+# disclosed` out of the severity loop entirely (it never reaches `RISKS` -- this
+# report now has no `RISKS` heading at all) and numbers it last, in its own STORE
+# REVIEW -- ADVISORY section, so what this fixture now exercises is a non-store
+# `question` alongside a store-review finding printed after it (Answer group,
+# flow-edit group, correct numbering -- see the grouping comment at the assertions
+# below).
 questions_only = {
     'screens': [{'id': 'scr_a', 'elements': {'map': {
         'el_buy': {
@@ -1596,8 +1613,11 @@ check('--report and --json together is a usage error',
 
 print('\nwhat to do next')
 # `txt` is still the multilocale fixture's report from the `report` section above,
-# run with `--status publication_failed`: 5 findings after collapse (1-2 blockers,
-# 3 a risk, 4-5 questions -- the store gap and the publication_failed status itself).
+# run with `--status publication_failed`: 6 findings after collapse (1-2 blockers,
+# 3 risk -- the untranslated-values one -- 4-5 questions -- the store gap and the
+# publication_failed status itself -- 6 the June 2026 price-prominence hazard, which
+# Task 7 moved out of RISKS into its own STORE REVIEW -- ADVISORY section, numbered
+# last and printed after LOCALE COVERAGE, before BEFORE YOU SHIP).
 check('WHAT TO DO NEXT is present', 'WHAT TO DO NEXT' in txt)
 check('WHAT TO DO NEXT comes after BEFORE YOU SHIP',
       'BEFORE YOU SHIP' in txt
@@ -1613,7 +1633,7 @@ nums = sorted(int(m) for m in re.findall(r'^(\d+)\.', txt, re.M))
 next_section = txt.split('WHAT TO DO NEXT', 1)[1].split('Want me to fix', 1)[0]
 missing = [n for n in nums if f'finding {n}' not in next_section]
 check('every numbered finding is referenced in WHAT TO DO NEXT',
-      nums == [1, 2, 3, 4, 5] and not missing, f'nums={nums} missing={missing}')
+      nums == [1, 2, 3, 4, 5, 6] and not missing, f'nums={nums} missing={missing}')
 
 check('Answer group asks about the store gap and points at its finding number',
       'Answer these' in next_section
@@ -1626,6 +1646,13 @@ check('the flow-edit group names the dead row\'s screen/element',
       'scr_paywall / el_089T' in next_section.split('Change in the Adapty')[0])
 check('the dashboard group carries the unconditional placement line',
       'Confirm the flow is attached to a placement.' in next_section)
+# `billed-amount-not-shown` is a store-review check (Task 7): it is registered in
+# `CHECK_TO_GROUP` as GROUP_FLOW like any other flow-edit fix, so it still gets a
+# line here -- but it is numbered LAST (finding 6), after every non-store finding,
+# because `render()` appends the STORE REVIEW section (and its own numbering) only
+# after the BLOCKERS/RISKS/COULD NOT CHECK loop has assigned 1-5.
+check('the flow-edit group carries the billed-amount-not-shown price risk',
+      'finding 6' in next_section.split('Change in the Adapty')[0])
 check('the optional group carries the untranslated-values risk',
       'Optional' in next_section
       and 'finding 3' in next_section.split('Optional', 1)[1])
@@ -1661,18 +1688,47 @@ check('...with the dashboard heading present only for the placement line',
       'Change in the Adapty dashboard' in rnd_next
       and 'Confirm the flow is attached to a placement.' in rnd_next)
 
-# `rq`'s questions-only config (from the READY-PENDING case above) fires exactly one
-# finding -- `no-escape-in-flow`, a verdict-conditional question -- so it must land
-# in BOTH the Answer group and its own default (flow-edit) group, per the same rule
+# `rq`'s questions-only config (from the READY-PENDING case above) now fires TWO
+# findings, not one -- the bare "Continue" CTA states no billing period, so
+# `check_disclosure` (Task 4/5) also fires `no-period-disclosed`. This is
+# deliberately NOT edited away (a prior pass rewrote the CTA to silence it; restored
+# on review, because that hid a real finding rather than testing it): the fixture now
+# gives this suite its only report combining a non-store `question` and a
+# store-review finding together -- Answer group, flow-edit group and correct
+# numbering all in one place.
+#
+# finding 1 = `no-escape-in-flow` (verdict-conditional question) -- lands in BOTH the
+# Answer group and its own default (flow-edit) group, per the same rule
 # `product-store-gap` demonstrates on the main fixture.
+# finding 2 = `no-period-disclosed` -- a store-review check (Task 7), so it is
+# partitioned out of the severity groups entirely (it never reaches RISKS, and never
+# sorts against the question by `ORDER`) and numbered last, in its own STORE REVIEW
+# -- ADVISORY section printed after LOCALE COVERAGE. It IS registered in
+# `CHECK_TO_GROUP` (Task 7 Step 6), as GROUP_FLOW like every other store-review
+# check, so it still gets a "Change in the flow" line in WHAT TO DO NEXT.
+#
+# Both land in the SAME group ("Change in the flow"), not split across a flow-edit/
+# Optional divide -- but for a different reason than before Task 7: `no-period-
+# disclosed` is mapped to GROUP_FLOW, not GROUP_OPTIONAL, so there is no `Optional`
+# heading in this report. (Store-review checks are deliberately absent from
+# `VERDICT_CONDITIONAL` and `CHECK_LABELS` too -- see Task 7's brief -- neither of
+# which this scenario exercises.)
 rq_next = rq.stdout.split('WHAT TO DO NEXT', 1)[1] if 'WHAT TO DO NEXT' in rq.stdout else ''
-check('a questions-only report still gets a WHAT TO DO NEXT section', bool(rq_next))
+check('a questions-only-plus-store-review report still gets a WHAT TO DO NEXT section',
+      bool(rq_next))
 check('...with an Answer prompt about the missing dismiss',
       'Answer these' in rq_next and 'dismiss' in rq_next.lower())
-check('...naming finding 1 in both the Answer and flow-edit groups',
+check('...naming finding 1 (no-escape-in-flow) in both the Answer and flow-edit groups',
       rq_next.count('finding 1') == 2, rq_next)
-check('...with no Optional heading (nothing risk-severity fired)',
+check('...naming finding 2 (no-period-disclosed) once, in the flow-edit group',
+      rq_next.count('finding 2') == 1
+      and 'finding 2' in rq_next.split('Change in the Adapty')[0], rq_next)
+check('...with no Optional heading -- no-period-disclosed is registered in '
+      'CHECK_TO_GROUP as GROUP_FLOW, not GROUP_OPTIONAL, and never reaches RISKS '
+      'at all (see the comment above)',
       'Optional' not in rq_next)
+check('...and the STORE REVIEW -- ADVISORY section is present for finding 2',
+      'STORE REVIEW' in rq.stdout and '2. ' in rq.stdout.split('STORE REVIEW', 1)[1])
 
 if fails:
     print(f'\n{len(fails)} FAILED')

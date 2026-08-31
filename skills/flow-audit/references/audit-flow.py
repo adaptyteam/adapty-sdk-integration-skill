@@ -898,6 +898,500 @@ def check_price_integrity(config, catalog):
     return out
 
 
+# --- STORE REVIEW (advisory). See `references/store-review.md` for the rejection
+# notices these rest on. Every check below emits `risk` or `question`, NEVER `blocker`:
+# store review is a human process that changes without announcement (the January 2026
+# toggle wave arrived with no guideline edit and no grace period), so a checker can
+# name a hazard and must not issue a verdict. `render()` prints these under their own
+# heading with a fixed disclaimer, and they are excluded from the verdict counts.
+
+# A weight is a name, not a number, and the two prominence checks need to order them.
+# Ranks are ordinal only -- nothing reads the gaps.
+WEIGHT_RANK = {'thin': 1, 'extralight': 2, 'ultralight': 2, 'light': 3, 'regular': 4,
+               'normal': 4, 'medium': 5, 'semibold': 6, 'demibold': 6, 'bold': 7,
+               'extrabold': 8, 'heavy': 8, 'black': 9}
+
+# The price variable whose value IS the amount the store charges, per catalog `period`.
+# `prod_price` is always the billed amount whatever the period. A period absent from
+# this map (quarterly, lifetime, or anything added later) has no per-unit alias, so
+# only `prod_price` counts for it -- which is correct, not a gap.
+BILLED_SUFFIX = {'weekly': 'prod_price_per_week', 'monthly': 'prod_price_per_month',
+                 'annual': 'prod_price_per_year'}
+
+
+def is_billed_suffix(suffix, period):
+    """True if this price variable renders the amount the user is actually charged."""
+    return suffix == 'prod_price' or (bool(period) and suffix == BILLED_SUFFIX.get(period))
+
+
+def resolve_font(config, element):
+    """(size, weight rank) for a text element, resolving the theme typography preset.
+
+    An element's own `font.size`/`font.weight` override the preset. A preset that names
+    no size at all resolves to 0, which makes both prominence comparisons fall through
+    rather than fire -- silence is the right direction of error for an advisory check
+    reading a theme it does not fully understand.
+    """
+    presets = {t.get('id'): (t.get('settings') or {})
+               for t in ((config.get('theme') or {}).get('typography') or [])}
+    f = (element.get('props') or {}).get('font') or {}
+    base = presets.get(f.get('preset')) or {}
+    size = f.get('size') or base.get('size') or 0
+    weight = f.get('weight') or base.get('weight') or 'regular'
+    return size, WEIGHT_RANK.get(str(weight).lower(), 0)
+
+
+def price_sites(config, screen, locale):
+    """Every price variable drawn on this screen, with the type it is set in.
+
+    Returns `[(element_id, product_id, suffix, size, weight_rank), ...]`.
+
+    SCREEN-scoped, deliberately, where `check_price_integrity` is card-scoped. The
+    June 2026 rejection is about what the user SEES -- a billed amount printed in the
+    footnote under the CTA satisfies "clearly and conspicuously displayed" just as
+    well as one printed inside the card, and a card-scoped walk would report that
+    perfectly compliant layout as a defect.
+
+    Reads `props.content` only. A price drawn from `propsByState.<state>.content` is
+    invisible here: measured, `tabs-paywall.json` binds and prices its products in a
+    shape this walk returns nothing for, so that flow gets no price findings rather
+    than wrong ones. Silence, not a guess -- recorded in `store-review.md`.
+
+    LATENT FONT MISATTRIBUTION, recorded rather than fixed because it is unreachable
+    today: this filters to `type == 'text'` and then calls `_element_blobs`, which
+    walks DESCENDANTS, while `resolve_font(config, e)` reads the font off the PARENT
+    `e`. Across all 12 tracked and raw fixtures no text element is a descendant of
+    another text element, so every blob's font really is its own element's -- checked,
+    not assumed. If a nested text element ever appears, a price drawn by the child
+    would be sized by the ancestor, and both prominence comparisons would read the
+    wrong number. Resolve the font per blob element (the `eid` `_element_blobs`
+    returns) if that day comes.
+    """
+    out = []
+    emap = (screen.get('elements') or {}).get('map') or {}
+    for eid, e in emap.items():
+        if e.get('type') != 'text':
+            continue
+        for _, blob in _element_blobs(config, screen, eid, locale):
+            size, rank = resolve_font(config, e)
+            for m in VAR_RE.finditer(blob):
+                suffix = m.group(2)
+                if suffix.startswith('prod_price'):
+                    out.append((eid, m.group(1), suffix, size, rank))
+    return out
+
+
+def check_price_prominence(config, catalog):
+    """The June 2026 rejection, in two checks.
+
+    Notice, verbatim: "The auto-renewable subscription displays the monthly calculated
+    pricing for the subscription more clearly and conspicuously than the billed
+    amount." The customer had to change every active paywall.
+
+    `billed-amount-not-shown` is the hard case: a derived per-unit figure is drawn and
+    the amount the store will actually charge appears NOWHERE on the screen.
+    `derived-price-louder` is the soft one: both are drawn, and the derived figure wins
+    on size or weight. Both are `risk`, because "conspicuously" is a judgement over
+    colour, position and container as well as type, and this reads only type.
+
+    Unknown period -> `question`. With no catalog row there is no `period`, so which
+    suffix IS the billed amount is undecidable -- and guessing produced a measured
+    false positive on `onboarding-quiz-paywall.json`, whose per-year + per-month pair
+    is the COMPLIANT shape.
+
+    But that question is SUPPRESSED whenever the missing catalog row is already
+    reported: its entire content would be "I could not find that product in the
+    catalog", which the report has said once already, and this check would repeat it
+    once per (screen, product). Measured on `onboarding-quiz-paywall.json`: two
+    `product-not-in-catalog` blockers plus two advisory questions saying the same
+    thing; with `--catalog` omitted, one `catalog-not-fetched` question plus one
+    advisory question per price site. This file establishes the pattern twice already
+    -- `check_products_catalog` returns after a single `catalog-not-fetched`, and
+    `check_period_claim` returns on a falsy catalog. The question survives only for
+    the two cases nothing else covers, and they get DIFFERENT wording because a
+    single sentence was wrong for one of them: a product that IS in the catalog whose
+    row carries no `period`, and a product reached only through a price variable --
+    absent from the catalog and bound nowhere, so `check_products_catalog` never saw
+    it either, since that check walks `bound_products`.
+    """
+    out = []
+    by_id = {p['id']: p for p in (catalog or [])}
+    # None when there is no catalog at all (`catalog-not-fetched` covers the whole
+    # flow with one question); otherwise every BOUND product missing from the catalog,
+    # each of which is already a `product-not-in-catalog` blocker. A price variable
+    # naming a product that is bound NOWHERE is in neither set, so it keeps its
+    # question -- nothing else in the report mentions it.
+    already_reported = (None if catalog is None
+                        else {pid for _, _, pid in bound_products(config)
+                              if pid not in by_id})
+    dl = default_locale(config)
+    for s in config.get('screens') or []:
+        sites = price_sites(config, s, dl)
+        if not sites:
+            continue
+        for pid in sorted({p for _, p, _, _, _ in sites}):
+            rows = [r for r in sites if r[1] == pid]
+            row = by_id.get(pid)
+            period = (row or {}).get('period')
+            title = (row or {}).get('title') or pid
+            billed = [r for r in rows if is_billed_suffix(r[2], period)]
+            derived = [r for r in rows if r[2].startswith('prod_price_per')
+                       and not is_billed_suffix(r[2], period)]
+            if not derived:
+                continue
+            if not billed:
+                if period:
+                    out.append(finding(
+                        'risk', 'compliance', 'billed-amount-not-shown',
+                        f'this screen shows a per-unit price for {title} but never the '
+                        f'amount the store actually charges. App Review rejected an '
+                        f'Adapty customer in June 2026 for exactly this, citing App Store 3.1.2(c): '
+                        f'"the subscription displays the monthly calculated pricing more '
+                        f'clearly and conspicuously than the billed amount"',
+                        f'Show the billed {period} amount on this screen too, at least as '
+                        f'prominently as the per-unit figure. Keeping the per-unit figure '
+                        f'is fine — it carries the savings framing — as long as the billed '
+                        f'amount is the louder of the two. Google Play requires the '
+                        f'price a user will actually be charged to be stated accurately '
+                        f'and completely, so this is a Play hazard as well as an App '
+                        f'Store one.',
+                        s['id'], rows[0][0]))
+                elif already_reported is None or pid in already_reported:
+                    # Already reported, once, by `check_products_catalog` -- see the
+                    # docstring. Silence here, not a second copy of that sentence.
+                    pass
+                elif row is None:
+                    # No catalog row AND not a bound product, so `check_products_catalog`
+                    # never saw it either -- that check walks `bound_products`, and this
+                    # id reaches us only through a price variable. Nothing else in the
+                    # report mentions it, so the question stays; but it must not claim a
+                    # catalog entry that does not exist, which is what the single earlier
+                    # wording did. `title` is the bare id here, by construction.
+                    out.append(finding(
+                        'question', 'compliance', 'billed-amount-not-shown',
+                        f'this screen shows a per-unit price for product {pid}, which is '
+                        f'not in the catalog and is not bound anywhere in this flow, so I '
+                        f'cannot tell whether the billed amount is shown anywhere',
+                        'Check that this price variable points at a product you actually '
+                        'sell — an id that is in neither the catalog nor the flow usually '
+                        'means the variable was left behind by an edit. If it is right, '
+                        'confirm the amount the store charges is on this screen: Apple '
+                        'rejects a paywall showing only a calculated per-month figure '
+                        '(App Store 3.1.2), and Google Play requires the price a user will '
+                        'actually be charged to be accurate and complete.',
+                        s['id'], rows[0][0]))
+                else:
+                    out.append(finding(
+                        'question', 'compliance', 'billed-amount-not-shown',
+                        f'this screen shows a per-unit price for {title}, whose catalog '
+                        f'entry states no billing period, so I cannot tell whether the '
+                        f'billed amount is shown anywhere',
+                        'Confirm the amount the store charges is on this screen. Apple '
+                        'rejects a paywall that shows only a calculated per-month figure '
+                        '(App Store 3.1.2). Google Play requires the price a user will '
+                        'actually be charged to be accurate and complete too.',
+                        s['id'], rows[0][0]))
+                continue
+            bmax = max((r[3], r[4]) for r in billed)
+            dmax = max((r[3], r[4]) for r in derived)
+            if dmax > bmax:
+                # Name the dimension that actually differs. `dmax > bmax` compares
+                # (size, weight rank) TUPLES, so weight only breaks a tie on equal
+                # size -- and the earlier single wording ("set larger or heavier
+                # (13pt) than the billed amount (13pt)") printed the same number
+                # twice and never mentioned weight on exactly that path. The weight
+                # NAME is not recoverable here: `WEIGHT_RANK` is many-to-one
+                # (regular/normal both rank 4), so the size-equal branch names the
+                # dimension and leaves the value to the config.
+                if dmax[0] > bmax[0]:
+                    louder = (f'is set larger than the billed amount '
+                              f'({dmax[0]}pt against {bmax[0]}pt)')
+                else:
+                    louder = (f'is set in a heavier weight than the billed amount, '
+                              f'both at {dmax[0]}pt')
+                out.append(finding(
+                    'risk', 'compliance', 'derived-price-louder',
+                    f'the per-unit price for {title} {louder}. App Store 3.1.2(c) '
+                    f'asks for the billed amount to be the more conspicuous of the two, '
+                    f'and has rejected on it',
+                    'Make the billed amount the heavier of the two — the fix that '
+                    'passed for one Adapty customer was billed amount bold at 14px with '
+                    'the per-month figure at 12px. Google Play requires the price a '
+                    'user will actually be charged to be stated accurately and '
+                    'completely, so an Android-only app has the same hazard.',
+                    s['id'], derived[0][0]))
+    return out
+
+
+def _switch_shaped(props):
+    """A pill: a fixed box wider than tall, fully rounded on all four corners.
+
+    Measured against the corpus: exactly ONE element in 12 real exports matches --
+    a 50x30 stack on `onboarding-multilocale.json`'s `scr_notify`, which is a
+    notifications opt-in. So shape alone is nearly specific enough and is still not
+    used alone; see `check_trial_toggle` for the second and third signals.
+
+    Shape only -- deliberately blind to `propsByState`. A pill can also be a static
+    "3-day trial" badge chip on a plan card, which is the check's own recommended fix;
+    `check_trial_toggle` requires the state-dependence separately, on the same element,
+    so a badge (shape but no `propsByState.selected`) never reaches this function's
+    caller alone.
+    """
+    w, h = (props.get('width') or {}), (props.get('height') or {})
+    if w.get('type') != 'fixed' or h.get('type') != 'fixed':
+        return False
+    width, height = w.get('value') or 0, h.get('value') or 0
+    if not (width > height > 0):
+        return False
+    br = props.get('borderRadius') or {}
+    return all((br.get(k) or 0) >= height / 2 for k in ('tl', 'tr', 'bl', 'br'))
+
+
+def check_trial_toggle(config, stores):
+    """Apple began rejecting the free-trial on/off switch in January 2026 under App
+    Store 3.1.2.
+
+    No guideline edit, no documentation change, no grace period -- apps just started
+    coming back rejected. Adapty warned roughly twenty customer teams on 2026-02-11 and
+    several replied that it had already happened to them. The objection: the trial's
+    terms are not visible unless the user touches the switch, so a user who never
+    touches it is never shown them.
+
+    iOS only -- Android and web implementations were unaffected -- so an app that does
+    not ship on iOS gets nothing. Unknown stores still print, worded as iOS.
+
+    THREE signals, all required, because any pair alone false-fires. Shape alone hits
+    the corpus's one notifications toggle; trial copy alone hits every paywall that
+    mentions a trial, which is most of them; shape-plus-copy alone also hits a static
+    "3-day trial" badge chip on a plan card -- the check's own recommended remediation
+    -- because a badge can be pill-shaped and say "trial" without being a switch. The
+    third signal, state-dependence (`propsByState.selected` on the SAME pill-shaped
+    element), is what a switch has and a badge does not: the catalog's own
+    `trial-toggle` template's pill child moves its knob (`layout.alignH`) between
+    states, while a static badge carries no `propsByState` at all.
+    """
+    if stores is not None and 'ios' not in stores:
+        return []
+    out = []
+    dl = default_locale(config)
+    selling = selling_screens(config)
+    for s in config.get('screens') or []:
+        if s['id'] not in selling:
+            continue
+        els = s.get('elements') or {}
+        emap, hier = els.get('map') or {}, els.get('hierarchy') or {}
+        for eid, e in emap.items():
+            if not (e.get('props') or {}).get('groupId'):
+                continue
+            node = _find_node(hier, eid)
+            kids = _descendants(node) if node else [eid]
+            if not any(_switch_shaped((emap.get(k) or {}).get('props') or {})
+                       and ((emap.get(k) or {}).get('propsByState') or {}).get('selected')
+                       for k in kids):
+                continue
+            copytext = ' '.join(flat_text(((emap.get(k) or {}).get('props') or {})
+                                          .get('content'), dl) for k in kids)
+            if not TRIAL_RE.search(copytext):
+                continue
+            out.append(finding(
+                'risk', 'compliance', 'trial-toggle',
+                'this looks like a free-trial toggle — a switch the user has to flip to '
+                'see the trial. Apple began rejecting this pattern in January 2026 under '
+                'App Store 3.1.2, with no announcement and no grace period, and several '
+                'Adapty customers were caught by it',
+                'Show the trial terms without requiring a tap: a side-by-side plan '
+                'comparison with the trial badged on one plan, or a trial timeline that '
+                'states when the charge happens. If you '
+                'keep the toggle, expect the next iOS submission to draw attention.',
+                s['id'], eid))
+    return out
+
+
+def check_disclosure(config, catalog):
+    """The Schedule 2 disclosure floor, on the screen itself.
+
+    Apple's App Store 3.1.2 rejection boilerplate, as reviewers send it: "Apps offering
+    auto-renewable subscriptions must include all of the following required information
+    in the binary: Title of auto-renewing subscription; Length of subscription; Price of
+    subscription, and price per unit if appropriate; Functional links to the privacy
+    policy and Terms of Use (EULA)." Terms and privacy are already covered by
+    `no-terms-link`/`no-privacy-link`. This function covers the other two: LENGTH
+    (`no-period-disclosed`) and what happens when a free trial ends
+    (`trial-terms-incomplete`).
+
+    Screen-scoped and reported ONCE per screen. The period may legitimately be stated
+    outside the card -- "Billed yearly" under the CTA discloses it for every card above
+    -- so a card-scoped test would flag a compliant layout, and one row per card would
+    bury four identical findings in the report.
+
+    Reuses `period_terms`, so it inherits that function's billing-context guard, which
+    took four measured false positives to get right ("Weekly progress reports" read as a
+    weekly billing claim). Inverted here for `no-period-disclosed`: the check is that NO
+    period term appears anywhere on the screen.
+
+    Both checks read the same per-screen `blob`, so a screen with neither a stated
+    period nor stated trial terms produces both findings -- deliberately: they are two
+    separate disclosures and a user reading the report should see both gaps, not just
+    whichever the code happened to check first.
+    """
+    out = []
+    dl = default_locale(config)
+    selling = selling_screens(config)
+    lifetime_only = {p['id'] for p in (catalog or [])
+                     if p.get('period') in ('lifetime', None)}
+    for s in config.get('screens') or []:
+        if s['id'] not in selling:
+            continue
+        bound = {pid for sid, _, pid in bound_products(config) if sid == s['id']}
+        # A screen selling only one-time purchases has no billing period to disclose.
+        if bound and bound <= lifetime_only:
+            continue
+        emap = (s.get('elements') or {}).get('map') or {}
+        blob = ' | '.join(
+            flat_text((e.get('props') or {}).get('content'), dl)
+            for e in emap.values() if e.get('type') == 'text')
+        if not period_terms(blob):
+            out.append(finding(
+                # Says only what the check knows: no period term appears in this
+                # screen's copy. It must NOT assert that a price is shown -- the one
+                # real export this fires on, `tests/fixtures/tabs-paywall.json`, has
+                # ZERO price variables in the whole document (recorded in
+                # `store-review.md`), so the earlier wording ("a user sees a price
+                # and a button") asserted a fact its only real firing case
+                # contradicts, and its fix pointed at a price that is not there.
+                'risk', 'compliance', 'no-period-disclosed',
+                'nothing on this selling screen states how often the subscription '
+                'bills — no billing period appears anywhere in its copy, so a user '
+                'is asked to subscribe without being told the frequency',
+                'Put the billing period in this screen\'s copy — "Billed yearly" '
+                'under the button, or a "/year" on the plan it belongs to. App Store '
+                '3.1.2 lists Length of subscription among the four disclosures '
+                'required in the binary (Schedule 2, cited by every App Store 3.1.2 '
+                'rejection); '
+                'Google Play requires the billing frequency too.',
+                s['id']))
+
+        # trial-terms-incomplete. Google Play, verbatim: developers must "clearly and
+        # accurately describe the terms of your offer, including the duration, pricing,
+        # and description of accessible content or services" and explain "the paid
+        # subscription cost after the offer ends". Apple rejects the same omission under
+        # App Store 3.1.2. The test is narrow on purpose: the copy PROMISES a trial and the screen
+        # says nothing anywhere about a charge following it. THREE satisfiers -- a
+        # currency amount, a billing verb, or a period term -- a deliberately generous
+        # bar, because this check reads copy and copy is where false positives are
+        # cheapest to create and most expensive to keep.
+        #
+        # A fourth, `VAR_RE.search(blob)` (a price VARIABLE), was here and was DEAD
+        # CODE: `blob` comes from `flat_text`, which renders a variable node as '' by
+        # design (see its docstring), so no variable id ever reaches this string and
+        # the branch could not match. Removing it reddened nothing. Do not re-add it --
+        # this file's own history is full of assertions that shipped unable to fail,
+        # and a satisfier that cannot fire is a fourth one only on paper. If a
+        # variable-backed price should count here, `after` has to read
+        # `_element_blobs`, which renders variable ids inline, not `flat_text`.
+        if not TRIAL_RE.search(blob):
+            continue
+        after = (MONEY_RE.search(blob)
+                 or BILLING_VERB_RE.search(blob) or period_terms(blob))
+        if after:
+            continue
+        out.append(finding(
+            'risk', 'compliance', 'trial-terms-incomplete',
+            'this screen offers a free trial but never says what happens when it ends '
+            '— no price, no billing period, nothing about renewal',
+            'State the charge that follows the trial next to the offer: "Free for 7 '
+            'days, then $79.99/year". Google Play requires the cost after the offer '
+            'ends and how to cancel; Apple rejects the same omission under App Store '
+            '3.1.2.',
+            s['id']))
+    return out
+
+
+# A url that looks like it takes the user somewhere to pay. Matched as exact tokens,
+# never substrings -- `_url_tokens`' own docstring records why ('tos' matches inside
+# 'photos'). `subscribe` is deliberately absent: a marketing page at /subscribe is an
+# ordinary content-gating link, not evidence of a purchase flow, so including it would
+# manufacture a question on almost every subscription app's marketing site.
+#
+# The vocabulary names a PAYMENT MECHANISM, never a PRODUCT SURFACE -- that line is
+# what keeps this list from regrowing the words dropped below. `billing`, `upgrade`
+# and `paywall` were all tried and dropped on real-world false positives: `billing`
+# fires on `/support/billing`, `/account/billing-history`, `/help/manage-billing` --
+# and `billing` is the decisive case, because Google Play *requires* an accessible
+# subscription-management path, plausibly living at exactly that kind of url, so the
+# token would fire on a link another store demands the app carry. `upgrade` fires on
+# `/why-upgrade`, `/upgrade-info`, `/compare-plans-upgrade`; `paywall` fires on an
+# attribution deep link routing back into the app's OWN paywall
+# (`yourapp.onelink.me/xyz?af_dp=yourapp://paywall`). All three name an in-app surface
+# or a management/marketing path, never a payment mechanism. `paddle` stays despite its
+# own narrow false positive (`/blog/paddle-boarding-tips`) because, unlike the three
+# dropped words, it names a real web-checkout processor and nothing else plausible
+# collides with it as often.
+PURCHASE_URL_WORDS = ('checkout', 'pay', 'payment', 'stripe', 'paddle',
+                      'purchase', 'buy')
+
+
+def _screen_openurls(screen, locale):
+    """Every openUrl target on this one screen, flattened to plain text.
+
+    KNOWN DUPLICATION, recorded on purpose rather than refactored: this is
+    `openurl_urls`'s body with the scope narrowed from the whole flow to one screen,
+    and the two were deliberately left as twins. `openurl_urls` feeds two shipped
+    BLOCKERS (`no-terms-link`, `no-privacy-link`); this feeds one advisory question
+    (`external-purchase-link`). Unifying them would put a live blocker's url handling
+    at risk to save twelve lines. **A future fix to how urls are read must land in
+    BOTH functions** -- that is the whole reason this note exists, because a fix
+    applied to one twin and not the other is exactly the kind of defect that gets
+    rediscovered as a bug months later.
+    """
+    out = []
+    for eid, e in ((screen.get('elements') or {}).get('map') or {}).items():
+        for _, a in actions_of(e):
+            if a.get('type') != 'openUrl':
+                continue
+            url = (a.get('payload') or {}).get('url')
+            text = url if isinstance(url, str) else flat_text(url, locale)
+            if text:
+                out.append(text)
+    return out
+
+
+def check_external_purchase(config, stores):
+    """App Store 3.1.1: an app may not steer users to a purchase mechanism other than
+    in-app purchase, except on the US storefront or under an entitlement.
+
+    A `question`, and it stays one however suspicious the url looks. The audit cannot
+    see which storefronts the app ships to, and cannot know whether the developer holds
+    the External Link Account Entitlement -- both of which make the same link legal. It
+    is worth asking anyway because Adapty ships web paywalls, so this is a real
+    foot-gun rather than a hypothetical.
+    """
+    if stores is not None and 'ios' not in stores:
+        return []
+    out = []
+    dl = default_locale(config)
+    selling = selling_screens(config)
+    for s in config.get('screens') or []:
+        if s['id'] not in selling:
+            continue
+        hits = [u for u in _screen_openurls(s, dl)
+                if set(PURCHASE_URL_WORDS) & _url_tokens(u)]
+        if not hits:
+            continue
+        out.append(finding(
+            'question', 'compliance', 'external-purchase-link',
+            'this selling screen opens a url that looks like a payment page: '
+            + ', '.join(sorted(set(hits)))
+            + '. App Store 3.1.1 forbids steering users to a purchase method other '
+              'than in-app purchase, outside the US storefront',
+            'If this link takes users somewhere to pay and you ship outside the US '
+            'storefront without the External Link Account Entitlement, remove it — this '
+            'is a reliable rejection. If it opens a help page or your US-storefront '
+            'build only, no action needed.',
+            s['id']))
+    return out
+
+
 # A localizable field carrying only a `variable`/`token`/`image` node has no literal
 # text by construction -- a price element's whole content IS a `variable` node. A
 # literal-text-only presence test reports every price on every paywall as empty, which
@@ -1249,6 +1743,10 @@ def audit(config, catalog=None, stores=None):
     findings += check_products_catalog(config, catalog, stores)
     findings += check_period_claim(config, catalog)
     findings += check_price_integrity(config, catalog)
+    findings += check_price_prominence(config, catalog)
+    findings += check_trial_toggle(config, stores)
+    findings += check_disclosure(config, catalog)
+    findings += check_external_purchase(config, stores)
     findings += check_localization(config)
     findings += check_placeholders(config)
     findings += check_fake_carousel(config)
@@ -1284,6 +1782,30 @@ def check_meta(meta):
 
 ORDER = {'blocker': 0, 'risk': 1, 'question': 2}
 HEADINGS = {'blocker': 'BLOCKERS', 'risk': 'RISKS', 'question': 'COULD NOT CHECK'}
+
+# Store-review checks are partitioned out of the severity groups and printed under
+# their own heading. They are advisory: they never count toward the verdict, never
+# reach `VERDICT_CONDITIONAL`, and never route to GROUP_ANSWER (whose heading reads
+# "they change the verdict" — by construction these do not).
+STORE_REVIEW_CHECKS = frozenset({
+    'trial-toggle', 'billed-amount-not-shown', 'derived-price-louder',
+    'no-period-disclosed', 'trial-terms-incomplete', 'external-purchase-link',
+    # The report-only merge of the two `check_disclosure` halves (see
+    # `_merge_disclosure`). It must be listed here or `render()`'s partition would
+    # route it into RISKS instead of the advisory section.
+    'trial-terms-incomplete-merged',
+})
+
+# Verbatim. Both directions are stated on purpose: a clean section is not a pass, and a
+# finding is not a rejection. An earlier draft of this feature gave the verdict line a
+# store dimension ("1 would fail App Store review"); that is exactly the certificate
+# this section must not issue, and it was dropped.
+STORE_REVIEW_DISCLAIMER = (
+    'These are rejection hazards, not verdicts. App Review and Play review are human, '
+    'inconsistent between submissions, and change without notice — the toggle-paywall '
+    'wave arrived with no guideline edit and no warning. A clean store-review section '
+    'is not a guarantee of approval, and a finding here is not a guarantee of '
+    'rejection. Nothing in this section blocks the verdict above.')
 
 # A short, human label per check -- a few words, no colon-clauses -- for the verdict
 # line ONLY. The full message stays in the finding row below it; the verdict line is
@@ -1410,6 +1932,30 @@ ACTION_PHRASE = {
 }
 WORD_NUM = {1: 'one', 2: 'two', 3: 'three'}
 DEAD_AFFORDANCE_RE = re.compile(r'^copy promises (.+?) but neither the element')
+
+# The second report-only collapse: the two `check_disclosure` halves, when both fire
+# on the SAME screen. Ordered absorber-last, mirroring `MERGE_ORDER`'s convention of
+# naming the checks that get consumed; `_collapse_for_report` requires every name
+# here to be present on one screen before it merges anything.
+DISCLOSURE_MERGE = ('no-period-disclosed', 'trial-terms-incomplete')
+
+
+def _merge_disclosure(screen):
+    """One row for a screen that discloses neither the billing period nor what
+    happens after the trial. See `_collapse_for_report`'s second pass for why
+    `trial-terms-incomplete` is the absorber.
+    """
+    return finding(
+        'risk', 'compliance', 'trial-terms-incomplete-merged',
+        'this selling screen offers a free trial and discloses neither of the two '
+        'things a store requires alongside it: nothing states how often the '
+        'subscription bills, and nothing states what happens when the trial ends',
+        'State both next to the offer, in one line: "Free for 7 days, then '
+        '$79.99/year". App Store 3.1.2 lists Length of subscription among the four '
+        'disclosures required in the binary (Schedule 2, cited by every App Store '
+        '3.1.2 rejection); Google Play requires the billing frequency, the cost after the '
+        'offer ends, and how to cancel.',
+        screen)
 
 
 def _dead_raw_text(dead):
@@ -1617,6 +2163,32 @@ def _collapse_for_report(findings, config):
         for idx, _f, _named in members[1:]:
             consumed.add(idx)
 
+    # --- Second collapse, same mechanism, different pair: the two `check_disclosure`
+    # halves on ONE screen. `trial-terms-incomplete` absorbs `no-period-disclosed`,
+    # never the reverse, because its claim is the superset -- its own message already
+    # says "no price, NO BILLING PERIOD, nothing about renewal", and its fix ("Free
+    # for 7 days, then $79.99/year") states the billing period the other finding asks
+    # for. Two rows for one defect, anchored to the same screen, with the second
+    # restating and satisfying the first, is a report arguing with itself.
+    #
+    # Report-only, exactly like the dead-affordance collapse above: both checks keep
+    # firing independently, so `--json` and `audit()` still carry both (which is what
+    # `tests/test-store-review.py` calibrates against, and what keeps a screen that
+    # fires only ONE of them reporting its own row unchanged).
+    by_screen = {}
+    for i, f in enumerate(findings):
+        if i in consumed or f['check'] not in DISCLOSURE_MERGE:
+            continue
+        by_screen.setdefault(f['screen'], {}).setdefault(f['check'], i)
+    for sid, pos in by_screen.items():
+        if len(pos) < len(DISCLOSURE_MERGE):
+            continue
+        first = min(pos.values())
+        for i in pos.values():
+            if i != first:
+                consumed.add(i)
+        replacements[first] = _merge_disclosure(sid)
+
     return [replacements.get(i, f) for i, f in enumerate(findings) if i not in consumed]
 
 
@@ -1667,6 +2239,13 @@ CHECK_TO_GROUP = {
     'variable-no-consumer': GROUP_FLOW,
     'flow-untitled': GROUP_DASHBOARD,
     'publication-failed': GROUP_DASHBOARD,
+    'trial-toggle': GROUP_FLOW,
+    'billed-amount-not-shown': GROUP_FLOW,
+    'derived-price-louder': GROUP_FLOW,
+    'no-period-disclosed': GROUP_FLOW,
+    'trial-terms-incomplete': GROUP_FLOW,
+    'trial-terms-incomplete-merged': GROUP_FLOW,
+    'external-purchase-link': GROUP_FLOW,
 }
 
 # Checks whose severity for THIS instance is a question that an answer could turn
@@ -1719,7 +2298,7 @@ def _next_step_line(group, f, n):
     return f"{f['fix'].rstrip('.')} ({ref})"
 
 
-def render(findings, config, meta=None):
+def render(findings, config, meta=None, stores=None):
     """The user-facing report. See the design spec's `## What the skill prints` for
     the exact shape this reproduces: a verdict first line that is the answer on its
     own, BLOCKERS/RISKS/COULD NOT CHECK numbered continuously, a LOCALE COVERAGE
@@ -1733,9 +2312,20 @@ def render(findings, config, meta=None):
     Deliberately prints NO gate-status section: a passing `verify-config.py` or
     `flows config validate` run tells a client nothing, and a failing one is already
     reported as a blocker above, in the user's own terms.
+
+    `stores` is the same set `main()` builds from `--stores`, or None when unknown, and
+    it exists ONLY so BEFORE YOU SHIP can drop a reminder that cannot apply. The
+    reminders are neither checks nor findings -- they are fixed report text -- so the
+    spec's "store scoping lives in the check, not on the finding" rule gives them no
+    route, and they had none: measured, `--stores android` printed both App Store
+    Connect bullets and `--stores ios` printed the Google Play one. Default None keeps
+    today's behaviour whenever the stores are unknown, which is the same direction of
+    error `check_trial_toggle` and `check_external_purchase` already take.
     """
     meta = meta or {}
     findings = _collapse_for_report(findings, config)
+    store = [f for f in findings if f['check'] in STORE_REVIEW_CHECKS]
+    findings = [f for f in findings if f['check'] not in STORE_REVIEW_CHECKS]
     lines = []
     name = meta.get('name') or 'this flow'
     status = meta.get('status')
@@ -1830,10 +2420,46 @@ def render(findings, config, meta=None):
             lines.append('  ' + ' '.join(parts))
             lines.append('')
 
+    if store:
+        lines += ['', 'STORE REVIEW — ADVISORY', '']
+        for f in store:
+            n += 1
+            numbered.append((n, f))
+            where = ' / '.join(x for x in (f['screen'], f['element']) if x)
+            lines.append(f'{n}. {f["message"]}')
+            if where:
+                lines.append(f'   {where}')
+            lines.append(f'   Fix: {f["fix"]}')
+            lines.append('')
+        lines += ['  ' + STORE_REVIEW_DISCLAIMER, '']
+
+    # BEFORE YOU SHIP. Every bullet here is unverifiable from a config and a catalog
+    # by design -- but "unverifiable" is not the same as "always relevant", and three
+    # of the original four printed on every audit forever, including on a flow that
+    # sells nothing (measured on `tests/fixtures/vpn-timer-draft.json`: three screens,
+    # no bound products, zero findings, and the report grew 12 -> 21 lines, entirely
+    # boilerplate telling a non-selling flow to get its products approved).
+    #
+    # A fourth bullet was CUT rather than gated: "a first-time personal developer
+    # account needs 12 testers over 14 consecutive days". It is about the developer
+    # ACCOUNT, not the flow, the app or the store; it applies only to a first-time
+    # PERSONAL account, which excludes nearly every Adapty customer; and a solo
+    # developer meets it in the Play Console anyway. Do not re-add it.
     lines += ['', 'BEFORE YOU SHIP', '',
               '  · Confirm this flow is attached to a placement. The CLI cannot see the',
               '    flow→placement link, so no audit can tell you whether your app can',
-              '    reach this flow at all.', '']
+              '    reach this flow at all.']
+    if bound_products(config):
+        lines += ['  · Confirm your products are approved in App Store Connect before you',
+                  '    submit. If they are not, the reviewer opens this paywall and sees',
+                  '    empty prices, and the build comes back rejected as incomplete. This',
+                  '    is invisible to both the flow config and the Adapty catalog.']
+    if stores is None or 'ios' in stores:
+        lines += ['  · Confirm your Terms of Use (EULA) and privacy policy are linked in the',
+                  '    App Store Connect metadata as well as in the app. Half of Apple\'s',
+                  '    App Store 3.1.2 rejections are about the metadata fields, not the',
+                  '    screen.']
+    lines.append('')
 
     # WHAT TO DO NEXT: every finding is already numbered above (in `numbered`); this
     # section never restates a finding's own text, only points back at its number.
@@ -1946,7 +2572,7 @@ def main(argv):
             else None}
     findings += check_meta(meta)
     if flags.get('--report'):
-        print(render(findings, config, meta))
+        print(render(findings, config, meta, stores))
     elif flags.get('--json'):
         print(json.dumps({'findings': findings}, indent=1))
     else:
