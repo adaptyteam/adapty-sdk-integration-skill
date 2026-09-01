@@ -142,14 +142,28 @@ A clean `validate` is a floor, not a proof. Every one of these passed with `vali
 | An element with no `states` key — a config the builder cannot open | `references/verify-config.py` |
 | A missing `defaultLocale` | nothing — and the schema is wrong to call it required |
 | A hyphen in an element id, which breaks the generated runtime script | nothing; renders as a black screen on device |
+| A product id that does not exist in this app | nothing; no price on device and the purchase fails |
 | Advisory warnings about silently dropped props (`verticalAlign` and friends) | nothing reachable from the CLI |
 
-The last two are the reason the phase-5 device-preview callout stays load-bearing. In particular:
+These are the reason the phase-5 device-preview callout stays load-bearing. In particular:
 
 - **No warnings surface here.** The transform service emits `severity: warning` issues for
   properties it drops silently — the flow publishes green and the property is simply absent on
   device. A successful `validate` returned `issues: []`, not a warning list, so this channel is
   **not** reachable through the CLI. A clean validate says nothing about what will actually draw.
+- **Nothing here resolves products against the app's catalog.** This follows from the trap
+  already noted above — the flow id is an existence and ownership check only, so `validate`
+  reasons about the document in front of it and never asks the account what exists. Measured
+  against production: a paywall binding **three** product ids, every one of which returns
+  `adapty_product_does_not_exist`, validated `valid: true, issues: []`. The document was
+  perfectly self-consistent — `_meta.screens` declared all three with plausible
+  `flowProductId`s — and every price would have been blank on device with the purchase
+  failing. The same property is what lets you validate any config against any flow you own,
+  so it is one property with two faces, not a bug. **`valid: true` says nothing about whether
+  the products exist.** The authoring path is normally safe because products come from
+  `products list`; the exposed path is a flow **grafted from another app**, where the UUIDs
+  travel and the products do not (see [snippets.md](snippets.md)).
+
 - **Publishable is not the same as it published.** A flow sitting in `publication_failed`
   validated clean. Treat `valid: true` as "the transform service has no blocking objection to this
   document", never as "publishing will succeed" and never as "the screen is right".

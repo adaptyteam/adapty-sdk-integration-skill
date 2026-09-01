@@ -199,6 +199,21 @@ preview works. Nothing was broken; the declaration simply did not exist yet. An 
 does the same thing (status → `dirty`), so a publish is not required — but neither is needed at all
 if you declare the products yourself, as above.
 
+> **`unknown_product_id` has a second cause, and that one does not self-heal.** Everything above
+> is the benign case: the product exists and the declaration has not been written yet, so
+> publishing or a builder edit fixes it. The same code also fires when the product id **does not
+> exist in this app at all** — the usual route being a flow grafted from another app, where the
+> UUIDs travel and the products do not. No amount of publishing repairs that; the binding has to
+> be changed. Tell the two apart before reassuring anyone, with one call per id:
+>
+> ```bash
+> $ADAPTY products get <product-uuid> --app "$APP" --json
+> # adapty_product_does_not_exist -> the binding is broken, publishing will not fix it
+> ```
+>
+> `flows config validate` cannot tell you: it returns `valid: true` for a paywall whose every
+> product is a ghost (measured — see [validate.md](validate.md)).
+
 The reason is that **device preview is a stricter gate than `config update`.** The write endpoint
 does not run the transform service, so a config with no declaration saves cleanly. Device preview
 and publish both do run it, and it treats a missing `flowProductId` as an error rather than a
