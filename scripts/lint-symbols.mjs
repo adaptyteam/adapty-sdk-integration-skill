@@ -255,7 +255,7 @@ for (const reference of references) {
 // silently-unchecked symbol is exactly what this lint exists to prevent. So check the claim
 // instead of believing it. Requires a capital A, which is what separates an SDK symbol
 // (`AdaptyPaywall`, `Adapty.getPaywall`) from the domain (`adapty.io`) and the CLI (`adapty asa`).
-const OTHER_SKILLS = ['ads-manager', 'flow-audit', 'flow-generator', 'paywall-teardown']
+const OTHER_SKILLS = ['ads-manager', 'flow-audit', 'flow-generator', 'onboarding-teardown', 'paywall-teardown']
 const SDK_SYMBOL = /\bAdapty[A-Z][A-Za-z0-9_]+|\bAdapty\.[a-z][A-Za-z0-9_]*/g
 const SKILLS_ROOT = join(SCRIPTS_DIR, '..', 'skills')
 

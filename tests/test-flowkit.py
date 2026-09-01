@@ -313,13 +313,19 @@ def main():
     check('an unknown timer unit raises rather than emitting a bare token',
           raises(lambda: fk.timer_digits(units=('hours', 'mins'))))
 
-    delay = fk.timer(actions=[{'id': 'act_next', 'type': 'navigate',
+    # SUPERSEDED 2026-09-01: this block used to build the delay timer CHILDLESS and assert
+    # that "a delay timer with no digit child draws nothing, which is the invisible-delay
+    # shape". Device-measured over three trips, that shape does not fire at all — see the
+    # guard below and CLAUDE.md finding 29. The timer-end assertion survives; the
+    # invisible-delay one was encoding the wrong claim and is replaced by its opposite.
+    delay = fk.timer([fk.timer_digits(units=('seconds',))],
+                     actions=[{'id': 'act_next', 'type': 'navigate',
                                'payload': {'type': 'screen', 'screen': 'scr_next'}}],
                      seconds=3)
     check("a timer's own interaction fires on timer-end, not tap",
           [i['trigger'] for i in delay.get('interactions', [])] == ['timer-end'], str(delay))
-    check('a delay timer with no digit child draws nothing, which is the invisible-delay shape',
-          not delay.get('_children'))
+    check('a firing delay timer carries a child, because a childless one does not advance',
+          len(delay.get('_children') or []) == 1)
     check('duration carries all four units',
           fk.timer(days=1, hours=2, minutes=3, seconds=4)['props']['duration']
           == {'days': 1, 'hours': 2, 'minutes': 3, 'seconds': 4})
@@ -632,6 +638,83 @@ def main():
     check('carousel() without one writes no margin key',
           'margin' not in fk.carousel([fk.stack([]), fk.stack([])],
                                       slide_w=300, slide_h=100)['props'])
+
+    _COLORS_MIN = [('bg', 'Background', '#FFFFFF', '#101014'),
+                   ('ink', 'Ink', '#111114', '#F5F5F7')]
+    _TYPO_MIN = [('body', 'Body', 16, 'regular')]
+
+    # --- switch_rich: conditional copy, the mechanism behind a personalization payoff.
+    # Shape asserted against the real export tests/fixtures do not carry one of, so the
+    # reference is bf5d731e ("Language onboarding — quizzes + branching") in app_finance:
+    # the switch nests INSIDE the locale, cases are [cond, const] PAIRS, default is a const.
+    _sw = fk.switch_rich(
+        [(fk.eq(fk.ref('goal.selectedOptionId'), 'sleep'), ['Sleep plan'])],
+        default=['Your plan'])
+    _en = _sw['values']['en']
+    check('switch_rich nests the switch inside the locale, not around it',
+          _sw['_localizable'] is True and _en['type'] == 'switch')
+    check('switch_rich emits [condition, const] case pairs',
+          isinstance(_en['cases'][0], list) and len(_en['cases'][0]) == 2
+          and _en['cases'][0][1]['type'] == 'const')
+    check('switch_rich wraps each branch as paragraph blocks, like rich()',
+          _en['default']['value'][0]['type'] == 'paragraph'
+          and _en['default']['value'][0]['content'][0]['text'] == 'Your plan')
+    check('switch_rich takes a bare string as one part',
+          fk.switch_rich([(fk.eq(fk.ref('goal.selectedOptionId'), 'a'), 'X')],
+                         default='Y')['values']['en']['cases'][0][1]['value'][0]
+          ['content'][0]['text'] == 'X')
+    check('switch_rich carries Span styling through a branch',
+          _sw is not None and fk.switch_rich(
+              [(fk.eq(fk.ref('goal.selectedOptionId'), 'a'), [fk.Span('b', bold=True)])],
+              default='y')['values']['en']['cases'][0][1]['value'][0]['content'][0]
+          ['attrs']['bold'] is True)
+    check('switch_rich with no cases raises (it would render the default and nothing else)',
+          raises(lambda: fk.switch_rich([], default='x')))
+    check('switch_rich rejects a built localizable as parts (it would nest a values map)',
+          raises(lambda: fk.switch_rich(
+              [(fk.eq(fk.ref('g.selectedOptionId'), 'a'), fk.rich('x'))], default='y'),
+              TypeError))
+    check('switch_rich rejects a malformed case pair',
+          raises(lambda: fk.switch_rich([(fk.eq(fk.ref('g.selectedOptionId'), 'a'),)],
+                                        default='y'), TypeError))
+    check('switch_rich checks the condition against the service walker',
+          raises(lambda: fk.switch_rich([({'type': 'assign'}, 'x')], default='y')))
+
+    # An unresolved variable in a conditional-text switch is COMPILED, so it is fatal —
+    # measured against the live service: valid:false, "Generated scripts failed validation",
+    # code and path both null. A `variable` SPAN in the same prop is not: it renders its
+    # literal token and publishes. Both directions, because the span must NOT be flagged.
+    def _doc(content_prop):
+        t = fk.text(fk.rich('x'), preset='body', color_id='ink')
+        t['props']['content'] = content_prop
+        member = fk.selectable([fk.text(fk.rich('A'), preset='body', color_id='ink')],
+                               group_id='goal', custom_id='a', default=True)
+        s = fk.screen('scr_a', [member, t], fill_=fk.fill('bg'),
+                      selectable_groups=[{'id': 'goal', 'type': 'single_choice'}])
+        return lambda: fk.config(screens=[s], colors=_COLORS_MIN, typography=_TYPO_MIN)
+
+    check('config() accepts a conditional-text switch on a group that exists',
+          _doc(fk.switch_rich([(fk.eq(fk.ref('goal.selectedOptionId'), 'a'), 'A')],
+                              default='B'))() is not None)
+    check('config() refuses a conditional-text switch naming nothing (hard 422 otherwise)',
+          raises(_doc(fk.switch_rich(
+              [(fk.eq(fk.ref('nosuch.selectedOptionId'), 'a'), 'A')], default='B'))))
+    check('...and still leaves a plain variable SPAN alone — it renders, it does not compile',
+          _doc(fk.rich('Hi ', fk.Var('nosuch.value')))() is not None)
+
+    # --- a timer that fires must have a child. Device-measured 2026-09-01 over three trips:
+    # the childless form does NOT advance, and every other gate is blind (validate passes both,
+    # preview never navigates at all). Raised rather than warned: the flow stops dead and only
+    # hardware can show it. This CORRECTS the shape patterns.md published as device-verified.
+    check('a timer with a timer-end action and no children raises',
+          raises(lambda: fk.timer([], custom_id='d', seconds=3,
+                                  actions=[fk.navigate('scr_next')])))
+    check('...and the same timer WITH a child is fine',
+          fk.timer([fk.timer_digits(units=('seconds',))], custom_id='d', seconds=3,
+                   actions=[fk.navigate('scr_next')])['interactions'][0]['trigger']
+          == 'timer-end')
+    check('...while a childless timer with NO action stays legal (a decorative countdown)',
+          fk.timer([], custom_id='d', seconds=3)['type'] == 'timer')
 
     print()
     if FAILURES:

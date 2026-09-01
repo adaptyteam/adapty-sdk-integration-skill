@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "adapty-skills",
-      "description": "Skills that hand your app's subscription surface to your agent: integrate the Adapty SDK on any mobile platform (iOS, Android, Flutter, React Native, Unity, KMP, Capacitor), run Apple Search Ads, audit a Flow Builder flow before you publish, edit a flow's config, and turn a paywall screenshot into ranked conversion tests.",
+      "description": "Skills that hand your app's subscription surface to your agent: integrate the Adapty SDK on any mobile platform (iOS, Android, Flutter, React Native, Unity, KMP, Capacitor), run Apple Search Ads, audit a Flow Builder flow before you publish, edit a flow's config, and turn a paywall screenshot or an onboarding flow into ranked conversion tests.",
       "author": {
         "name": "Adapty",
         "email": "support@adapty.io"

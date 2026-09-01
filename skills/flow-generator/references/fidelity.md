@@ -4,7 +4,8 @@
 inventory, and what to do with each gap you find.
 
 **Run it whenever a reference was given** — an image, a screen to copy, a layout spelled out. Not
-when you chose the design yourself; that case is graded by `paywall-teardown` instead.
+when you chose the design yourself; that case is graded by a teardown skill instead —
+`paywall-teardown` for a screen that sells, `onboarding-teardown` for a sequence.
 
 ## Why it is a written list and not a look
 

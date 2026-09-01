@@ -31,6 +31,7 @@ Every install below gives you the whole toolkit — and it grows, so an update b
 | [`ads-manager`](#managing-apple-search-ads) | Runs your Apple Search Ads: performance across campaigns and keywords, bid and budget changes, search-term harvesting, campaigns on and off | Adapty CLI, Apple Ads account |
 | [`flow-audit`](#auditing-a-flow) | Answers "did I forget anything?" before you publish a flow — triggers, products, variables — with a verdict and ranked fixes | Adapty CLI |
 | [`flow-generator`](#building-flows-and-paywalls) | Builds a paywall or onboarding flow, or changes one you have: translate it, rewrite the copy, add or reorder screens, add tabs and plan pickers, wire quiz branching | Adapty CLI |
+| [`onboarding-teardown`](#tearing-down-an-onboarding-flow) | Reads an onboarding flow — described, screenshotted, or as a config — and ranks what to change and test, seam with the paywall included | nothing |
 | [`paywall-teardown`](#tearing-down-a-paywall) | Reads any paywall — yours, a competitor's, a work in progress — and ranks what to change and test | nothing |
 
 The Adapty CLI comes from `npm install -g adapty`. You don't have to keep it current — the skills check the version themselves and fetch a newer one when they need it, rather than telling you a command doesn't exist.
@@ -194,7 +195,7 @@ Four transforms:
 
 ## Tearing down a paywall
 
-A screenshot turned into a ranked list of things to test. Alone among them, `paywall-teardown` needs **no CLI, no account and no credentials** — it reads what you give it and writes nothing anywhere.
+A screenshot turned into a ranked list of things to test. Like [`onboarding-teardown`](#tearing-down-an-onboarding-flow), it needs **no CLI, no account and no credentials** — it reads what you give it and writes nothing anywhere.
 
 Paste a paywall screenshot and say roughly nothing:
 
@@ -209,6 +210,26 @@ You get back a read of the vertical and its trust axis, a line on what's already
 **It also works forwards.** Ask for a paywall instead of a critique of one — or hand an agent "add a paywall screen" with no design attached — and the library becomes the reference the agent designs against: a build list of the patterns that belong on the screen for your category, in priority order, plus the short list of real values it refuses to invent for you (your actual rating, your actual review count, your actual outcome data, your hero asset). Then it grades the result and fixes what it finds, rather than handing you a report on a screen it just built. `flow-generator` calls it at both ends for exactly this — before it writes the config, and again over the render — so a generated screen is held to the same library a live one would be. If you *do* give a design reference, that reference wins; the library only fills what it leaves unsaid.
 
 Impact ranges are expected effect calibrated from Adapty's teardowns of top subscription apps across many verticals — not measured lift for your app. Ship the tests and get your own numbers.
+
+## Tearing down an onboarding flow
+
+The same treatment, one level up: the **sequence** rather than the screen. It needs no CLI, no account and no credentials either.
+
+Onboarding is a sequence, and that is the one thing a screenshot cannot show — so this one starts with a short interview instead of an upload:
+
+```
+/onboarding-teardown
+```
+
+Six questions, one at a time, each answerable with a tap or a line: your category, how long the flow is, what the first screen is, whether you ask what users want and give them something personalized back, when the paywall appears, and when you ask for permissions. Answer three of six and it still delivers.
+
+You get back your flow written out as a line (often the first time anyone has seen it that way), what's already working, 5–8 prioritized rows, and a paragraph on **the seam** — whether the paywall reflects what onboarding just spent five screens capturing. That seam is where the expensive findings live: a goal question with nothing behind it, a loader promising a personalized plan that the next screen doesn't deliver.
+
+**Hand it a flow config and it stops interviewing.** The sequence, the branching, the goal capture and the paywall's position are all in the file; it reads them and asks only what the JSON cannot say — your category, and whether the app truly delivers the payoff the flow promises.
+
+**It also works forwards**, the same way its paywall counterpart does. Ask for an onboarding rather than a critique of one and the library becomes the reference: a skeleton chosen for your category from what your app can actually back, a per-screen build list, and the short list of things it refuses to invent — a projected outcome nobody modelled, real proof numbers, an asset nobody has a file for. `flow-generator` calls it at both ends, so a generated sequence is held to the same library a live one would be.
+
+One constraint it will tell you about rather than quietly working around: **a flow cannot request a permission.** It can render the soft prompt that makes the ask land better, but the system dialog belongs to your app code — so permission-timing findings arrive as a handoff, not as something the builder can ship for you.
 
 ## Requirements
 

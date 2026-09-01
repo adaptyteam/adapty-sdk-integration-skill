@@ -1169,6 +1169,14 @@ It may instead be a **`switch` expression** whose every branch yields its own bl
   "ru": {"type": "switch", "cases": [[ …the same predicate… ]], "default": { … }}}}
 ```
 
+**Emit it with [`flowkit.switch_rich()`](flowkit.py)**, which builds this shape and checks each
+predicate against the service's own walker. Two facts that make hand-authoring it a bad trade, both
+measured 2026-09-01 against the live service: the predicate is **compiled**, so an unresolved
+variable here is `valid: false` — *"Generated scripts failed validation"*, with `code` and `path`
+both `null`, naming neither the element nor the variable — while a `variable` **span** in the very
+same `props.content` merely renders its literal token and publishes. Same property, opposite
+severity. `flowkit.config()` refuses the fatal half locally.
+
 Four consequences, and the nesting order is the reason for all of them:
 
 - **The conditional sits inside the locale, not outside it.** Every locale carries its own complete

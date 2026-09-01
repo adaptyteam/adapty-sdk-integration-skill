@@ -1057,6 +1057,47 @@ def check(path, baseline_text=None):
                     f"'%name%'). Timer tokens carry a timer_ prefix — one of "
                     f"{sorted(valid_timer_tokens)}. If you lifted a timer from "
                     f"component-catalog.json, add the prefix; flowkit.timer_digits() emits it")
+    # A `timer` carrying a `timer-end` action and NO children DOES NOT FIRE on a device.
+    # Device-measured 2026-09-01 across three trips: the childless form left a real onboarding
+    # stuck on its loading screen; the same timer with one child text advanced; an isolating
+    # probe whose two exits led to different destinations then confirmed it directly (it
+    # reported "YOU TAPPED", i.e. the manual route, never the timer's). An element with nothing
+    # to lay out is one the renderer skips, timer included.
+    #
+    # Severity is an ERROR, and every other gate is blind: `flows config validate` returns
+    # `valid: true` for both forms, the schema check passes both, and `config preview` NEVER
+    # NAVIGATES for any reason -- so a working timer and a dead one produce the identical local
+    # observation. The failure is silent, terminal (the flow has no other way off that screen
+    # unless the author happened to add one) and only visible on hardware.
+    #
+    # This also CORRECTS the shape `patterns.md` published as device-verified, which carried no
+    # children: that verification was confounded by its own instrumentation -- the session that
+    # ran it had added visible digits to diagnose the failure, and documented the shape without
+    # them. See CLAUDE.md finding 29.
+    for s in d.get('screens') or []:
+        for eid_, e in (s.get('elements', {}).get('map') or {}).items():
+            if e.get('type') != 'timer':
+                continue
+            fires = any(i.get('trigger') == 'timer-end' and (i.get('actions') or [])
+                        for i in (e.get('interactions') or []))
+            if not fires:
+                continue
+            def _children_of(nid, root=s.get('elements', {}).get('hierarchy') or {}):
+                found = []
+                def w(n):
+                    if n.get('id') == nid:
+                        found.extend(n.get('children') or [])
+                        return True
+                    return any(w(c) for c in (n.get('children') or []))
+                w(root)
+                return found
+            if not _children_of(eid_):
+                bad.append(
+                    f'screen {s["id"]}: timer {eid_} has a timer-end action and NO children, '
+                    f'so it does not fire on a device and the flow stops on this screen '
+                    f'(measured 2026-09-01). Neither validate nor preview can see this. Give '
+                    f'it a child -- the running digits, or the loading copy itself')
+
     # `footer` is the pinned bottom bar, and all three of these were measured 2026-08-26 by
     # rendering one screen eight ways. The element is lifted out of the flow and pinned to the
     # viewport bottom; the same props under `type: "stack"` land below the fold.

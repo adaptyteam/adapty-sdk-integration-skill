@@ -246,7 +246,8 @@ re-adds it from the guideline text).
   create`, no `flows delete` (there is no such command). If a fix requires changing the
   flow, that is `flow-generator`'s job.
 - **Not conversion advice.** This skill answers "is it wired up", never "will it
-  convert" — that is `paywall-teardown`.
+  convert" — that is `paywall-teardown` for a paywall screen, `onboarding-teardown`
+  for the sequence around it.
 - **Not a render check.** The audit is a config-and-catalog question; it does not
   screenshot. A finding that genuinely needs a render (a selected-state defect, a
   scroll-behind-footer bug) is named as something `flow-generator`'s preview loop should

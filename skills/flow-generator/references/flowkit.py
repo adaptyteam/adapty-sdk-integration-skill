@@ -527,6 +527,52 @@ def localized(value, locale='en'):
     return {'values': {locale: value}, '_localizable': True}
 
 
+def switch_rich(cases, default, *, locale='en'):
+    """Conditional rich text: ONE element whose copy depends on what the user chose.
+
+    This is the mechanism behind an onboarding's personalization payoff -- echoing the user's
+    own answer back at them. Without it the only way to "personalize" is a stack of elements
+    with `visibility` conditions, which duplicates the layout per branch and drifts.
+
+    Shape taken from a real builder export, not from the schema: the `switch` nests INSIDE each
+    locale, so every locale carries a full copy of the expression and **parity is per branch** --
+    a field with a `ru` value can still be English in the branch the other choice shows.
+
+        switch_rich([(eq(ref('goal.selectedOptionId'), 'sleep'),
+                      ['Your plan for ', Span('falling asleep faster', bold=True)])],
+                    default=['Your personalized plan'])
+
+    `cases` is a sequence of `(condition, parts)`; `parts` is what `rich()` takes. The condition
+    is checked against the transform service's own walker here, because a bad one is a hard 422
+    (`invalid_conditional_text_predicate`), not a render defect.
+    """
+    def _blocks(parts, what):
+        if isinstance(parts, (str, Span, Var)):
+            parts = [parts]
+        if isinstance(parts, dict):
+            raise TypeError(
+                f'{what}: pass the parts, not a built localizable — switch_rich() wraps them '
+                'itself, so `rich(...)` here would nest a values map inside a switch branch.')
+        return [{'type': 'paragraph', 'content': [_span(p) for p in parts]}]
+
+    cases = list(cases)
+    if not cases:
+        raise ValueError(
+            'switch_rich() with no cases renders the default and nothing else — use rich() '
+            'if the copy does not depend on anything.')
+    out = []
+    for i, case in enumerate(cases):
+        if not (isinstance(case, (list, tuple)) and len(case) == 2):
+            raise TypeError(f'switch_rich() case {i} must be (condition, parts), got {case!r}')
+        cond, parts = case
+        _check_expr(cond, f'switch_rich() case {i} condition')
+        out.append([cond, {'type': 'const', 'value': _blocks(parts, f'case {i} parts')}])
+    return {'values': {locale: {
+        'type': 'switch', 'cases': out,
+        'default': {'type': 'const', 'value': _blocks(default, 'default parts')}}},
+        '_localizable': True}
+
+
 # --- nodes -------------------------------------------------------------------------------
 
 def _node(kind, props, *, children=None, caption=None, states=None,
@@ -738,6 +784,36 @@ def icon(name, *, size_pt=22, color_id=None, weight='regular', position=None, **
     if color_id is not None:
         props['icon']['color'] = color(color_id)
     return _node('icon', props, **kw)
+
+
+def spinner(icon_name, *, size_pt=32, color_id=None, hexval=None, duration_ms=1000,
+            position=None, **kw):
+    """A rotating loading indicator. `icon_name` must name a `_meta.icons` entry you declared.
+
+    Two things this exists to stop, both from `patterns.md`. **The icon type must be `custom`**:
+    the publish gate refuses a phosphor spinner with a 422 (`Spinner element only supports custom
+    icons`), so the type is not a parameter here. And **a static `icon` is not a substitute** —
+    a ring glyph renders in `flows config preview` and reads as a spinner in a screenshot, but it
+    does not animate on a device; that is the fake-footer mistake wearing a loader.
+
+    `duration_ms` is the ROTATION PERIOD, not a delay. A spinner has no completion trigger and
+    fires nothing — the invisible `timer()` beside it is what moves the flow on. Say which is
+    which in the handoff, because the field reads exactly like a delay.
+
+    The spinner draws blank in `config preview`; that is a render blindness, not a broken
+    element. Verify it on a device.
+    """
+    if not (isinstance(icon_name, str) and icon_name):
+        raise ValueError('spinner() needs the name of a _meta.icons entry')
+    ic = {'name': icon_name, 'size': size_pt, 'type': 'custom'}
+    if color_id is not None and hexval is not None:
+        raise TypeError('spinner(): pass color_id or hexval, not both')
+    if color_id is not None:
+        ic['color'] = color(color_id)
+    elif hexval is not None:
+        ic['color'] = hex_color(hexval)
+    return _node('spinner', {'icon': ic, 'duration': duration_ms,
+                             'position': position or relative()}, **kw)
 
 
 #: The deliberate "no asset exists" content for `image()`. Spelled as a constant so an empty
@@ -1291,12 +1367,29 @@ def timer(children=(), *, custom_id='offer', days=0, hours=0, minutes=0, seconds
           align_v='center', visibility=None, position=None, actions=None, node_id=None,
           **kw):
     """A countdown `timer` element. Pass `timer_digits(...)` as one of its `children` to show the
-    running digits; a bare timer with no digit child draws nothing (which is the correct shape for
-    a purely invisible delay — pair it with `actions` carrying a `timer-end` navigate).
+    running digits.
+
+    **A timer carrying a `timer-end` action MUST have at least one child.** Device-measured
+    2026-09-01, two writes differing in nothing else: the childless form **did not advance**, the
+    same timer with one child text **did**, and an isolating probe with two exits to different
+    destinations confirmed it on a third trip. So the "purely invisible delay" this docstring used
+    to recommend does not fire at all — an element with nothing to lay out is one the renderer
+    skips, timer included. `config preview` cannot see any of this: it never navigates for any
+    reason, so both forms look identical locally and `validate` passes both.
+
+    Raised rather than warned because the failure is silent, terminal and remote: the flow stops
+    dead on that screen, and the only surface that can show it is a device.
 
     `duration` is `{days, hours, minutes, seconds}`. `behavior='start_at_every_appear'` restarts
     the countdown each time the screen appears.
     """
+    if actions and not list(children):
+        raise ValueError(
+            'a timer with a `timer-end` action and NO children does not fire on a device '
+            '(measured 2026-09-01) — the flow stops dead on that screen, and neither '
+            '`config preview` nor `flows config validate` can see it. Give it a child: '
+            'timer_digits(...) if a visible countdown suits the screen, or the loader copy '
+            'itself. See patterns.md -> the auto-advancing screen.')
     props = {
         'customId': custom_id, 'behavior': behavior,
         'duration': {'days': days, 'hours': hours, 'minutes': minutes, 'seconds': seconds},
@@ -1556,6 +1649,19 @@ def config(*, screens, colors=(), typography=(), icons=(), locales=(('en', 'Engl
             for st in e.get('states') or []:
                 if isinstance(st, dict) and st.get('condition'):
                     trees.append(st['condition'])
+            # A conditional-text `switch` (switch_rich) is COMPILED, not rendered, so an
+            # unresolved id there is fatal exactly like a visibility condition -- measured
+            # 2026-09-01 against the live service: `valid: false`, "Generated scripts failed
+            # validation", with `code` and `path` both null, so the refusal names neither the
+            # element nor the variable. This is the opposite severity from a `variable` SPAN in
+            # rich text, which renders its literal token and publishes; the two shapes sit in
+            # the same `props.content` and only this one compiles.
+            for prop in (e.get('props') or {}).values():
+                if not (isinstance(prop, dict) and prop.get('_localizable')):
+                    continue
+                for lv in (prop.get('values') or {}).values():
+                    if isinstance(lv, dict) and lv.get('type') == 'switch':
+                        trees.append(lv)
             for tree in trees:
                 for vid in _condition_var_ids(tree, set()):
                     head = vid.split('.')[0]
