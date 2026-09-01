@@ -1433,11 +1433,34 @@ def _has_content(value, locale):
     same shape), so `node_kinds`/`flat_text` -- which only understand richtext-shaped
     nodes (`type` + `content`) -- see nothing and call it empty. A truthy `url` is
     the signal; an unfilled slot is `{}` and stays correctly empty.
+
+    A CONDITIONAL-TEXT `switch` is the third trap of the same shape, and it was measured
+    firing an `empty-translation` BLOCKER on three legitimate, service-approved fields in
+    a real onboarding flow (2026-09-01): the per-locale value there is not a block array
+    at all but `{'type': 'switch', 'cases': [[cond, const], ...], 'default': const}`, so
+    `flat_text`/`node_kinds` see nothing and call it empty. This is the copy a
+    personalization payoff is made of -- the highest-value pattern `onboarding-teardown`
+    recommends -- so the false positive landed a blocker on exactly the screen the sibling
+    skill exists to produce. The branches are recursed rather than the type merely
+    accepted, so an all-empty switch still counts as empty.
+
+    KNOWN LIMITATION, deliberately not fixed here: `flat_text` still returns '' for a
+    switch, so a conditional field is invisible to the `same`-as-base parity count and to
+    every other check that reads visible text. Widening `flat_text` reaches the price and
+    store-review checks, which are calibrated against measured false positives, so it
+    needs its own calibration rather than a ride on this one.
     """
     if flat_text(value, locale):
         return True
     if any(k in SUBSTANTIVE_NODES for k in node_kinds(value, locale)):
         return True
+    if isinstance(value, dict) and value.get('type') == 'switch':
+        branches = [c[1] for c in (value.get('cases') or [])
+                    if isinstance(c, (list, tuple)) and len(c) == 2]
+        if 'default' in value:
+            branches.append(value['default'])
+        return any(_has_content(b.get('value'), locale)
+                   for b in branches if isinstance(b, dict))
     return isinstance(value, dict) and bool(value.get('url'))
 
 

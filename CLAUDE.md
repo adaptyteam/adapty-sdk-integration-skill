@@ -4,17 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-Five portable, Claude-style skills for agentic CLIs (Claude Code, GitHub Copilot CLI, OpenAI Codex, Gemini CLI):
+Six portable, Claude-style skills for agentic CLIs (Claude Code, GitHub Copilot CLI, OpenAI Codex, Gemini CLI):
 
 - **`adapty-integration`** — guides an agent through integrating the Adapty SDK into a mobile app end-to-end: dashboard setup via the Adapty CLI, SDK install, paywall, store configuration.
 - **`ads-manager`** — operates Apple Search Ads through the Adapty CLI's `adapty asa` topic: reading performance, changing bids and budgets, keyword work, launching and pausing campaigns.
 - **`flow-audit`** — answers one question, is this Flow Builder flow ready for production, by cross-referencing its config against the live dashboard (catalog, access levels) and returning a verdict plus ranked, fixable findings. Read-only: never writes to a flow. Complements `flow-generator` (which owns writes) and `paywall-teardown` (which owns conversion advice).
 - **`flow-generator`** — reads a flow's Flow Builder config (JSON) through the CLI's `flows` topic, transforms it, and writes it back. Touches no app code; touches the CLI for the config itself and for products.
+- **`onboarding-teardown`** — reads an onboarding flow (a described sequence, screens, a flow config, or a set of `flows config preview` renders) against a pattern library and returns ranked, testable growth hypotheses plus a read of the onboarding→paywall seam. Touches nothing: no CLI, no files, no network. Owns the **sequence**; `paywall-teardown` owns the paywall screen's execution, and the two are run together on a flow that is both.
 - **`paywall-teardown`** — reads a paywall (a screenshot, a `flows config preview` render, or a flow config) against a pattern library and returns ranked, testable conversion hypotheses with expected-impact ranges. Touches nothing: no CLI, no files, no network. The growth half of the pair whose engineering half is `flow-generator`.
 
 One repo, three distribution channels: a Claude Code plugin (`.claude-plugin/` holds the marketplace + plugin manifests), the skills.sh CLI, and plain directory copy of a `skills/<name>/` directory into a tool's skills folder. Keep every skill directory self-contained and format-portable — nothing in one may assume Claude Code specifically.
 
-All five skills ship inside the single `adapty-skills` plugin, because a plugin exposes every skill under `skills/`. No manifest edit is needed to add one. The plugin name is deliberately broader than any one skill — installing it gives you every skill in the repo, and that is the intended shape. Splitting the skills into separate marketplace entries was considered and rejected; do not reopen it without a reason the plugin name no longer covers.
+All six skills ship inside the single `adapty-skills` plugin, because a plugin exposes every skill under `skills/`. No manifest edit is needed to add one. The plugin name is deliberately broader than any one skill — installing it gives you every skill in the repo, and that is the intended shape. Splitting the skills into separate marketplace entries was considered and rejected; do not reopen it without a reason the plugin name no longer covers.
 
 `marketplace.json` also carries a **deprecated `adapty-sdk-integration` entry** pointing at the same `source: "./"`, so installs made under the old plugin name keep resolving and keep updating. Verified: `plugin details` through either handle reports the same plugin identity and the same skill inventory. Drop that entry only after the docs stop teaching the old handle — never before, or you break the installs it exists to protect.
 
@@ -37,6 +38,8 @@ All five skills ship inside the single `adapty-skills` plugin, because a plugin 
 - `skills/flow-generator/references/validate.md` — the `flows config validate` evidence, split out because a run only needs it when validate says no. Owns the coverage matrix in both directions (what it catches, what it passes), the three message families, the one-fatal-per-run mechanic and the two call traps (bare config not envelope; the flow must exist). `SKILL.md` phase 3 holds the commands and the exit condition and links here.
 - `skills/flow-generator/references/media.md` — the asset path, split out because a copy, locale or branching run never needs any of it. Owns `flows media upload`'s call shape and the `sed`-off-stdout URL capture (never `--json`, which inlines a base64 thumbnail), the accepted-format and byte-cap measurements, the two shapes an uploaded URL binds into (per-locale `values` map on an `image` element versus flat inside a `fill`), the string-`id` rule, the measured geometry table for `hug`/`fixed`×`cover`/`fit`, and the finding that makes the phase ordering load-bearing: neither publish-time gate looks at an image, and a placeholder does not occupy the space the real asset will. `SKILL.md` links into it by exact heading string, so renaming a heading breaks the entry point silently.
 - `skills/flow-generator/references/products.md` — product binding, split out because a locale or copy run never needs any of it. Owns the fact that a flow's `product.id` and the Adapty product UUID from `adapty products list` are the same namespace (verified, not inferred), the read-only lookup chain (`apps list` → `access-levels list` → `products list`/`get`), the `products create` write and its confirmation gate, and the `--period`-versus-price-variable agreement check. It also records the three ways `products create --help` misdescribes required flags (all found by running the command, not by reading it) and the fact that a `const` purchase action binds a product with no `product` element — while the flow stays **unpublishable** until that product is declared in `_meta.screens` anyway (corrected 2026-08-24; see the validate bullet).
+- `skills/onboarding-teardown/SKILL.md` — the onboarding skill's entry point. Adapted from Adapty's growth-team `onboarding-teardown` skill; the upstream half is the six-question interview, the contradiction rules, the seven-part output and the framing rules. The additions here are the **config/render input forms** with the read-the-config-instead-of-interviewing table, the **two directions** (Audit / Design) on the same observable predicate `paywall-teardown` uses, `## Choose the flow skeleton first` (six skeletons gated on observable prerequisites), `## What you cannot invent`, the split of upstream's combined sign-off into a **verbatim disclaimer** plus a **conditional CTA**, and the two-way link with `flow-generator`. See finding 28.
+- `skills/onboarding-teardown/references/patterns.md` — the pattern library: 8 contradiction rules that fire on *combinations*, patterns by section, and 8 category playbooks. **Vendored byte-for-byte from upstream and kept that way**, the same rule `paywall-teardown/references/patterns.md` follows and for the same reason: a growth-team revision lands as a one-file diff. Every repo-specific fact therefore lives in `SKILL.md`, never here.
 - `skills/paywall-teardown/SKILL.md` — the paywall skill's entry point. Owns the **two directions** — audit a paywall someone else will change, or *design*, which is entered on an observable predicate (**no design reference was given**: no reference image, no screen to copy, no layout spec) and runs two passes, the second of which grades and corrects the agent's own render — the three input forms (screenshot / `flows config preview` render / flow config), the internal four-step process, the two output formats, the verbatim disclaimer, the conditional CTA, and the framing rules that keep the numbers honest. Adapted from Adapty's growth-team `paywall-teardown` skill shipped on claude.ai; the additions here are the render/config inputs, the design-brief direction, the `## What you cannot invent` section, and the two-way link with `flow-generator`.
 - `skills/paywall-teardown/references/patterns.md` — the pattern library: 15 patterns plus category playbooks, each with when it applies, its cross-check, its impact tier and its category-level grounding. **Kept at that filename deliberately**, matching the upstream skill so a growth-team update to the library copies in as a one-file diff — even though `skills/flow-generator/references/patterns.md` is a different file about layout composites. They never own the same fact: conversion patterns and impact numbers here, JSON skeletons there.
 - `tests/` — the fixture corpus for `flow-generator`, plus the repo-only Python helpers that operate on it — sanitizing, rendering, measuring and `test-flowkit.py` (see the `flow-generator` conventions below). Not a test suite for the skills. **`verify-config.py` used to live here as `verify-fixture.py` and moved to `skills/flow-generator/references/` on 2026-08-25 so that it ships, and was renamed at the same time because a runtime agent runs it on its own config, not on a fixture. Every mention of `verify-fixture.py` in the dated findings below was rewritten to the new name: the rounds themselves ran against the old one** — anything in `tests/` is repo-only by definition, so a check an agent must run at runtime does not belong here.
@@ -46,9 +49,9 @@ All five skills ship inside the single `adapty-skills` plugin, because a plugin 
 
 ## Validation lints
 
-**The link lint covers ALL of `skills/`; the symbol lint covers `adapty-integration` and guards the rest.** Widened 2026-08-28 — it previously hardcoded `skills/adapty-integration`, so a green run said nothing about four of the five skills that ship, while the runtime agent is told to fetch URLs from all of them. The widening cost 17 unique URLs and found no dead links; coverage is now printed per skill on every run (`adapty-integration 318, ads-manager 1, flow-generator 21, paywall-teardown 1` — `flow-audit` has none, verified, so its absence from that line is coverage rather than a skip). Two extraction rules were needed and both are load-bearing: a URL containing `…` **or** `...` is a documentation placeholder, not a link — the second came from a real 404 on a media URL inside pasted sample output with the hash cut out (`1e5bbbb4-.../hero-600x400.png`), which is elided-example noise rather than a finding.
+**The link lint covers ALL of `skills/`; the symbol lint covers `adapty-integration` and guards the rest.** Widened 2026-08-28 — it previously hardcoded `skills/adapty-integration`, so a green run said nothing about four of the five skills that ship, while the runtime agent is told to fetch URLs from all of them. The widening cost 17 unique URLs and found no dead links; coverage is now printed per skill on every run (`adapty-integration 322, ads-manager 1, flow-audit 7, flow-generator 22, onboarding-teardown 1, paywall-teardown 1` — `flow-audit` had none when the lint was widened and has since gained 7). Two extraction rules were needed and both are load-bearing: a URL containing `…` **or** `...` is a documentation placeholder, not a link — the second came from a real 404 on a media URL inside pasted sample output with the hash cut out (`1e5bbbb4-.../hero-600x400.png`), which is elided-example noise rather than a finding.
 
-**The symbol lint was deliberately NOT widened, and that is a measured decision rather than an omission.** It resolves a file's platform from its name (`references/<platform>.md`) and checks against that platform's docs aggregate; the other four skills have no platform and name **zero** SDK symbols (measured across all their `.md`). But "they name none" is an assumption that rots the moment someone adds one, so it is now checked instead of believed: a **scope guard** scans those four for `Adapty[A-Z]…` / `Adapty.<member>` and turns the lint **red** with a pointer to either drop the symbol or widen the lint. The capital `A` is what separates an SDK symbol from the domain (`adapty.io`) and the CLI (`adapty asa`). Negative-tested by injecting `Adapty.getPaywall()` into `flow-audit`.
+**The symbol lint was deliberately NOT widened, and that is a measured decision rather than an omission.** It resolves a file's platform from its name (`references/<platform>.md`) and checks against that platform's docs aggregate; the other five skills have no platform and name **zero** SDK symbols (measured across all their `.md`). But "they name none" is an assumption that rots the moment someone adds one, so it is now checked instead of believed: a **scope guard** scans those five for `Adapty[A-Z]…` / `Adapty.<member>` and turns the lint **red** with a pointer to either drop the symbol or widen the lint. The capital `A` is what separates an SDK symbol from the domain (`adapty.io`) and the CLI (`adapty asa`). Negative-tested by injecting `Adapty.getPaywall()` into `flow-audit`.
 
 There is no test suite for the skills themselves — the lints are the verification gates. Run them after any edit to a SKILL.md or a reference:
 
@@ -244,7 +247,9 @@ Every rule below exists because it was violated while the skill was built.
 
 - **Not agent-tested, and recorded rather than hidden (finding 14).** Every fact above is render-measured and the guards are calibrated, but no GREEN round has asked whether an *agent* handed "build a trial timeline" emits this shape. Per the Iron Law it stays open. **The scenario to run:** ask for a three-step trial timeline on a screen that does not already contain one, and score (a) whether the rail is absolute with both anchors and `height: auto` rather than a computed `fixed`, (b) whether the last row is left without a rail, (c) whether the fade is authored on alpha rather than toward the page colour, and (d) whether the agent measures the rail column instead of eyeballing the screenshot. Two consecutive clean rounds, and compare against the pre-change wording rather than against no-skill.
 
-- **Finding 13 (2026-08-25, live run — a 14-screen onboarding built from one reference strip): the timed-screen recipe was written in the builder's vocabulary and translating it to JSON produced a screen that spun forever on a real device while every local gate was green.** `patterns.md`'s "Countdown with `Opacity 0`, `Position Absolute`, top/left 0, `On Timer End → Navigate Next`" left three gaps an author fills wrongly: no size guidance (I invented a **degenerate `fixed: 1×1`** box, which trap 15 says the transformer believes), no statement of *what* `absolute` resolves against (I nested the timer in a content stack, so `top/left: 0` meant the stack — trap 9), and an `opacity: 0` that only makes sense for a countdown showing **digits** (a timer with no child text draws nothing anyway, and a zero-opacity element is one a renderer may skip). The **device-verified working shape** now lives in `patterns.md` as a JSON block — direct child of the screen `root`, `hug`+`padding`, explicit `visibility`, no `opacity`, explicit `navigate` — and it is this project's **first confirmed `timer-end`**, since no export in the corpus carries one. **Which of the four changes was decisive is unisolated** (all were fixed before the single device test), so the shape is documented as a unit, the same honesty as the authored-icon entry. Also recorded there: **a `spinner`'s `duration` is its rotation period, not a completion time** — the field reads like a delay and that is exactly how the user misread it. `navigateNext` was tried and **reverted**: it makes the graph implicit and order-dependent, and `verify-config.py` immediately reported five screens unreachable — the checker doing its job, not a false positive.
+- **Finding 13 (2026-08-25 — PARTIALLY WRONG, corrected by finding 29 on 2026-09-01; read them together): the timed-screen recipe was written in the builder's vocabulary and translating it to JSON produced a screen that spun forever on a real device while every local gate was green.** `patterns.md`'s "Countdown with `Opacity 0`, `Position Absolute`, top/left 0, `On Timer End → Navigate Next`" left three gaps an author fills wrongly: no size guidance (I invented a **degenerate `fixed: 1×1`** box, which trap 15 says the transformer believes), no statement of *what* `absolute` resolves against (I nested the timer in a content stack, so `top/left: 0` meant the stack — trap 9), and an `opacity: 0` that only makes sense for a countdown showing **digits** (a timer with no child text draws nothing anyway, and a zero-opacity element is one a renderer may skip). The **device-verified working shape** now lives in `patterns.md` as a JSON block — direct child of the screen `root`, `hug`+`padding`, explicit `visibility`, no `opacity`, explicit `navigate` — and it is this project's **first confirmed `timer-end`**, since no export in the corpus carries one. **Which of the four changes was decisive is unisolated** (all were fixed before the single device test), so the shape is documented as a unit, the same honesty as the authored-icon entry. Also recorded there: **a `spinner`'s `duration` is its rotation period, not a completion time** — the field reads like a delay and that is exactly how the user misread it. `navigateNext` was tried and **reverted**: it makes the graph implicit and order-dependent, and `verify-config.py` immediately reported five screens unreachable — the checker doing its job, not a false positive.
+
+- **CORRECTION (finding 29): the shape this finding published was CHILDLESS, and a childless timer does not fire at all.** The four fixes were applied together and the entry says so — "which one was decisive is unisolated" — but the deeper problem is that a *fifth* change was in the working config and never made it into the record: the visible countdown digits this same round added as instrumentation. They were treated as diagnostic scaffolding and stripped from the documented shape, so what shipped was the one variant that had **not** been device-verified. See finding 29 for the isolation.
 
 - **The methodology finding from that round is worth more than the fix, and it is now a rule in BOTH `preview.md` and `SKILL.md` phase 4 (at the owner's request, 2026-08-25): when the only surface that can exercise a mechanism is the user's device, build the diagnostic in BEFORE the first ask.** It earns its place in the entry point by the usual test — an agent must *act* on it at that step, by shipping the instrumentation with the first ask rather than after the fourth — and phase 5's slot list gained "a screen that advances itself" so the two steps name the same thing. Cost: SKILL.md grew ~150 words, which is worth tracking against the < 5,000-token target the skill-validator wants. `config preview` never navigates for any reason, so a broken `timer-end` and a working one produce the identical local observation — 15 s of `--virtual-time-budget` and the DOM is still on the same screen, which is *worthless as evidence*. Four blind config tweaks went to the user's device one at a time before anyone thought to make the countdown visible; the instrumentation (a child `text` carrying the `timer_minutes`/`timer_seconds` tokens) then split the failure in two — *digits never appear* is the element not mounting, *digits reach zero and nothing happens* is the trigger not firing — at the cost of exactly one cycle. Temporary instrumentation must be announced as temporary and removed, which it was.
 
@@ -303,6 +308,187 @@ Every rule below exists because it was violated while the skill was built.
 - **Six assertions in this plan shipped unable to fail**, one proven dead only by reverting the code it guarded — a subprocess round trip through JSON cannot observe object identity, so an `is not` check on decoded output tests `json.loads`, not the code. The repo's existing answer is the guarded in-process import (`sys.dont_write_bytecode = True` before the import, as `tests/test-flowkit.py:21-24` does). Every replacement assertion in this work was proven load-bearing by reverting the behaviour and confirming red.
 - **Open follow-ups, stated as open**: the behavioural half has **no GREEN round** — no agent has been measured on whether it runs `plan` before `graft`, surfaces an undeclared product as an ask rather than fabricating a `flowProductId`, re-previews after adoption changes a colour, or prints the absolute snippet path; the scenario for that round is in the design spec. And one known one-line gap: `match[0]['id']` in the any-app rebind branch still raises `KeyError` if a catalog row is a dict without an `id` key.
 - **Task 12 (2026-08-27, `adapty` 0.8.1) closed the three ASSUMED claims by measurement, against `app_finance`, Grit and NetPrime — full evidence in the design spec's Risks section.** (1) **Cross-app media and font URLs both resolve and draw.** A `flows media upload` CDN URL is not app-scoped: a probe uploaded to `app_finance` loaded (`200 image/png`) and drew visibly inside a different app's flow with zero re-upload. A `_meta.fonts[].url` lifted verbatim from one app's flow rendered in that face inside another app's flow preview — glyphs actually changed shape, not just a resolvable-but-inert reference. Neither needs a rewrite step in a cross-app graft. The font result is preview-only per `flow-schema.md` trap 7: no SDK-integrated device was available to confirm the font *ships*, so a font-carrying graft still needs a named device caveat. (2) **The `fill` shape question is only partially closed.** For a single-layer `color` fill, leaving a snippet's v9 object form unconverted inside a v10 flow validated clean and rendered **MD5-identical** to the destination's own array form — so `snippet.py`'s current no-conversion behaviour is correct for this case, and the design spec's "graft keeps the destination's form" line was aspirational text nothing enforces. But the object/array split is not a clean v9/v10 boundary in the first place — `tests/fixtures/tabs-paywall.json` is a real `schemaVersion: 9` export carrying **15 array-form** fills and it renders (this file, ~line 199) — so what Task 12 actually measured is narrower: a single-layer `color` fill validates and renders identically **in either form**, independent of `schemaVersion`. This does **not** extend to multi-layer, image or gradient fills — the standing multi-layer-fill trap above (tint present in preview, absent on an iOS device) is exactly the shape of failure a single-layer probe cannot rule out, and no device check was run. Guidance updated in `snippets.md`'s Grafting section and the design spec; `snippet.py` itself was not touched (still closed for this task).
+
+## Conventions when editing `onboarding-teardown`
+
+- **This skill is vendored, not authored here**, the same arrangement as `paywall-teardown`. It
+  came from the growth team and the library is theirs. `references/patterns.md` is **byte-identical
+  to the upstream file** and must stay that way, so their next revision of the contradiction rules,
+  the impact tiers or the category playbooks lands as a one-file copy rather than a merge. Every
+  repo-specific fact therefore lives in `SKILL.md`. When an impact range or a playbook changes, it
+  changes upstream first.
+- **The two skills split on one line: `paywall-teardown` owns a SCREEN, this one owns a SEQUENCE
+  and the SEAM.** Plan cards, price display, savings framing, CTA and proof placement are theirs;
+  flow length, branching, goal capture, the personalization payoff, loader placement, permission
+  timing and whether the paywall reflects what onboarding captured are this skill's. Run both on a
+  flow that is both, and do not duplicate rows. The boundary is stated in three places at once —
+  both scope sections and `flow-generator`'s routing table — because a skill that answers a
+  question it cannot see is exactly the failure `paywall-teardown`'s "reason only from what you
+  were given" rule already guards.
+- **The skeleton table is the mirror of the archetype table, and it exists for the same structural
+  reason** — but say what that reason is, because it is not the same evidence. Read forward, the
+  library's highest-value entry is the personalization loop, and its contradiction rule fires on
+  *every* flow you author, since "no personalized result exists" is true by construction before
+  you build anything. So an agent that starts at the pattern list emits quiz → loader → "your plan
+  is ready" → paywall every time, **including on apps that cannot back the promise — which is
+  rule 1's own failure, built deliberately.** On the paywall side the equivalent inertia was
+  *measured*, twice, in unrelated verticals; here it is reasoning about the library's shape, and
+  `SKILL.md` says so in a parenthesis rather than borrowing the measurement. Do not upgrade that
+  sentence to a claim.
+- **The interview must not run inside a build, and that is a wiring rule, not a style note.** The
+  six questions are the skill's front door when a user brings it a flow. Invoked from
+  `flow-generator` phase 2 there is nobody mid-build to run six turns at, so they are answered from
+  the brief, the config and the catalog, and the remainder becomes one batched ask. Both call sites
+  say this. Without it, adding the skill to the generator would have made every build stop and
+  start a questionnaire — a contradiction introduced by the wiring rather than by either skill.
+- **Upstream's sign-off was SPLIT into a verbatim disclaimer plus a conditional CTA**, matching
+  `paywall-teardown`. The condition is the same observable one and not a matter of taste: omit the
+  builder pitch when the input was a flow config or a render, because that user is already inside
+  the builder. Keep the disclaimer unconditional.
+- **A config answers most of the six questions, and asking anyway is the worst version of the
+  re-asking failure the interview rules already name** — the answer is in a file you were handed.
+  `SKILL.md` carries the field-by-field table. The two things a config genuinely cannot say are the
+  **category** and **whether the app really delivers the payoff the flow promises**, and the second
+  is rule 1's whole hinge, so it is the one thing that always survives into the asks.
+
+### Finding 28 (2026-09-01): adding the skill exposed two real defects, and both are the class this repo keeps re-learning
+
+**A flow CANNOT request a permission, and that turns contradiction rule 3 into a handoff.** Read off
+the published schema rather than assumed: there are **15 `IAction*` definitions** — `alert`,
+`closeFlow`, `conditional`, `custom`, `hideElement`, `navigate`, `navigateBack`, `navigateNext`,
+`nothing`, `openUrl`, `purchase`, `restorePurchases`, `selectProduct`, `setVariable`, `showElement`
+— and none of them is a permission request. So the library's permission-timing pattern, which is a
+CR +10–15% item, is **not buildable by the builder at all**: the flow can render the pre-permission
+soft prompt and fire a `custom` action, and the app makes the system call. `SKILL.md`'s
+`## What you cannot invent` states it as a hard `No` with the enumeration attached, so nobody
+re-derives it from the pattern's presence in the library. This is finding 15's class read forward:
+the recommended path led into a capability that does not exist.
+
+**`flowkit` could not express a personalization payoff at all — finding 12, again, on the single
+highest-value pattern in the library.** Conditional text is how an onboarding echoes the user's own
+answer back, and there was no helper for it, so the only reachable "personalization" was a stack of
+elements with `visibility` conditions. **`switch_rich()`** now emits it, with the shape taken from a
+real builder export (`bf5d731e` in `app_finance`) rather than the schema: the `switch` nests
+**inside** each locale, cases are `[condition, const]` pairs, and every locale carries its own full
+copy of the expression — so **parity is per branch**, which is what `SKILL.md` already told users
+and what nothing could produce.
+
+**And the helper would have shipped with a hole, which a measurement caught.** `config()`'s
+condition-variable resolution pass walked `props.visibility.condition` and `states[].condition` and
+nothing else. Measured against the live service (2026-09-01, `adapty` 0.8.1, `app_finance`): a
+conditional-text switch on a group that exists returns `valid: true, issues: []`; the identical
+document with the variable renamed returns **`valid: false`, "Generated scripts failed validation",
+with `code` and `path` both `null`.** So a conditional-text predicate is **compiled**, exactly like
+a visibility condition, and is fatal — the **opposite severity** from a `variable` *span* in the
+same `props.content`, which renders its literal token and publishes. Two shapes, one property, and
+only one of them compiles. The pass now walks any localizable value whose per-locale content is a
+`switch`; negative-tested by deleting the walk, which reddens exactly one case.
+
+**`flow-audit` false-blockered on the shape, and it is the THIRD instance of one trap in one
+function.** `_has_content` reads richtext-shaped nodes, so a per-locale value that is a `switch`
+looked like no content at all: a real 6-screen onboarding came back **`NOT READY FOR PRODUCTION —
+1 blocker: empty translation`**, naming the three fields that make up its payoff. Its own docstring
+already recorded the two earlier instances — variable-only content (every price on every paywall)
+and per-locale image objects (two real fixtures) — so the shape of the bug was documented and the
+new value shape walked straight into it. Worth stating plainly: **the read-only auditor put a
+blocker on the exact screen the sibling skill exists to produce.** Fixed by recursing the branches
+rather than accepting the type, so an all-empty switch still counts as empty; both directions are
+pinned in `tests/test-audit-flow.py` and the fix is negative-tested.
+
+**One limitation was accepted rather than fixed, and it is labelled in the code.** `flat_text` still
+returns `''` for a switch, so a conditional field stays invisible to the `same`-as-base parity count
+and to every other check that reads visible text — the price-literal and store-review checks
+included. Widening `flat_text` reaches checks calibrated against measured false positives, so it
+needs its own calibration rather than a ride on this one.
+
+**`flowkit.spinner()` was the third missing helper**, found the same way: `patterns.md` tells an
+agent to build a loading screen from `loader-spinner-label` and *forbids* substituting a static
+`icon` for the spinner, and there was no way to emit a `spinner` from the module. The helper fixes
+`icon.type` to `custom` (a phosphor spinner is a 422) and its docstring carries the two facts the
+field names contradict: `duration` is the **rotation period**, not a delay, and the element **draws
+blank in `config preview`** — the timer beside it is what moves the flow on.
+
+**What WAS tested: a live end-to-end build of three onboarding flows in `app_finance`, and what was
+NOT: any GREEN round.** The three were built through `flow-generator`'s five phases with this skill
+in the Design direction, deliberately in three categories that force three different skeletons —
+Wellness (**personalization loop**, `524e9930`), Productivity (**value walkthrough**, `d11d4711`),
+Education (**problem → method**, `30bd5a3c`). All three pass `verify-config.py` and
+`flows config validate` (`valid: true`), render on every screen, round-trip byte-identical through
+`config update` → `config get`, and audit to `READY, PENDING` with only the Android-binding question
+outstanding. The conditional-text echo is **visible in the renders**, which is the end-to-end proof
+that `switch_rich` works. Two defects were caught by the skill's own pass 3 over its own output —
+an ask leaking into product copy as a benefit row, and a mixed step-marker style — which is the
+pass doing the job it exists for. **But one author running the skill is not an arm comparison**, and
+per the Iron Law and [`docs/green-round-gate.md`](docs/green-round-gate.md) every behavioural claim
+here is open. **The scenarios to run**, and note the account now contains three reference
+implementations, so gate row "a scenario must not be answerable from the account the agents can
+read" applies and these must be run elsewhere or against a different vertical: (1) ask for an
+onboarding for an app that **cannot** back a personalized promise, and score whether the loop is
+ruled out on its prerequisite or built anyway; (2) ask for a permission-priming step and score
+whether the agent reports the handoff or invents an action; (3) hand an agent a flow config and
+score whether it interviews anyway.
+
+### Finding 29 (2026-09-01, three device trips): a `timer` with a `timer-end` action and NO CHILDREN does not fire — and finding 13's device-verified shape was confounded by its own instrumentation
+
+**The measurement, isolated properly this time.** Trip 1: a real 6-screen onboarding whose loader
+carried the childless shape exactly as `patterns.md` published it — **stuck on the loading screen**.
+Trip 2: the identical config with one child `text` added to the timer (visible countdown digits,
+added as a diagnostic, not as a fix) — **advanced**. Two writes differing in nothing else, which is
+better isolation than finding 13 ever had, but still consistent with a propagation artefact, since
+trip 1 was the flow's first write and trip 2 followed a `config update`. Trip 3 separated them: a
+throwaway probe flow whose screen 1 carried the childless timer and **two exits to different
+destinations** — the timer to `scr_auto`, a manual button to `scr_manual`. It came back
+**`YOU TAPPED`**. The timer never fired.
+
+**The mechanism was already half-written in the file that got it wrong.** `patterns.md`'s
+`opacity: 0` bullet said a zero-opacity element "asks a renderer to keep ticking an element it may
+legitimately skip" — correct — and then concluded a childless timer "draws nothing anyway", which
+read as a licence to ship one. An element with nothing to lay out is skipped, and a timer is not
+exempt from that.
+
+**Why it survived a device verification, and this is the part worth carrying forward: the session
+that verified the shape had instrumentation in the config and stripped it from the record.**
+Finding 13's own text says the visible digits "split the failure in two" and cost exactly one
+cycle — so the working config on that device **had a child**. The digits were read as diagnostic
+scaffolding and removed before the shape was written down, which means the published variant is the
+one that was never tested. Finding 13 already flags that its four fixes were unisolated; the sharper
+problem is a fifth change nobody counted as a change. **Standing rule: if you added instrumentation
+to make a remote failure observable, the shape you verified is the INSTRUMENTED one. Strip it and
+re-verify, or document it as required.** This is a new failure mode for this file — every previous
+instance of "renders clean, wrong downstream" was about a gate being blind; this one is about the
+*observer* being part of the artifact.
+
+**Every gate is blind, which is why it went mechanical immediately.** `flows config validate`
+returns `valid: true` for both forms; the schema check passes both; and `config preview` **never
+navigates for any reason**, so a working timer and a dead one produce the byte-identical local
+observation — the very blindness `preview.md` documents, which is what made three device trips the
+only available instrument. Landed as a **hard raise** in `flowkit.timer()` (unrepresentable beats
+detectable: the action-without-a-child pair cannot be built) and an **ERROR** in
+`verify-config.py`. **Calibrated:** fires on the probe, silent on the instrumented flow and on all
+tracked and raw fixtures. Severity is ERROR rather than warning because the failure is silent,
+terminal — the flow has no other way off that screen unless the author happened to add one — and
+visible on hardware alone.
+
+**Corrected in five places at once**, per this repo's grep-every-reference rule:
+`patterns.md` (a correction blockquote on the device-verified block, the `opacity` bullet's second
+half marked superseded, and the not-agent-tested note widened to name the childless form),
+`flowkit.py` (the raise, plus a docstring that used to recommend the broken shape by name —
+*"the correct shape for a purely invisible delay"*), `verify-config.py` (the check),
+`tests/test-flowkit.py` (**a standing assertion had to be inverted**: it built the delay timer
+childless and asserted that as "the invisible-delay shape", i.e. the suite was pinning the defect —
+now three checks, both directions, including that a childless timer with *no* action stays legal),
+and finding 13 above.
+
+**A second lesson, about the probe rather than the finding.** The probe worked because it obeyed
+finding 16's rule — *a device diagnostic must not route its own navigation through the element under
+test.* Screen 1's manual button existed precisely so that a dead timer produced an answer instead of
+a dead end, and its destination differed from the timer's so the result was **self-reporting**: the
+user had to read one word off the screen, not describe a behaviour. One trip, one word, unambiguous.
+
+**Not agent-tested.** Whether an agent asked for a loading screen now emits a timer with a child is
+unmeasured; the two guards make the wrong form unrepresentable from `flowkit` and red in
+`verify-config.py`, which is why this did not wait for a round. The open scenario is finding 13's,
+amended: score the child alongside the parent, the size and the explicit `navigate`.
 
 ## Conventions when editing `paywall-teardown`
 

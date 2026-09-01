@@ -1,6 +1,6 @@
 ---
 name: flow-generator
-description: Use when a user wants to change an Adapty flow by editing its builder config JSON — add a locale, translate a paywall or onboarding, rewrite copy, add/remove/reorder screens, add tabs or plan pickers, or wire quiz branching. Triggers on "edit my flow config", "add a language to my paywall", "translate my onboarding", "remove a screen from the flow", "add tabs to my paywall", "build me a paywall like this", or a supplied Adapty flow config.
+description: Use when a user wants to change an Adapty flow by editing its builder config JSON — add a locale, translate a paywall or onboarding, rewrite copy, add/remove/reorder screens, add tabs or plan pickers, wire quiz branching, or build an onboarding sequence. Triggers on "edit my flow config", "add a language to my paywall", "translate my onboarding", "remove a screen from the flow", "add tabs to my paywall", "build me a paywall like this", "build me an onboarding", or a supplied Adapty flow config.
 ---
 
 # Flow generator
@@ -48,7 +48,7 @@ did and did not cover. **Say each thing once**: if the approval ask already name
 note does not repeat it.
 
 Do not narrate phases, restate the config back, list warnings you did not act on, or explain the
-CLI to someone who asked for a paywall.
+CLI to someone who asked for a flow.
 
 ## The CLI surface
 
@@ -187,18 +187,33 @@ compare against the file rather than your memory of it (phase 4). **Follow the r
 colour, typography, icon style and hierarchy, but keep Adapty's fluid layout discipline**
 (`width: fill`, `height: hug`, `position: relative`): never hardcode fixed dimensions or offsets to
 match a screenshot's pixels, because fixed geometry breaks across devices (ADP-7117). **No
-reference means you are choosing it** — "build me a paywall", "make one that converts" — and the
-request map only turns nouns into element types; it says nothing about what sells.
+reference means you are choosing it** — "build me a paywall", "build me an onboarding", "make one
+that converts" — and the request map only turns nouns into element types; it says nothing about
+what sells.
 
-When you are the one choosing, the **`paywall-teardown`** skill is the reference. Invoke it before
-you write anything: it returns a **composition** plus the patterns this vertical needs, and it
-names the values it refuses to invent — a rating, a review count, an outcome stat, a discount, a
-hero asset. **Put those asks to the user before you write the config**, and leave the element out
-rather than filling it with a plausible number: a missing element is recoverable, a fabricated
-rating is a lie in front of real buyers. Build the composition it names and **do not substitute a
-shape you built last time** — that is how two unrelated verticals got the same screen. It also
-grades the result in phase 4, where a correction is still free. And when the user wants to know how
-*good* a flow is rather than to change it, that answer is a teardown, not a transform.
+**When you are the one choosing, a teardown skill is the reference, and which one is decided by
+what you are building — not by which you reached for last time.**
+
+| What you are building | The reference | What it returns |
+| :--- | :--- | :--- |
+| One screen that sells — a paywall | **`paywall-teardown`** | An **archetype** (the screen's composition) plus the patterns this vertical needs |
+| A sequence — onboarding, welcome, quiz, activation | **`onboarding-teardown`** | A **skeleton** (the sequence's shape) plus the patterns, placed per screen |
+| Both — an onboarding that ends on a paywall | **Both.** `onboarding-teardown` owns the sequence and the seam; `paywall-teardown` owns the paywall screen itself | Run the sequence one first: it decides what the paywall must reflect |
+
+Invoke it before you write anything. Both name the values they refuse to invent — a rating, a
+review count, an outcome stat, a discount, a hero asset, and for a sequence the thing the app must
+really deliver behind a personalized promise. **Put those asks to the user before you write the
+config**, and leave the element out rather than filling it with a plausible number: a missing
+element is recoverable, a fabricated rating is a lie in front of real buyers. Build the shape it
+names and **do not substitute one you built last time** — that is how two unrelated verticals got
+the same screen. It also grades the result in phase 4, where a correction is still free. And when
+the user wants to know how *good* a flow is rather than to change it, that answer is a teardown,
+not a transform.
+
+**In a build there is nobody to interview.** `onboarding-teardown`'s six questions are its
+front door when a user brings a flow to it; invoked from here they are answered from the brief,
+the config and the catalog, and whatever is left becomes one batched ask alongside the others
+above. Do not start a six-turn questionnaire in the middle of a build.
 
 **Products are the user's to pick — catalog first, store ids second, create last.** For any
 screen that sells, resolve the products **before the design**, in this order, and never skip a
@@ -417,14 +432,20 @@ so and ask the user to look; never report the work finished on a clean validate.
 Both, with the four surfaces and what each one proves:
 [preview.md](references/preview.md).
 
-**A render that matches the request can still be a weak paywall.** Every check above asks whether
-you built what was asked; none asks whether the screen sells. **If you chose the design — no
-reference, no source screen — running `paywall-teardown` over this PNG is part of the work, not a
-courtesy.** Hand it the render *and* the config (one shows what is visible, the other what is
-there), then **apply** what it ranks *Fix first* or *High* and re-render. Findings on a screen you
-designed are defects, not suggestions — a screen handed over with a list of the patterns you
-skipped is unfinished — and this is the cheapest moment, a screenshot instead of a `config update`.
+**A render that matches the request can still be a weak screen — and a set of renders that each
+match can still be a weak flow.** Every check above asks whether you built what was asked; none
+asks whether it sells. **If you chose the design — no reference, no source screen — running the
+teardown over what you built is part of the work, not a courtesy.** Same routing as phase 2: a
+paywall goes to **`paywall-teardown`**, a sequence to **`onboarding-teardown`**, a flow that is both
+to both. Hand it the render *and* the config (one shows what is visible, the other what is there),
+then **apply** what it ranks *Fix first* or *High* and re-render. Findings on something you designed
+are defects, not suggestions — handing it over with a list of the patterns you skipped is
+unfinished — and this is the cheapest moment, a screenshot instead of a `config update`.
 Skip it only on a literal edit: a typo fix, a locale add.
+
+**A sequence is graded on the sequence, so give it every screen.** Render each one and pass the set
+— `references/montage.py` joins them into a strip, which is what makes "screen 4 promises what
+screen 5 doesn't deliver" visible at all. One screen out of six cannot show a seam.
 
 **Iterate here.** Anything off, go back and fix it, then re-run phases 3 and 4. Nothing has
 been saved yet, so an iteration costs a screenshot rather than a write.
@@ -773,7 +794,8 @@ Each file **owns** its facts; link rather than restate, or the copies drift.
 | [merge.md](references/merge.md) | The flow has been edited by a human since it was generated, or you are tempted to re-run a build script over an existing flow |
 | [transforms.md](references/transforms.md) | You hit a point where two answers are defensible and silence is the only wrong one |
 | [patterns.md](references/patterns.md) | You need a composite you cannot guess: tabs, progress bars, toggles, countdowns, plan cards |
-| the **`paywall-teardown`** skill | **Phase 2** when *you* choose the design, **phase 4** to grade what you built. It owns whether the screen sells; this skill owns the JSON |
+| the **`paywall-teardown`** skill | **Phase 2** when *you* choose the design of a **screen that sells**, **phase 4** to grade what you built. It owns whether the screen sells; this skill owns the JSON |
+| the **`onboarding-teardown`** skill | The same two phases when what you are choosing is a **sequence** — onboarding, welcome, quiz, activation. It owns the shape of the flow and the onboarding→paywall seam. A flow that is both runs both |
 
 Executable, all under `references/`: `flowkit.py` (authoring), `verify-config.py` (phase 3),
 `validate-with-schema.mjs` (phase 3), `diff-config.py` (phase 2 and phase 5), `montage.py` and

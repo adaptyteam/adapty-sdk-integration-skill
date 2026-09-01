@@ -259,6 +259,26 @@ first confirmed `timer-end`, since no export in the corpus carries one:
                                 "payload": {"type": "screen", "screen": "scr_next"}}]}]}
 ```
 
+> **CORRECTED 2026-09-01 — the block above is incomplete, and the missing part is the one that
+> makes it work. `el_delay` MUST HAVE AT LEAST ONE CHILD.** A childless timer does **not** fire
+> `timer-end` on a device: the flow reaches the screen and stops there for good. Measured over
+> three device trips — a real onboarding stuck on its loader; the identical config with one child
+> `text` added advancing; and an isolating probe whose two exits led to *different* destinations
+> reporting the manual route, never the timer's. The mechanism is the one the fifth bullet below
+> already half-stated and then waved away: an element with nothing to lay out is one the renderer
+> skips, and a timer is not exempt.
+>
+> **Why the original verification missed it, and this is the transferable half: that session had
+> added visible countdown digits to diagnose the failure, then wrote the shape down without
+> them.** The instrumentation *was* the fix, and it was removed from the record as noise. If you
+> add instrumentation to make a remote failure observable, the shape you verified is the
+> instrumented one — strip it and re-verify, or document it as required. See CLAUDE.md finding 29.
+>
+> `flowkit.timer()` now raises on the pair and `verify-config.py` errors on it, because no other
+> gate can see it: `validate` returns `valid: true` for both forms and `config preview` never
+> navigates for any reason, so the working and the dead timer produce the identical local
+> observation.
+
 Four things about it, and **which one was decisive is unisolated** — they were fixed together
 before the device test, so treat the whole shape as the unit that works:
 
@@ -268,9 +288,12 @@ before the device test, so treat the whole shape as the unit that works:
 - **`hug` + `padding`, never a `fixed` 1×1 box.** A 1×1 timer is a degenerate size and trap 15
   is explicit that the transformer believes those. The one real export's timer is `hug` *with*
   padding, so it has a genuine box; copy that.
-- **No `opacity: 0`.** The recipe's opacity exists to hide a countdown showing **digits**. A
-  timer with no child `text`, no `fill` and no `border` draws nothing anyway, so the zero opacity
-  buys nothing and asks a renderer to keep ticking an element it may legitimately skip.
+- **No `opacity: 0`.** The recipe's opacity exists to hide a countdown showing **digits**, and
+  a zero-opacity element is one a renderer may legitimately skip. **Superseded in its second
+  half:** this bullet went on to say a timer with no child draws nothing "anyway", which read as
+  a licence to ship one childless. It is not — see the correction above. The surviving rule is
+  narrower: do not set `opacity: 0`, *and* give the timer a child. If the countdown should not be
+  seen, the child is the loading copy the screen was going to show regardless.
 - **An explicit `navigate`, not `navigateNext`.** The recipe says "Navigate Next" because that is
   the builder's dropdown; in JSON an implicit next-in-order target silently re-routes if anyone
   reorders the screens, and it also makes the graph invisible to the reachability check —
@@ -278,8 +301,8 @@ before the device test, so treat the whole shape as the unit that works:
   which is the checker doing its job, not a false positive to suppress.
 
 **Not agent-tested.** The facts above are device-measured, but whether an agent handed "add a
-3-second loading screen" produces this shape rather than the 1×1 nested form has had no baseline
-round — per the Iron Law in `superpowers:writing-skills`, treat that as open.
+3-second loading screen" produces this shape rather than the 1×1 nested (or childless) form has
+had no baseline round — per the Iron Law in `superpowers:writing-skills`, treat that as open.
 
 ```json
 {"id": "el_…", "type": "timer",

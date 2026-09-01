@@ -1001,6 +1001,53 @@ check('empty-translation is a blocker',
 check('a variable-only field is not reported empty',
       len(of(run(FLOW)[1], 'empty-translation')) == 0)
 
+# SILENT: CONDITIONAL TEXT. A personalization payoff's copy is a `switch` nested inside
+# the locale, not a block array, so a richtext-shaped reader sees nothing there. Measured
+# firing a BLOCKER on three legitimate fields of a real onboarding flow before the fix --
+# the third instance of this trap, after variable-only content and per-locale images.
+def _switch_val(text):
+    return {'_localizable': True, 'values': {'en': {
+        'type': 'switch',
+        'cases': [[{'type': '==', 'left': {'type': 'var',
+                                           'variableId': 'goal.selectedOptionId'},
+                    'right': {'type': 'const', 'value': 'a'}},
+                   {'type': 'const', 'value': [{'type': 'paragraph', 'content': [
+                       {'type': 'text', 'text': text, 'attrs': {}}]}]}]],
+        'default': {'type': 'const', 'value': [{'type': 'paragraph', 'content': [
+            {'type': 'text', 'text': text, 'attrs': {}}]}]}}}}
+
+
+c = load(FLOW)
+_target = None
+for _s in c['screens']:
+    for _e in _s['elements']['map'].values():
+        if _e.get('type') == 'text' and isinstance(_e['props'].get('content'), dict):
+            _target = _e
+            break
+    if _target:
+        break
+_target['props']['content'] = _switch_val('Your plan for falling asleep faster')
+check('fixture setup: a conditional-text value was actually injected', _target is not None)
+check('conditional text is SILENT on empty-translation',
+      len(of(run(c)[1], 'empty-translation')) == 0,
+      f'got {len(of(run(c)[1], "empty-translation"))}')
+
+# FIRES: the branches are recursed rather than the type merely accepted, so a switch
+# whose branches are all empty is still an empty translation.
+c = load(FLOW)
+_target2 = None
+for _s in c['screens']:
+    for _e in _s['elements']['map'].values():
+        if _e.get('type') == 'text' and isinstance(_e['props'].get('content'), dict):
+            _target2 = _e
+            break
+    if _target2:
+        break
+_target2['props']['content'] = _switch_val('')
+check('an all-empty conditional-text switch still FIRES',
+      len(of(run(c)[1], 'empty-translation')) == 1,
+      f'got {len(of(run(c)[1], "empty-translation"))}')
+
 print('\nlocalization: delegation to verify-config.py (Step 5)')
 # A MISSING locale key (one field, present in some locales and absent in this one) is
 # already reported by verify-config.py, per field. `locale_coverage` may COUNT it for

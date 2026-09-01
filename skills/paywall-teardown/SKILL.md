@@ -270,8 +270,15 @@ step is the change itself.
 
 ## Scope note
 
-This skill analyzes the **paywall**. If the user asks about onboarding, the full funnel, or pricing
-strategy, give what you can from the paywall and say a full-flow teardown is a broader exercise —
-don't fake analysis of screens you weren't given. Editing the flow itself, previewing it, and
-writing it back is the `flow-generator` skill's job; this one decides *what* should change and
-what it is worth.
+This skill analyzes the **paywall** — one screen, and its execution: plan cards, price display,
+savings framing, CTA, proof placement, trust signals.
+
+**The sequence in front of it belongs to `onboarding-teardown`** — flow length and branching, goal
+capture, the personalization payoff, loader placement, permission timing, and the onboarding→paywall
+seam. Hand those over rather than answering them from a screen you weren't given; when both are in
+front of you, run both and don't duplicate rows. Whether the paywall's annual card is legible is
+yours; whether it reflects the goal onboarding captured is theirs.
+
+Pricing strategy is nobody's here: say what you can and don't prescribe exact prices. Editing the
+flow itself, previewing it, and writing it back is the `flow-generator` skill's job; this one
+decides *what* should change and what it is worth.

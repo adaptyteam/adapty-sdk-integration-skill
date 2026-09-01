@@ -178,7 +178,7 @@ the checks were written against.
 authoring a config. A shape helper that has drifted from the format is worse than no helper,
 because it is confidently wrong at scale — so it does not ship without this.
 
-Nineteen checks, in three groups:
+164 checks, in four groups:
 
 - **The invariant it exists for.** `hierarchy` and `map` hold the same id set, no id twice, no
   leftover `_children`, and `flatten` *raises* on a duplicate id rather than silently dropping an
@@ -186,6 +186,14 @@ Nineteen checks, in three groups:
 - **The traps, as assertions.** Fills are arrays (v10), `_meta.screens` stays empty because it is
   builder-owned, a purchase buys `<group>.selectedProduct` rather than a const, a product carries
   the system `selected` state, and `opacity` is a percentage.
+- **The capability gaps, as assertions.** Every helper added because its absence *was* the missing
+  capability — an author reaches for what the module exposes. `switch_rich()` is the newest and the
+  one with a service measurement behind it: it emits conditional text (the copy a personalization
+  payoff is made of) in the export-verified shape, and `config()` refuses a predicate naming
+  nothing, because that half is compiled and fatal while a `variable` span in the same prop merely
+  renders its token. Also asserted: `spinner()` fixes `icon.type` to `custom` (a phosphor spinner
+  is a 422), `footer()` refuses a `position`, `screen()` refuses two footers and a
+  `footer` + `scrollable: false` pair, and a theme hex outside `#RRGGBB` raises.
 - **The bug it was built to kill.** Three build scripts once had three `runs()` helpers that agreed
   on the name and disagreed on what a tuple meant — one read `('var', id)` as a variable node, one
   read `(text, colorId)` as a coloured span, one crashed. Copying a call between them produced the
