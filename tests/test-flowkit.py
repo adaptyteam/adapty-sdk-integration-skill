@@ -716,6 +716,24 @@ def main():
     check('...while a childless timer with NO action stays legal (a decorative countdown)',
           fk.timer([], custom_id='d', seconds=3)['type'] == 'timer')
 
+    # ---- attach_point(): the single-plan hidden product element.
+    # patterns.md spelled this skeleton with `height: fixed 0` until 2026-09-02 -- the exact shape
+    # verify-config.py errors on under trap 15 -- and flowkit exposed no helper, so it was
+    # hand-assembled from that skeleton every time. Both halves of finding 12 in one place.
+    _ap = fk.attach_point(product_id='p-uuid', group_id='plans')
+    check('attach_point is a product element',
+          _ap['type'] == 'product')
+    check('attach_point height is hug, NEVER fixed 0 (trap 15)',
+          _ap['props']['height'] == {'type': 'hug'})
+    check('attach_point is hidden — that is what collapses the space',
+          _ap['props']['visibility'] == {'type': 'hidden'})
+    check('attach_point binds the product and the group',
+          _ap['props']['product'] == {'id': 'p-uuid'} and _ap['props']['groupId'] == 'plans')
+    check('attach_point is the group default — a lone member must be selected',
+          _ap['props']['default'] is True)
+    check('attach_point carries the selected system state like any group member',
+          _ap['states'] == [{'id': 'selected', 'type': 'system'}])
+
     print()
     if FAILURES:
         print(f'{len(FAILURES)} failure(s): ' + ', '.join(FAILURES))

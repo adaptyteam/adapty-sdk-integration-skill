@@ -39,8 +39,38 @@ eight inputs and the tabs composite — each raising on the shape the transform 
 
 The user reads your messages, not this file. Keep them short.
 
-**Two fixed blocks, and nothing else is fixed:** the approval ask before a write, and the closing
-callout after one. Both are in phase 5; fill their slots and do not pad them.
+**Three fixed blocks, and nothing else is fixed:** the approval ask before a write and the closing
+callout after one, both in phase 5; and the **missing-assets block**, printed in phase 2 whenever
+a build has assets nobody has a file for. Fill their slots and do not pad them.
+
+The missing-assets block goes out in phase 2, batched with the product questions, because a path
+they hand over turns a placeholder into a finished screen. **The upload routes are not symmetric** —
+offering both on every row recommends a path that ends in a refusal:
+
+> **`<n>` assets missing — the screen ships with placeholders until these land.**
+>
+> | | what | where it goes | size |
+> |---|---|---|---|
+> | 1 | `<what it is, in their words>` | `<where on the screen>` | `<w>`×`<h>` |
+>
+> Tell me which, per asset or for all of them:
+> - **Send me a path** — I'll upload and bind it.
+> - **Upload it yourself** at https://app.adapty.io/flows/`<FLOW_ID>`/builder — the placeholder is
+>   already styled, so it lands finished.
+> - **Design around it** — I'll replace that region with something the format can build, and say
+>   what I chose. Right when the reference is someone else's screen and that asset was never going
+>   to be yours.
+>
+> Until you answer, they ship as placeholders.
+>
+> `<only if a face is missing:>` `<what>` is set in a `<description>` this account lacks; I'm
+> using `<substitute>`, which `<how it differs>`. Fonts are **builder-only** — I can't upload one:
+> https://adapty.io/docs/using-custom-fonts-in-flow-builder.md — upload it, then tell me the
+> family name and I'll point the theme at it.
+
+Images up to ~2.5 MB you can upload; **SVG, fonts, video and anything larger are builder-only**
+([fidelity.md](references/fidelity.md)). Phase 5's callout carries the outstanding count as one
+line, not a repeat of the table.
 
 **Everything else is one line or omitted** — what changed, what still needs them (products to
 attach, assets to upload), any decision where two answers were defensible, and what your checks
@@ -235,8 +265,9 @@ the screen a screenshot cannot show.
 **Assets are resolved here too — upload the file, then build with its URL.** The upload reads a
 **path**, so **an image you can only see is not an image you have**: one the user pasted or
 attached arrives as pixels in your context with no file behind it, and you cannot write the bytes
-you were shown. For every image the screen needs, one of three states, decided before you write the
-element:
+you were shown.
+
+For every asset the screen needs, one of three states, decided before you write the element:
 
 1. **You have a path that reads** — one they gave you, or a project file you found and *named*.
    Upload it now and bind the URL it returns:
@@ -250,7 +281,14 @@ element:
    sent — **ask for a path**, once, batched with your other asks. Never guess one: a guess that
    misses fails loudly, and a guess that *hits* ships the wrong picture in a screen that renders
    perfectly. A URL they pointed at is fetchable, but say what you are downloading first.
-3. **Nobody has a file** — an empty `values` map (trap 5), reported in the handoff.
+3. **Nobody has a file** — a **styled empty `image`** where the graphic occupies a box:
+   `borderRadius`, `objectFit`, and a **fixed size taken from the reference**, on the element
+   itself, so the upload lands styled and the layout is checked at the size the asset will fill.
+   Where it has no box of its own — a texture, a glow — leave it out rather than approximating it.
+   Either way it goes on the missing-assets list, never into a paragraph. **Never a made-up URL**
+   (trap 5). If the reference itself contains the graphic on a *flat* backdrop, you may be able to
+   cut it out instead — [`references/crop.py`](references/crop.py), which refuses rather than
+   guessing when the backdrop is textured or the box is wrong.
 
 **Upload before the preview loop, not after it, and upload each asset once.** A placeholder does
 not occupy the space the real asset will, so a screen previewed with placeholders is a screen whose
@@ -609,6 +647,9 @@ point:
 >    On mobile, tap the link to preview.
 >    <the QR image line if they asked for one; otherwise the offer, or nothing>
 > 3. **Publish:** the button at the **top right of the editor**.
+>
+> `<one line, only if the phase-2 missing-assets list still has open items:>`
+> `<n>` assets are still placeholders — see the list above.
 >
 > Until you publish, everyone continues to see the previous version.
 

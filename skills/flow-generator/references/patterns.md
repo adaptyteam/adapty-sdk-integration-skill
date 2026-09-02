@@ -862,7 +862,7 @@ The shape that avoids it uses each mechanism for the one thing it is for:
 
 ```json
 { "id": "el_attachPoint", "type": "product", "caption": "Product attach point (hidden)",
-  "props": {"width": {"type": "hug"}, "height": {"type": "fixed", "value": 0},
+  "props": {"width": {"type": "hug"}, "height": {"type": "hug"},
             "visibility": {"type": "hidden"},
             "groupId": "plans", "default": true,
             "product": {"id": "<product-uuid>"}, "layout": {…}, "position": {"type": "relative"}},
@@ -878,6 +878,12 @@ The shape that avoids it uses each mechanism for the one thing it is for:
   variable resolves only against a declared product, and only a `product` element can be
   attached to. Hidden costs nothing — hiding collapses the space (trap 14) — and the price then
   lives in ordinary copy anywhere on the screen.
+- **`height` is `hug`, not `fixed: 0`.** Corrected 2026-09-02: this skeleton spelled it
+  `{"type": "fixed", "value": 0}`, which is the exact shape `verify-config.py` **errors** on under
+  trap 15 — a fixed 0 saves fine and kills the element on device. So the file that tells you to
+  prefer a documented skeleton was handing you the one the checker rejects, which is finding 15's
+  class. `visibility: hidden` already collapses the space; belt-and-braces with a zero height buys
+  nothing and trips a real gate. Found by an agent that hit the error and worked around it.
 - The **CTA buys with `const`**, which names the product directly and needs no group and no
   selection. Both facts, with their evidence, are
   [products.md → a price variable REQUIRES a `product` element](products.md) and
@@ -885,7 +891,12 @@ The shape that avoids it uses each mechanism for the one thing it is for:
 - Keep the `selectableGroups` entry and the element's `groupId` in agreement even though nothing
   reads the selection — the invariant is bidirectional and a stray `groupId` fails verify.
 
-**Verified by render**, and it is what a reviewer asked for over a visible single card. What is
+**Verified by render**, and it is what a reviewer asked for over a visible single card. Evidence
+tier, stated plainly because this file's own ordering demands it: **no real export contains a
+hidden attach point at all** — every `product` element across the corpus is a visible plan card
+(`hug` height, `fill` width, no `visibility`), so this composition is authored, not observed. The
+two halves it is built from *are* attested separately: `hug` is what every real `product` element
+uses, and `visibility: hidden` appears on real builder output elsewhere in the corpus. What is
 *not* yet verified: whether the builder declares a product on a **hidden** element when it saves.
 Provisional declaration via `flowkit.predeclare()` covers device preview meanwhile, so check the
 live `_meta.screens` after the flow has been saved in the builder once before relying on it.

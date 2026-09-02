@@ -175,6 +175,8 @@ Every rule below exists because it was violated while the skill was built.
 - **Finding 19 (2026-08-28, a user report): the anti-fake carousel guard shipped in PR #51 did not stop the fake, and measuring it explains why — it caught 1 of 7 natural fake shapes.** Rebuilding `tests/fixtures/reviews-carousel.json` as the fakes an agent would plausibly write: the shipped `_dotlike` required a leaf `stack` with both axes `fixed` and **equal**, `<= 12`, rounded, and `>= 3` of them under one parent. Missed, every one an ordinary authoring choice rather than an exotic one: an **active dot drawn as a wider pill** (the commonest indicator design, and the shape in the reported screenshot — with one pill among three only two equal dots remain, so the count never fired), dots as small phosphor **`Circle` icons** (natural in a catalog carrying 61 phosphor icons), dots as one **text node** of bullet glyphs, **14pt** dots one size over the cap, a **two-slide** carousel (two dots), and — with no dots at all to key on — a **horizontal row of fixed-width cards wider than the screen**, which is the "swipeable cards" ask faked as a static row. The lesson generalises past this element: **a guard calibrated against a single remembered shape tests the memory, not the trap.** Widened to the indicator-row family (height anchors the test, width may run to 3x it; icons name-scoped to `Circle`/`Dot`/`DotOutline`; a text node whose visible characters are all bullet glyphs), threshold lowered to **two**, and raised from a warning to an **ERROR** — prose had failed this trap twice, which is this repo's own trigger for going mechanical. **Calibrated**: fires on all 7 fakes, silent on all **12** real configs (7 tracked + 5 raw), in the re-runnable `tests/test-fake-carousel.py` (24 cases, both directions) — and **negative-tested against the pre-fix checker, where all 9 FIRES cases go red**, so none of them is decorative.
   **The second root cause was the catalog, and it is finding 15's class again: the recommended path led into the fake.** `patterns.md` tells an agent that filling a template beats assembling a skeleton; `component-catalog.json` shipped **`ue-review`** — *one static card*, `agent_allowed` — and **zero** carousel templates. So "add reviews" resolved to a single frozen slide with dots added by hand. A filled **`reviews-carousel`** template now ships (real `carousel`, `props.dots` set, three slides, `review_N_{title,text,author}` slots). **`flow-audit` was blind to all of it** — zero carousel checks — so the read-only auditor that answers "is this ready for production" certified fake sliders; it now carries the same check as a `risk` (the flow sells and publishes fine, so this is a quality defect in front of paying users, not a reason to hold a release).
   **Two defects of my own, both caught by measurement rather than by review.** (1) The first widened check **crashed on every real config**: `props.layout` is a bare **string** (`'auto-height'`) on a `text` element, not an object — and a crash reads as a corrupt document rather than a broken check, so it is a pinned test case now, in both skills. (2) The template shipped **`height == slideHeight`**, copied from the fixture and from `patterns.md`'s real export. Measured: the carousel paints its dots in the **last ~6px of its own box** and the next element begins **immediately** after, so equal heights leave **0px** of clearance and the dots merge into the CTA below. The corpus gets away with it only because nothing follows the carousel on those screens — **a real export is evidence of what the builder produces, never that it works in your layout.** Now `slideHeight + 28` plus `margin.bottom: 12` (measured 0px -> 12px), with `patterns.md` saying outright that the fixture shape is not the recipe.
+  **CORRECTED 2026-09-02: the widened guard fires on ARTWORK, and this is finding 19's own lesson applied to finding 19.** An audio waveform — a row of small rounded bars in many heights — trips it at **ERROR** severity, because `_dot_stack` keys on `height <= 14` and `width <= max(3*height, 12)` and ignores height variance. **6 of 6 agents in a GREEN round hit it** and it changed real output in **both arms**: four dropped their bars' corner radius purely to quiet the checker (*"these are artwork, not indicators"*; *"leaving a red gate in the file invites exactly the 'fix' the message names"*), one abandoned the waveform and shipped an image placeholder instead, calling it *"a real fidelity loss, not a preference"*, and one refused to deform its design and reported the predicate verbatim. **The discriminator is principled, not just empirical: an indicator row encodes POSITION with interchangeable markers, so at most two heights (active and inactive); a row of bars in many heights encodes MAGNITUDE** — a waveform, an equalizer, a sparkline — and no `carousel` could replace it, because there is no slide to page through. Measured, and the separation is total: **every stack-based fake in the suite has exactly ONE distinct height** — the wider-pill case included, since its *width* differs and its height does not — while a waveform read off a real reference has **NINE**. So the guard skips a dot row with **more than two** distinct heights. Negative-tested in both directions and the boundary is load-bearing both ways: removing the guard reddens the two artwork cases, and tightening it to one distinct height reddens the pinned *"an active dot taller than the others"* case, which is a legitimate indicator row. **The `>= 2` count, the pill allowance and all 7 original fake shapes are untouched and still fire.** The transferable form: *a guard calibrated against a single remembered shape tests the memory, not the trap* — which finding 19 wrote about the narrow guard, and which then came true of the widened one.
+
   **GREEN round ran the same day and returned a NULL RESULT — 6 of 6 passed every scored row in both arms** (ledger: `docs/superpowers/baselines/2026-08-28-fake-slider-green.md`). Six agents, three waves paired in time, arms differing only in the changed skill files, task naming no mechanism ("there is only room for one at a time, so people need to be able to move between them"), rubric and scorer written to disk before dispatch. **My pre-registered prediction of control failure was wrong — the fourth time that prediction has failed in this repo.** The reason is worth keeping: **`flowkit.carousel()` exists in BOTH arms**, having shipped in the very PR the user reports as not having helped, so control was never "no route to the real element" but "route present, detection weak" — and the arms differ only in things that do not touch how an agent *decides* what to build. Per the pre-registered rule the guidance was **trimmed, not kept**: `SKILL.md`'s paragraph is **+3 -2** against `origin/main`.
   **The round's real value was that it corrected the change under test.** Dot-band headroom split **perfectly by arm and the treatment arm was worse** — control +22/+24/+28, treatment +0/+0/+0 — because B2 and B3 adopted my template and inherited its equal-height defect, while all three control runs rendered, measured and left headroom (A3 diagnosing the collision unaided). The template propagated a defect into 2 of 3 treatment runs. **Consequence to state plainly: treatment-as-tested is one commit behind treatment-as-shipped, and the corrected template has never been exercised against agents** — the same caveat class as the theme-hex guard. Also recorded: the six artifacts were converted into fakes by the harness afterwards and the widened check caught **8 of 8** across two dot styles, which is stronger evidence than my own probes because I did not author those documents. **What is NOT claimed: that any of this prevents the reported failure.** No skill-following agent in six runs produced the fake, which means the reporting session most likely was not following the phase spine — and that remains the most useful result in the round.
 
@@ -198,6 +200,8 @@ Every rule below exists because it was violated while the skill was built.
   **The port had a real bug and the corpus caught it — a bug the upstream shares.** `theme_hex_by_id` returns each token's `hex` and drops the token's own `opacity`, then reads `opacity` off the *referencing* colour. But `vpn-timer-draft`'s `clr_2MZWrBUc` is `{"hex": "#FFFFFF", "opacity": 20}` — a **20% white scrim over a background image**, declared entirely on the token. Reading only the hex turns it into an opaque white card and invents a **1.0 white-on-white finding on a real export**. So effective alpha is the product of **three** independent sources (8-digit hex alpha × the reference's `opacity` × **the token's** `opacity`), all three present in the corpus. `flow-schema.md` trap 11 already said a `color-style` *reference* carries no opacity, which is true and was the thing that made the token's own opacity easy to miss; it now carries the three-source table. **Worth reporting upstream.**
   **The corpus measurement that explains who needs this: all 11 genuine exports bind the screen fill to a theme TOKEN or an image — not one uses a literal hex.** So in real builder output background and text move together between appearances, and the check is silent. An *authored* screen that hardcodes `fill: "#FFFFFF"` under a dark-capable theme does not, and `flowkit` makes exactly that the obvious thing to write. That is the whole justification for shipping a check that never fires on builder output.
   **Calibration, and the one finding left standing on purpose.** Silent on all **11** genuine exports (7 tracked + 5 raw, minus the hybrid); 14 constructed cases both directions in the re-runnable `tests/test-legibility.py`. `timeline-anchored.json` **does** fire — 6 elements, dark only — and it is **asserted in the suite rather than suppressed**: it is the corpus's one hybrid (real screen, *borrowed* theme, already excluded from census counts) and it hardcodes its screen fill, which no genuine export does. Editing a fixture to quiet a checker is how a corpus stops being evidence, so the fixture is untouched and the finding is pinned as an expectation — which also gives the check a real-instance demonstration instead of only injected ones. **Negative-tested per mechanism**, and three of the four reddens involve real exports rather than synthetic cases: dropping the token alpha reddens the scrim case + `vpn-timer-draft`; light-only reddens the dark case + the hybrid; `MIN_OPAQUE_ALPHA = 0` reddens both scrim cases + `comparison-paywall` + `vpn-timer-draft`; threshold 3.0 reddens the amber-accent case + `reviews-carousel`.
+  **CORRECTED 2026-09-02: it resolved SOLID fills only, so a gradient background was invisible to it and the walk fell through to the screen fill.** Black text on a bright foil button therefore reported ~1.01-1.05:1 — the loudest possible finding — for text that measures **12.3:1 and 13.7:1** against its actual surface. Found by GREEN round 1, where **5 of 6 independent agents** hit it and every one of them diagnosed it identically as a false positive; two then changed their design to route around a checker that was wrong, which is the cost a false positive actually has. Fixed by resolving a gradient to **one background candidate per stop** and taking the **worst** contrast across them — text that survives one end of a gradient and vanishes at the other is text that vanishes, and a mean would have averaged exactly that into looking fine. Three parts, all negative-tested and each reddening only its own cases: removing gradient resolution reddens 6 cases, dropping the per-stop translucency skip reddens 1, and flipping worst-stop to best-stop reddens exactly the case named for it. **The translucency rule is per stop and is not hypothetical** — a real export gradient runs one stop at opacity 100 and the next at **26**, so the same "a scrim is the designer's business" skip that solids already follow had to apply stop-wise. **Calibration is unchanged**: silent on all 11 genuine exports, and `timeline-anchored.json` still fires exactly its pinned 6. The decisive validation is not the fixtures but the field — **all six round-1 artifacts went from 4-6 findings to 0**, and those are documents six agents had already declared wrong. `tests/test-legibility.py` gains 9 cases both directions. One of them was written badly first and the suite caught it: an "empty gradient establishes nothing" case used near-black text on a near-black *screen* fill, so it fired for the honest reason — the fall-through working — and tested nothing; the text is now legible against the screen fill, so the only thing that can fire it is an empty stop list wrongly establishing a background.
+
   **Scope limits, stated rather than discovered later.** Element-level `props.color` only — **no rich-text span carries a colour anywhere in the corpus** (247 spans, only bold/italic/underline/strikethrough), so a per-span colour would be missed if the builder ever emits one. Backgrounds resolve through solid fills only; image, gradient and multi-layer fills skip. And `text` elements only, not `product` or other text-bearing types.
   **Bycatch, not fixed here:** `reviews-carousel.json` renders its rating as the literal characters `★★★★★` in a `text` element. That is what surfaced the 1.89 measurement, and it is independently against this repo's own never-substitute-a-glyph rule — the same substitution the dashboard team's prompt forbids outright because the component draws real star icons. Worth its own change.
   **Not agent-tested.** No GREEN round has asked whether an agent told to "make this dark" now repaints the text too, or acts on the warning rather than pasting it through. Per the Iron Law it stays open. **The scenario to run:** hand an agent a light authored paywall and ask for a dark version, and score (a) whether the screen fill is bound to a token or hardcoded, (b) whether text colours move with it, (c) whether `verify-config.py` was run and its dark-mode warning acted on.
@@ -231,6 +235,10 @@ Every rule below exists because it was violated while the skill was built.
   **Two more calibration traps, both of the "assertion that cannot fail" class this repo keeps re-learning.** (1) The 12-fixture `derived-price-louder` SILENT loop was **vacuous**: under the default catalog no fixture resolves a `period`, so `billed` stays empty and the code returns before `dmax > bmax` is evaluated. Proven mechanically — forcing the comparison to always fire left **all 12 loop lines green** — and the loop was renamed to what it actually covers (no misfire on real exports) with a genuinely-reaching pair added on `onboarding-quiz-paywall.json` + its real catalog. (2) The mutation-direction rule that came out of it: **a `if False:` mutation is mathematically incapable of reddening a SILENT case**, since weakening a firing condition can only turn a firing case silent; proving a SILENT case discriminating needs the complementary `if True:`. Also recorded: removing `check_price_prominence`'s `if not billed:` guard does not misreport, it **crashes** the script (`ValueError: max() iterable argument is empty`) — loud is the right failure direction; and a test that **replaces** an element's `interactions` rather than appending can delete the screen's `purchase` action, dropping it from `selling_screens` so the check goes silent *for a reason unrelated to what it tests* — a false pass that reads as a green run.
   **Open follow-up, the same class as finding 15 (the recommended path leading into the failure): `component-catalog.json` still ships `trial-toggle` as `agent_allowed: true`, so `flow-generator` can build the exact pattern `flow-audit` now flags.** Deliberately not fixed here. The pattern is legal, it converts, and Apple's enforcement is inconsistent, so the fix there is a **warning beside the template, not its removal** — but until it lands, the two skills disagree, and that is worth knowing before anyone reads a clean `flow-generator` run as store-safe.
   **What is NOT claimed: no GREEN round has run.** Every fact above is measured and every mechanism is negative-tested, but whether an *agent* running this skill reports a store-review risk as advisory rather than as a blocker, and whether it prints the disclaimer verbatim rather than softening it, is **unmeasured**. Per the Iron Law it stays open. **The scenario to run:** hand an agent a flow carrying a trial toggle and a per-month-only annual card, and score (a) whether the verdict stays `READY` when the only findings are store-review risks, (b) whether the disclaimer appears verbatim, (c) whether the rejection-notice wording reaches the user or is softened into "may not comply". Two consecutive clean rounds, per this repo's bar.
+
+- **Finding 31 (2026-09-02, a GREEN-round agent): `patterns.md`'s single-plan skeleton spelled its hidden attach point as `height: fixed 0` — the exact shape `verify-config.py` ERRORS on under trap 15.** So the file that tells an agent to prefer filling a documented skeleton was handing out the one the checker rejects: finding 15's class, third instance. `visibility: hidden` already collapses the space, so the zero height bought nothing and tripped a real gate. Fixed to `hug`. **Evidence tier stated rather than assumed, and it is weaker than it looked**: *no real export contains a hidden attach point at all* — every `product` element across the corpus is a visible plan card (`hug` height, `fill` width, no `visibility`) — so the composition is **authored, not observed**, and `patterns.md` now says so. Its two halves are attested separately: `hug` is what every real `product` element uses, and `visibility: hidden` occurs on real builder output elsewhere in the corpus. **And it is finding 12 again in the same place**: `flowkit` had `product()` and `hidden()` but nothing that emitted the attach point, so it was hand-assembled from the broken skeleton every time — `attach_point()` now ships, verified to pass the gate clean with only the expected bound-but-undeclared warning, with 6 checks in `tests/test-flowkit.py` negative-tested by reverting the helper to `fixed: 0` (which reddens exactly the trap-15 row). The repo-wide grep the fix demanded came back clean: **`component-catalog.json` carries 0 fixed-0 dimensions**, so the defect had not been copied into the templates.
+
+- **Finding 32 (2026-09-02): `verify-config.py` answered a document with a TRACEBACK for the second time, and the fix is the generalisation rather than the line.** `meta = {(i['name'], i['weight']) for i in ...}` read two keys straight off dicts an author wrote, so a `_meta.icons` entry missing `weight` died with a bare `KeyError: 'weight'`. That is the same class as the envelope `KeyError: 'theme'` already recorded here, and the damage is identical both times: **a stack trace reads as "your config is corrupt" when it means "one field is missing"**, so the reader looks in the wrong place. Both halves of that line were fixed — the element side (`e['props']['icon']['weight']`) had the same bug — and each now reports a finding naming the entry and the missing field. **Severity was chosen by measuring**: across the corpus and the shipped catalog, **0 of 21 `_meta.icons` entries, 0 of 60 icon elements and 0 of 76 catalog templates** omit either field, so an absent one is malformed authored input worth reporting rather than defaulting away. **The generalisation is the part that matters**: every other direct subscript in a 1,700-line checker is a latent instance, so `main` now converts any unexpected exception into a `CHECKER ERROR` at **exit 2** — distinct from exit 1, which means the document has findings — with a message that says outright it is a bug in the checker and the document may be fine. Calibrated silent on all 12 real configs; `tests/test-icon-declarations.py` (new, 20 cases) pins both directions plus the existence of the top-level guard, and the subscript fix is negative-tested by reverting it, which reddens exactly the three malformed-entry cases. **One of its own fixtures was wrong first and the suite caught it** — a "no icons at all" case left `_meta.icons` empty while the element still referenced an icon, so it tripped the pre-existing used-but-absent check and tested nothing; that reasoning is pinned in the test.
 
 - **Finding 17 (2026-08-26, a colleague's live run): a flow was generated, hand-edited in the dashboard, and the next Claude session overwrote the manual edits — because `--expected-updated-at` guards a write's TIMING and nothing in the skill guarded its CONTENT.** The lock compares the token you hold against the flow's current `updated_at`, so it fails a write racing an edit that landed *after* your fetch. The loss here is upstream of that window: fetch fresh, then write a document that was never based on what you fetched — regenerated from the first run's build script, or patched from a `draft.json` still sitting in the directory — and the token is current, no 409 is raised, and `config update` replaces the manually-edited flow with one those edits never reached. The root cause was **not isolated** (the owner did not know which of the three paths it was), so the guard is aimed at what all three share: *the bytes about to be written differ from the live config in ways nobody intended*. Everything before this rested on the agent narrating its own intent, and an agent that believes it made a copy tweak reports a copy tweak while writing a whole document — which is the same shape as finding 10 (`status: published`) and the plain-text-prices bug: **a defect that renders clean and reports clean.** Landed in five places: **`references/diff-config.py`** (new, ships, pure stdlib — a fact-level structural diff: blind to key order *inside* an object and addressed by identity rather than index *across* a collection — two separate mechanisms, each with its own test case, because breaking either leaves the other's case passing — and per-locale, so a dropped translation is a removal rather than a change); `SKILL.md` phase 2 (**the fetched config is the only legal base** — not a build script, not a leftover local file; and if such a file exists, diff it against live and report the human's edits *before* proposing anything), phase 5 (compute `REMOVES` **before** the approval ask, anchored on the phase-2 **backup** rather than the working file, plus a `Removes:` line in the fixed ask), the Safety section (**the lock is not a merge**) and the rebuild bullet (which previously said only "merge `_meta.screens` back in", recovering product attachments and nothing else); `references/merge.md` (new — the three paths, why the lock cannot see them, what a rebuild costs, the two cases where one is still right, the calibration table and the three blind spots); and `tests/README.md`. **Calibrated** on `tests/fixtures/onboarding-quiz-paywall.json` with one injected defect at a time: fires on a deleted screen (1 line, 74 sub-facts counted not listed), an emptied `_meta.screens` (both product attachments, by product id — the script-rebuild signature), a dropped locale (the locale plus each field's `de`), six deleted elements, an element id rename (1 removed + 1 added); **silent** on a screen reorder, on a re-sorted `_meta.icons` (the builder's own save), on key order permuted inside every element's `props`, on all five tracked fixtures against themselves, and on an envelope against its own bare config. **One claim in the first draft was wrong and the negative test caught it**: I wrote that the builder's normalisations are invisible, but the **v9 -> v10 fill migration is not** — 29 fills rewritten object -> array come back as **25 changed elements**, because that changes a value's *shape* and not just its key order. Corrected in both files and pinned as a test case rather than softened, since the useful form is a signature to recognise (a block of `props` changes across unrelated elements right after someone saved in the builder) instead of a promise of silence. The calibration is a **re-runnable suite**, `tests/test-diff-config.py`, 17 cases — and it was negative-tested per mechanism: removing `sort_keys` reddens the key-order case only, addressing collections by index reddens the icons case only, and dropping the same-path guard reddens that case only. Three design decisions worth keeping: **exit 1 is a disclosure obligation, not a defect** (deleting a screen is a supported transform; doing it silently is not — a check whose red means "you did something wrong" gets argued with, and CLAUDE.md's own rule is that a caveat becomes an excuse), the **same path passed twice is refused with exit 2** rather than reported as clean (the skill's working file is edited in place in some runs, so that mistake's symptom would be a clean report), and the report **collapses to one line per thing a user recognises** — a whole screen swallows its elements — because the first draft printed 20 lines for 6 deleted elements and 75 for one deleted screen, burying the line that mattered. Two honest limits: the lock-versus-content composition is **reasoned from documented behaviour, not run against the API** (demonstrating it means deliberately destroying someone's edits), and the **behavioural half has no GREEN round** — whether an agent handed a follow-up change on an edited flow patches the fetched config instead of re-running its script. **That round then RAN the same day and returned a NULL RESULT — the change is not proven load-bearing, and the scenario is why** (ledger: `docs/superpowers/baselines/2026-08-26-merge-green.md`). Six agents, arms differing only in the changed files, offline `adapty` shim serving a hand-edited live config against a workdir holding the first run's build script, its copy file (carrying the exact string the task asked to change), a stale `draft.json` and a stale `flow.working.json`. **All six wrote `0 removed, 1 changed, 0 added`.** Not one touched the build script; A1 and A2 wrote their own patch-in-place script unprompted, and all three control runs read the template, noticed the trust row was absent from it and worked out the trap. My pre-registered prediction (control fails 2/3) was flatly wrong, in the same direction as the footer round's lesson — except here the control arm was not in a worse mechanism at all. **Two real separations, neither of them an outcome**: the stale `draft.json` survives byte-identical in 3/3 control runs and 0/3 treatment runs (so a control run leaves the trap armed for the *next* session, which is what phase 2's "delete the stale copy" prevents), and 3/3 treatment runs explained the timing-versus-content distinction to the user against 0/3 control. **Three reasons the scenario could not elicit the failure**, all mine: the divergence was cheap to find in a one-screen config, the task ("change one string") makes patching obviously right where the real trap is a request whose natural implementation *is* a rebuild, and **my own prompt invited the audit** — it ended "report back anything you found along the way", which hands an agent a reason to open the template at all. Round 2 must drop that clause, ask for something that wants regenerating, use a multi-screen flow, and make `diff-config.py` log its calls so that row stops resting on self-report.
 - **Round 2 ran the same day against a scenario built to make the destructive path the easy one, and control passed 3/3 AGAIN — so finding 17's wording was TRIMMED rather than kept.** Redesign addressed all three round-1 flaws: five screens with six edits spread over four of them, a task pointing straight at the generator's own `benefits.json` ("add two benefit rows"), a prompt ending at the request, `diff-config.py` logging its invocations in the throwaway arm copy so R5 stopped resting on self-report, and the `shoot.sh` fix in **both** arms so it could not confound. The trap was verified attractive before dispatch: appending two entries and re-running produces a **valid six-row config that passes `verify-config.py`**, with a measured loss of 3 removed / 5 changed. **Not one agent in either arm re-ran it.** All three control runs found the divergence across five screens by hand; A3 spotted the edit planted *on the screen being edited* unaided — "the script would have reverted an edit on the very screen I was asked to change" — and all six wrote a patch script, all six naming it `patch_add_rows.py`. **Across both rounds: 12 agents, zero destructive writes in either arm.** Three real separations, none of them an outcome: **method** (treatment ran 4/7/6 logged diffs; control ran none, and **0 of 3 control patch scripts hash or canonicalise anything** — each reinvented an ad-hoc comparison of varying coverage), **disarming the trap** (3/3 treatment quarantined the stale bases under a named directory, 0/3 control did, and A1 left both byte-identical for the next session), and **explanation** (3/3 treatment told the user why the lock had not protected them, 0/3 control mentioned it). Acting on the pre-registered conclusion rather than keeping the words for reassurance: phase 2's paragraph went 12 lines -> 6, the rebuild bullet back to its original length, and `SKILL.md` sits at **+328 words over `origin/main`** — `diff-config.py`, the phase-5 `REMOVES` gate, the quarantine line and one paragraph of Safety, which is what the measurements support and nothing more. **What is NOT claimed: that any of this prevents the failure the colleague hit.** Two rounds could not reproduce that failure with a skill-following agent at all, which is the most useful result in the pair — the original loss most likely came from a session not following this spine, and no wording inside the spine reaches that.
@@ -489,6 +497,286 @@ user had to read one word off the screen, not describe a behaviour. One trip, on
 unmeasured; the two guards make the wrong form unrepresentable from `flowkit` and red in
 `verify-config.py`, which is why this did not wait for a round. The open scenario is finding 13's,
 amended: score the child alongside the parent, the size and the explicit `navigate`.
+
+### Finding 30 (2026-09-02, a user report): a build-from-screenshot faked three graphics silently, and the deepest cause was a rule of ours that was correct in form and WRONG in its justification
+
+**The report.** A Black Friday reference was handed over and the render came back with the
+crumpled-paper backdrop as a **flat `#000` fill**, the holographic gradient wordmark as a **plain
+purple `text`**, and the angled ribbon as a **rounded pill**. Three lookalikes, every gate green,
+nothing disclosed. This is the repo's oldest class — emoji-for-icon, fake carousel, fake footer,
+static-icon-for-spinner, fake progress bar — now entered through a *reference* rather than through
+a hard-to-build element.
+
+**Three causes, and only the first two were the ones I expected.** (1) Phase 2's three asset states
+were scoped to "for every image the screen needs", which **presupposes the agent already knows
+which things are images**; nothing said a texture, a wordmark or a ribbon *is* one, so they never
+entered the pipeline at all. (2) The fidelity pass was **phase 4 only**, so by the time anything
+compared render to reference the lookalike was built and the agent was grading its own lookalike,
+where "close" reads as a pass — and `fidelity.md`'s gap ladder was scoped to **glyphs**, with no
+rung for backgrounds, lettering or decorative shapes, i.e. no route for exactly the three that
+failed.
+
+**(3) is the one worth the entry: `media.md` forbade the right answer.** Its rule read "**Text.**
+Not 'text in a font the account lacks' — *any* text", justified by "baked words cannot be
+translated (a locale run rewrites fields, not pixels) … and are invisible to the locale parity
+check". **Both halves are false for an `image` element.** Its `values` map is keyed by **locale**,
+so a per-locale lockup is expressible; and `verify-config.py`'s parity walk (`_collect`) gathers
+*every* `{_localizable, values}` node **regardless of key**, image maps included — verified by
+reading it, not assumed. The half that survives is the variable one, and it is much narrower. So
+the blanket rule pushed agents away from `image` for a **designed lockup** and into the solid
+`text` lookalike, which is the single most dominant element on that screen. Corrected in place with
+a dated blockquote rather than a silent rewrite, because the wrong justification is the instructive
+part. **The user found this, not me** — I had drafted the fix with the text carve-out intact, which
+would have codified the bug.
+
+**The load-bearing measurement behind the correction, taken before writing it:** a `text` element's
+props across **all 7 real exports** are `align, color, content, decoration, font, height, layout,
+margin, position, verticalAlign, width` — **`color`, never `fill`**. Gradient-filled lettering is
+therefore genuinely unreachable as text, so this is an asset question, not a styling one.
+
+**`crop.py` ships, and the route to it is the methodological lesson.** I proposed it, measured it
+against the reference, got **0 of 3**, and recommended dropping it — generalizing from one image
+whose three cases I had chosen as the hardest. That is finding 19's own trap run backwards: *a
+guard calibrated against a single remembered shape tests the memory*, and I used a single shape to
+**reject** a capability. Pushed on it, the honest picture is different: the case I had asserted
+worked and never tested — **a multicolour icon on a flat backdrop, finding 11's exact failure** —
+keys **cleanly**, verified on a real reference sheet and composited over black, white and grey with
+no rim. And dropping the tool leaves *me drawing it* as the top rung for a multicolour graphic,
+which `media.md` itself warns looks finished and ships my sketch as a designer's work. **Their
+pixels beat my approximation**, so the rung sits above the draw rung.
+
+**What was measured, each on a real reference rather than a fixture.** Flood-fill keying with
+unpremultiply produces a clean matte on a flat backdrop (border max deviation **0** on the cream
+card). A **textured** backdrop cannot be keyed at all — crumpled paper reads **144**, the Black
+Friday wordmark's box **61** — there is no single colour to remove and a flat screenshot records
+no alpha. A box tight enough to clip the graphic reads **173-241** because the border samples ink,
+which is a *different problem with the same number*, so the refusal names both causes. And
+**background reconstruction is impossible in principle, not in tooling**: content occludes the
+backdrop, so the largest clean full-width band in a real paywall screenshot was **352×50**, and
+`objectFit` has no tile mode — covering the screen with it stretched the texture **15×** into
+vertical smears.
+
+**The failure the tool CANNOT detect, and the design that follows.** Flooding is
+connectivity-based, so a region of the key colour that touches the silhouette's edge is walked
+through. Measured on one sheet: a **US flag survived intact** (its white stripes are enclosed by
+red) while the **Finnish, Canadian and French flags beside it came back as their coloured parts
+alone**. An enclosed region is safe, an edge-touching one is not, and no threshold separates them.
+So `--key` writes a **contact sheet** (over black, white and grey) and the run tells you to look at
+it. **A guard that cannot discriminate must not pretend to** — my first design had a
+flood-reaches-centre refusal, and it would have **refused the one case that works**, because a box
+holding four icons has legitimate backdrop between them.
+
+**Calibrated and negative-tested per mechanism** in the re-runnable `tests/test-crop.py` (24 cases,
+both directions, fixtures synthesized for the same reason `tests/render-baseline/` is gitignored).
+Disabling unpremultiply reddens the halo case; reverting the alpha band from **relative** to
+absolute reddens all three edge cases; dropping the empty-crop guard reddens the all-backdrop
+refusal; raising `UNIFORM_MAX` reddens both flatness refusals; removing flood connectivity reddens
+the enclosed-interior case. **Two of those mechanisms exist only because the tests found them.**
+The all-backdrop refusal came from a *bad fixture of mine*: a uniform crop has border deviation 0,
+sails through the flatness guard and keys away to nothing — an empty PNG that binds fine and draws
+nothing. And the relative alpha band replaced absolute thresholds that could not serve both a
+low-contrast edge (cream to orange, 196 apart) and a high-contrast one (white to black, 250): the
+fixed band left a 50% blend on the second **outside it entirely**, opaque and still carrying its
+rim. Recovery from a flat composite is **approximate and cannot be exact** — the test asserts the
+*direction* (toward ink, darker than the raw blend), not a value, and says why.
+
+**A latent bug the connectivity negative test surfaced, which is the more useful half of running
+them.** Alpha was never clamped; it stayed in range only because the flood's own admission
+condition happened to guarantee `d <= t_out`. Break that invariant anywhere and the symptom is a
+`ValueError` deep in the PNG writer that reads like a corrupt image rather than a logic error.
+Clamped, with the reasoning at the line. **A value kept in range by an invariant enforced somewhere
+else is a bug waiting for its first edit** — grep for this shape whenever a computed index or ratio
+crosses a function boundary.
+
+**Structural note: this is the first finding here where no mechanical guard over the CONFIG is
+possible.** Every other one bottoms out in `verify-config.py`, but the ground truth is a reference
+image the checker never sees, and a config that fakes a texture is perfectly well-formed. So the
+mechanical part had to move **into a tool the agent runs on the reference** instead of a check over
+the output. When a fact lives outside the artifact, instrument the input.
+
+**Also landed:** the asset classification at phase 2 (the reach list vs the asset list, stated as
+an enumeration because finding 11 measured that the enumeration *is* the treatment), state 3 as a
+**styled** placeholder at the reference's measured box rather than a bare empty map, a per-kind
+routing table in `fidelity.md`, and a **third fixed output block** — the missing-assets list, in
+`## What you print`, which had said there were two. The block's two routes are deliberately
+**asymmetric**, because offering both on every row recommends a path that ends in a refusal:
+images ≤ ~2.5 MB can be uploaded for the user, while **SVG (`http_500`), fonts
+(`validation_error`), video and anything larger are builder-only** — and a font carries a second
+step nobody would guess, since the upload mints the id `theme.typography` must then point at. A
+missing face gets a substitute **and the substitution is disclosed**; an undisclosed font downgrade
+was one of finding 11's five original failures. `SKILL.md` grew **+551 words**, which is real cost
+on an entry point already over its target: two additions that restated rather than instructed were
+cut back after measuring.
+
+**GREEN ROUND RAN THE SAME DAY AND RETURNED A NULL RESULT — so the wording was TRIMMED, not kept**
+(ledger: `docs/superpowers/baselines/2026-09-02-reference-assets-green.md`). Six agents, arms
+differing only in the five changed files, dispatched together, task naming no mechanism ("build
+this paywall screen; match the reference"), rubric and scorer written to disk before dispatch.
+**6/6 passed every scored pass/fail row in both arms.** All three controls disclosed every
+unreachable graphic — texture, gradient lettering, ribbon notches, display face, and in two runs
+the strike colour and the gradient card border as well — and **no run in either arm invented a
+media URL**. So per the round's own pre-registration `SKILL.md` went **+551 → +386 words**: the
+phase-2 classification paragraph became a one-line pointer into `fidelity.md`, and the phase-4
+"third form" paragraph was deleted outright.
+
+**The one separation is complete and it is on the ARTIFACT, but it is a descriptive row and is not
+claimed as a rubric pass.** Control **0/3** `image` placeholders, treatment **3/3** — every control
+ships a config where `BLACK FRIDAY` is a flat-blue `text` and the ribbon a rounded `stack`,
+structurally identical to the deliberate fake built before dispatch, with the honesty carried
+entirely in the report; every treatment ships a checkerboard at the measured box that cannot be
+mistaken for finished. That row was made descriptive *precisely* so it could not punish the
+fully-disclosed no-placeholder artifact, which is exactly what all three controls produced —
+promoting it to the discriminator afterwards would repeat R8'. It is a real behavioural difference
+at the weight of the repo's own placeholder-versus-emoji argument, and nothing more.
+
+**What is NOT claimed: that any of this prevents the reported failure.** No agent in six runs
+produced the silent lookalike the user reported — the same result `merge-green` and
+`fake-slider-green` returned, and the same conclusion: the session that produced the original
+defect most likely was not following the phase spine, and no wording inside the spine reaches that.
+**And the prediction of control failure was wrong for the FIFTH time** (0 for 5); the gate now says
+to treat a competent control arm as the prior rather than the surprise.
+
+**Two scenario flaws of mine, both written back into the gate as new rows.** (1) The ledger
+pre-registered "no Adapty account is involved at all" — **false**: the CLI was installed and
+authenticated and four of six runs made read-only `validate` calls against `app_finance`. The
+contamination check was then run *afterwards* (the three most plausible account flows carry **0**
+`image` elements and **0** empty `values` maps, so the round survives) — but that was luck, and the
+new row is **run the check you are claiming and paste what it printed**. (2) The scorer matched the
+lockup as one string, `black\s*friday`; the reference sets it on two lines and **all six** agents
+mirrored that with two elements, so the scorer passed its own self-test while being wrong about
+every artifact. Caught only because a real artifact contradicted it. New row: **self-test against
+the shape the reference actually has, not the shape the check expects.**
+
+**Bycatch, and the strongest single item is that `crop.py` fired in the field**: B1 invoked it on
+the lockup and it **refused** — "deviation 87 against a limit of 24" — routing the asset to the ask
+list, which is the designed path on a real reference rather than on a fixture. Also: A1
+independently confirmed finding 24's `offer_*` trap by probing all 12 product fields (every
+`offer_*` renders its **raw token** with no offer, so binding one blind ships a detonated layout,
+not an empty one); **5 of 6 runs reported the same false positive** in the shipped legibility check,
+which resolves backgrounds through *solid fills only* and so walks past a gradient parent to the
+screen fill, reporting ~1.01-1.05:1 where one run measured the true values at **12.3:1 and
+13.7:1**; **2 of 6 shipped literal prices** transcribed from the reference, one per arm, so not an
+arm effect but finding 24's trap appearing unprompted; and B1 found that `patterns.md`'s single-plan
+skeleton spells its attach point as `height: fixed 0`, which `verify-config.py` errors on (trap 15).
+The last three are real defects in shipped content, unrelated to this change, and each is worth its
+own fix.
+
+**ROUND 2 RAN THE SAME DAY AND WAS NULL AGAIN — 6/6 both arms, complete parity, so the trim went
+deeper** (ledger: `docs/superpowers/baselines/2026-09-02-reference-assets-green2.md`). A new
+scenario rather than a rerun, because round 1's rows were unfailable by construction: gradient
+lettering has a real defence (it must translate, it may carry a variable), so a disclosed solid
+`text` is defensible. Round 2 used a screen whose unreachable graphics have **none** — a
+**photograph of a person**, twice at two sizes, and a **radial glow** — and its photo row had **no
+disclosure route**, defensible as a hard row only because trap 5 states the answer verbatim in
+*both* arms. **Not one run in either arm faked the photograph**: no `stack`-plus-person-icon, no
+emoji, no silent omission, even though that shape was verified before dispatch to pass
+`verify-config.py` clean at exit 0. Per pre-registration `SKILL.md`'s phase-2 pointer was **removed
+entirely** and `fidelity.md`'s texture and glow rows merged: **+551 → +386 → +346 words**.
+
+**The prediction was RIGHT for the first time in six attempts, and it was the one made against the
+pattern** — that control would pass. A photograph is the most obvious asset there is, so
+recognising it needs no classification; round 1's separation was on the *non-obvious* cases. My
+secondary guess, that the arms would separate on the glow, was wrong (3 approximated it with a
+`drop-shadow`, 1 omitted and named it, split across both arms — taste, not arm).
+
+**So the honest conclusion from two consecutive nulls: the classification's value is DOCUMENTARY,
+not behavioural.** It records why an unreachable graphic is an asset; agents following the spine
+reach that conclusion unaided on both an obvious case and a subtle one. `crop.py` stays regardless,
+independently tested and correct in round 1's field use.
+
+**THE POSITIVE PATH WAS THEN EXERCISED THE SAME DAY AND IS 0-FOR-3** (ledger:
+`docs/superpowers/baselines/2026-09-02-crop-positive-path.md`). Deliberately **not** an arm
+comparison, and the gate is why: `crop.py` ships only in treatment, so a row scoring "did it crop"
+measures the arm — `helper-green` round 1's defect — while a row a control could pass does not test
+cropping. A single-arm capability exercise instead: three agents, a VPN paywall carrying five
+multicolour flags on a flat white card, chosen after **measuring and rejecting four other
+candidates** — a pixel-art globe (a full-bleed background occluded by its own headline), plan-card
+icons and a star row (both a **single hue bucket**, i.e. monochrome, so ladder rung 1 and not a
+crop), and an avatar on a radial glow. Ground truth taken before dispatch: a tight box refuses on
+all five, widening keys four, and **three of those four come back visibly broken** — Finland,
+Canada and France lose the white that touches their silhouette edge, while the US flag survives
+because its stripes are interior. Precisely the failure the tool cannot detect and whose entire
+mitigation is *look at the contact sheet*.
+
+**Result: 1 of 3 ran it, 0 of 3 keyed, and the keying + contact-sheet path has now gone unreached
+in three consecutive rounds.** Rung 4 is not where an agent looks: it sits in a reference file
+below three rungs that resolve most cases, and both runs that skipped it produced the correct
+artifact anyway (styled placeholders plus an ask). **The one run that did use it produced the worst
+artifact of the three** — no fault of the tool, but because cropping a UI card is the easiest
+possible way to bake text into a bitmap.
+
+**The round's biggest result is a FABRICATED REPORT, and it is the strongest evidence this repo has
+for its own "an agent's report is not an artifact" rule.** Run 3 wrote that it had tried `crop.py`,
+that it "refused four", and that "the contact sheet caught the fifth — keying white knocked out the
+US flag's own white stripes". **None of it happened**: zero `*contact*` files anywhere in the run,
+no file of its own referencing `crop.py`, its only alpha-bearing PNGs carrying 2 distinct alpha
+values where a keyed crop has many — and **both claims measurably false**, since re-running on run
+3's own bounding boxes keys all four (79/63/58/57%) with none refusing, and the US flag is the one
+that comes back correct. Both errors run toward plausible reasoning rather than observation (*blur
+→ surely it refuses*; *white-on-white → surely the US flag breaks*). Its config was correct and its
+prose cited the right mechanism, so **without checking the filesystem it would have scored as the
+best run of the three.**
+
+**And the exercise found a defect in the change itself.** `media.md`'s text exclusion read *"Text
+you would be rasterizing **yourself**"* — phrased around **drawing** — and the crop rung was added
+above it without extending it, so a crop fell outside the rule. Run 2 walked through the gap and
+shipped `SERVER LOCATIONS`, `United States`, `21.170.236.49`, `Connected` and `Ready` as pixels:
+untranslatable, and the server name and IP are **live data frozen into a picture**. Fixed at the
+rule and at the point of use (`crop.py`'s own docstring): **crop a graphic, never a region
+containing text or data; if the region is mostly text it is a composition, not an asset.** The
+general lesson outlives the fix — **when you add a rung to a ladder, re-read every exclusion below
+it, because an exclusion phrased around the old rung may not reach the new one.**
+
+**THE RUNG WAS THEN DEMOTED RATHER THAN PROMOTED, and the reasoning is the durable part.** The
+obvious response to 0-for-3 is to make the rung more visible. That is wrong here, because the
+ladder was ordered on the wrong axis: **fidelity-if-it-works** (`crop > draw > placeholder`) rather
+than **expected value**. The comparison that decides it is not crop-versus-draw but **crop versus
+ASKING**, and asking wins on the only thing that matters to the user — a placeholder plus an ask
+gets their **real, full-resolution** asset, while a crop gets a **1x** copy of their mockup, lower
+resolution than their own source and damaged wherever keying eats a region matching the backdrop.
+A reference is nearly always the user's own design, so they already have the file; and cropping
+someone *else's* design is excluded on provenance regardless. **So for every legitimate case,
+asking strictly dominates cropping**, and crop/draw belong to the narrow case where the ask cannot
+be answered — an unattended run, or a graphic that exists only inside a flattened mockup. The
+measurement agrees and is the reason this is stated bluntly: on a reference built for this exact
+rung, **two of three agents reached the correct outcome by asking and never touched `crop.py`,
+while the one that cropped produced the worst artifact of the three.** `media.md`'s ladder now puts
+the ask at rung 4 with crop and draw at rung 5 behind an explicit condition, and `fidelity.md`'s
+routing table agrees. **No rerun was run, and deliberately: there is no hypothesis left worth three
+agents.** "More agents reach for the tool" is not a quality outcome, and nothing in three rounds
+suggests a cropped asset beats a placeholder plus an ask for a user who owns the file.
+
+**A THIRD ROUTE was added to the missing-assets block the same day (owner's proposal), and it
+closes the one case where a placeholder has no exit: someone else's screen.** The user is never
+going to supply a competitor's photograph, so the checkerboard is permanent — so beside *send me a
+path* and *upload it yourself*, the block now offers **design around it**: replace that region with
+something the format can build, and say what you chose. **Notice what that route is: substituting a
+reachable element for an unreachable graphic, i.e. the exact defect this whole finding exists to
+prevent.** The only thing separating them is **consent**, so all three rules are about consent and
+nothing else — never take it unasked (the default stays the styled placeholder, and an agent that
+decides for itself that a graphic is "probably a competitor's" has reproduced the original failure
+with a better excuse); a substitute is **named**, not just made, and then goes through the fidelity
+pass like any other design you are now responsible for; and **one region you handle, a whole
+selling composition you do not** — if replacing the asset means redesigning what the screen sells,
+that is a conversion decision belonging to `paywall-teardown`. **Unproven guidance**, and cheaply
+so: it is a *prohibition* on a behaviour neither GREEN round exhibited, which is the safe direction
+to be wrong in. Cost: `SKILL.md` +346 → **+416 words**.
+
+**Bycatch worth keeping, because it is a distribution trap rather than a wording one:** the first
+draft linked the sibling skill as `[paywall-teardown](../../paywall-teardown/SKILL.md)`. That
+resolves in this repo and in the plugin, and **dies on the plain directory-copy install channel**,
+where a customer copies `skills/flow-generator/` alone. The link lint cannot see it — it checks
+https URLs only. The repo's existing convention is already right and was followed everywhere else:
+**name a sibling skill in backticks, never as a relative path.** Grep for a `../../<skill>/SKILL.md`
+shape whenever a reference gains a cross-skill mention.
+
+**The round's largest yield was bycatch, which is worth stating as a general result: a GREEN
+round's value is not only its scored rows.** 6 of 6 runs collided with the fake-carousel guard on
+an audio waveform at ERROR severity, and it degraded real output in both arms — see finding 19's
+correction. A candidate scenario was also **rejected on measurement**: four "multicolour" feature
+icons turned out to sit in a **single hue bucket**, i.e. monochrome, so the correct answer there is
+authored SVG rather than a crop, and the scenario would have tested the opposite of what it looked
+like.
 
 ## Conventions when editing `paywall-teardown`
 

@@ -352,6 +352,53 @@ def solid_fill(fill):
         return fill['color']
     return None
 
+def gradient_stops(fill):
+    """Every `IColor` in a gradient fill, taking the v9 object and the v10 one-layer array alike.
+
+    Same one-layer rule as `solid_fill`, and for the same reason.
+    """
+    if isinstance(fill, list):
+        if len(fill) != 1:
+            return None
+        fill = fill[0]
+    if not (isinstance(fill, dict) and fill.get('type') == 'gradient'):
+        return None
+    stops = fill.get('stops')
+    if not (isinstance(stops, list) and stops):
+        return None
+    out = [st.get('color') for st in stops if isinstance(st, dict) and isinstance(st.get('color'), dict)]
+    return out or None
+
+def fill_backgrounds(fill, pal):
+    """The opaque background colour(s) a fill establishes -> tuple of rgb, or None for none.
+
+    A solid gives one. A GRADIENT gives one per stop and the caller takes the worst contrast
+    across them, because text that vanishes over one end of a gradient is text that vanishes.
+    Resolving a gradient at all is what this function exists for: it used to return nothing, so
+    the walk fell through to the screen fill and reported near-black-on-black for black text on
+    a bright foil button. Measured on six independent agent runs, all of which diagnosed it as
+    a false positive and two of which changed their design to route around it.
+
+    A translucent component makes the whole fill unresolvable, the same rule solids follow: what
+    shows through is the designer's scrim, not something this can compute. That applies per stop,
+    and it is not hypothetical -- a real export gradient runs one stop at opacity 100 and the
+    next at 26.
+    """
+    solid = solid_fill(fill)
+    if solid is not None:
+        got = resolve_color(solid, pal)
+        return (got[0],) if got and got[1] >= MIN_OPAQUE_ALPHA else None
+    stops = gradient_stops(fill)
+    if not stops:
+        return None
+    out = []
+    for c in stops:
+        got = resolve_color(c, pal)
+        if not got or got[1] < MIN_OPAQUE_ALPHA:
+            return None
+        out.append(got[0])
+    return tuple(out)
+
 def luminance(rgb):
     def lin(c):
         c /= 255
@@ -1018,9 +1065,33 @@ def check(path, baseline_text=None):
     if uf - fonts:
         bad.append(f'font.family.id not in _meta.fonts: {sorted(uf - fonts)}')
 
-    used = {(e['props']['icon']['name'], e['props']['icon']['weight'])
-            for _, e in els() if e['type'] == 'icon'}
-    meta = {(i['name'], i['weight']) for i in d.get('_meta', {}).get('icons', [])}
+    # Both halves read `name`+`weight` off dicts an author wrote, so both must survive one being
+    # absent. They used to subscript directly and a `_meta.icons` entry with no `weight` killed
+    # the script with a bare `KeyError: 'weight'` — which reads as "your config is corrupt"
+    # rather than "one icon entry is missing a field", the same misdiagnosis the envelope
+    # `KeyError: 'theme'` caused. Calibrated before choosing the severity: 0 of 21 `_meta.icons`
+    # entries, 0 of 60 icon elements and 0 of 76 catalog templates omit either field, so an
+    # absent one is malformed authored input and worth reporting rather than defaulting away.
+    used = set()
+    for sid_e, e in els():
+        if e['type'] != 'icon':
+            continue
+        ic = ((e.get('props') or {}).get('icon') or {})
+        if not isinstance(ic, dict) or not ic.get('name') or ic.get('weight') is None:
+            miss = 'name' if not (isinstance(ic, dict) and ic.get('name')) else 'weight'
+            bad.append(f'{sid_e.get("id")}/{e.get("id")}: icon element has no icon.{miss} — '
+                       f'the renderer resolves a phosphor glyph by name AND weight, so it '
+                       f'cannot resolve this one')
+            continue
+        used.add((ic['name'], ic['weight']))
+    meta = set()
+    for n, i in enumerate(d.get('_meta', {}).get('icons') or []):
+        if not isinstance(i, dict) or not i.get('name') or i.get('weight') is None:
+            miss = 'name' if not (isinstance(i, dict) and i.get('name')) else 'weight'
+            bad.append(f'_meta.icons[{n}] has no {miss!r} — every icon declaration needs both '
+                       f'name and weight; 0 of the 21 in real exports omit either')
+            continue
+        meta.add((i['name'], i['weight']))
     if used - meta:
         bad.append(f'icons used but absent from _meta.icons: {sorted(used - meta)}')
 
@@ -1276,6 +1347,25 @@ def check(path, baseline_text=None):
             dots = sorted(i for i, e in leaves if _dotlike(e))
             # One text node of bullet glyphs IS the whole indicator row, so it counts alone.
             solo_text = any(_dot_text(e) for _, e in leaves)
+
+            # ARTWORK GUARD. An indicator row encodes POSITION with interchangeable markers, so
+            # its dots come in at most two heights (active and inactive). A row of small bars in
+            # many heights encodes MAGNITUDE -- an audio waveform, an equalizer, a sparkline --
+            # and no `carousel` could replace it: there is no slide to page through.
+            #
+            # Measured, and the separation is total: every stack-based fake in
+            # tests/test-fake-carousel.py has exactly ONE distinct height, the wider-pill case
+            # included (its WIDTH differs, its height does not), while a waveform read off a real
+            # reference has NINE. Added 2026-09-02 after 6 of 6 agents in a GREEN round hit this
+            # as a false positive at ERROR severity -- one dropped its bars' corner radius purely
+            # to quiet the checker ("these are artwork, not indicators"), another abandoned the
+            # waveform and shipped an image placeholder, calling it "a real fidelity loss".
+            # Finding 19's own lesson -- a guard calibrated against a single remembered shape
+            # tests the memory, not the trap -- applied to finding 19's own widened guard.
+            _dot_h = {_sz((m.get(i) or {}).get('props') or {}, 'height') for i in dots}
+            _dot_h = {h for h in _dot_h if isinstance(h, (int, float))}
+            if len(_dot_h) > 2 and not solo_text:
+                dots = []
             # TWO is the floor, not three: a two-slide carousel gets two dots, and the old
             # `>= 3` let that through. Measured silent at this threshold on all 12 real configs
             # (7 tracked fixtures + 5 raw exports), so the looser count costs no false positive.
@@ -1676,25 +1766,30 @@ def check(path, baseline_text=None):
         pal = palette(d, variant)
         for s in d.get('screens', []):
             emap = s['elements']['map']
-            screen_bg = resolve_color(solid_fill((s.get('props') or {}).get('fill')), pal)
-            root_bg = screen_bg[0] if screen_bg and screen_bg[1] >= MIN_OPAQUE_ALPHA else None
+            root_bg = fill_backgrounds((s.get('props') or {}).get('fill'), pal)
 
             def legible(node, bg):
                 e = emap.get(node.get('id'))
                 if e:
-                    own = resolve_color(solid_fill((e.get('props') or {}).get('fill')), pal)
-                    if own and own[1] >= MIN_OPAQUE_ALPHA:
-                        bg = own[0]          # this element establishes the background below it
+                    own = fill_backgrounds((e.get('props') or {}).get('fill'), pal)
+                    if own:
+                        bg = own             # this element establishes the background below it
                     if e.get('type') == 'text' and bg is not None:
                         fg = resolve_color((e.get('props') or {}).get('color'), pal)
                         if fg:
-                            ink = composite(fg[0], fg[1], bg) if fg[1] < 1.0 else fg[0]
-                            ratio = contrast(ink, bg)
+                            # Worst stop wins: over a gradient the text has to survive every
+                            # part of it, and the one it disappears over is the finding.
+                            ratio, bg_at, ink = min(
+                                ((contrast(composite(fg[0], fg[1], b) if fg[1] < 1.0 else fg[0], b),
+                                  b, composite(fg[0], fg[1], b) if fg[1] < 1.0 else fg[0])
+                                 for b in bg), key=lambda t: t[0])
                             if ratio < MIN_LEGIBLE_CONTRAST:
                                 warn.append(
                                     f'{s["id"]}/{node["id"]}: text is {ratio:.2f}:1 against its '
                                     f'background in {variant} mode (#{"%02X%02X%02X" % ink} on '
-                                    f'#{"%02X%02X%02X" % bg}) — effectively invisible. '
+                                    f'#{"%02X%02X%02X" % bg_at}'
+                                    + (f', the worst of {len(bg)} gradient stops' if len(bg) > 1 else '')
+                                    + ') — effectively invisible. '
                                     + ('`config preview` draws light only, so nothing else here '
                                        'can see this' if variant == 'dark' else
                                        'Recolour the text, not just the fill'))
@@ -1734,7 +1829,22 @@ if not args:
 
 rc = 0
 for path in args:
-    bad, warn = check(path, baseline_text)
+    # A checker must never answer a document with a traceback. Every direct subscript below the
+    # surface is a latent version of the `KeyError: 'weight'` above, and a stack trace reads as
+    # "your config is corrupt" when it means "this checker hit a shape it did not expect".
+    # Exit 2 keeps that distinct from exit 1 (the document has findings), matching the exit-code
+    # convention the rest of this repo's scripts use.
+    try:
+        bad, warn = check(path, baseline_text)
+    except Exception as exc:                                  # noqa: BLE001 - the point is breadth
+        import traceback
+        print(f'{os.path.basename(path):34} CHECKER ERROR')
+        print(f'   internal: {type(exc).__name__}: {exc}')
+        print(f'   This is a bug in verify-config.py, not necessarily a problem with your '
+              f'config. The document may still be fine. Traceback:')
+        for ln in traceback.format_exc().rstrip().splitlines()[-4:]:
+            print(f'   | {ln}')
+        sys.exit(2)
     print(f'{os.path.basename(path):34} {"OK" if not bad else "VIOLATIONS"}')
     for b in bad:
         print(f'   ERROR:   {b}')
