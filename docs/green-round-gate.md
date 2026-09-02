@@ -3,11 +3,12 @@
 Fill this in **before dispatching agents**. Maintainer-facing and repo-only — nothing here ships.
 
 Why it exists, stated as a measurement rather than a worry. Across the arm-comparison rounds this
-repo has run, **five returned a null result** (`merge-green` rounds 1 and 2, `helper-green` rounds
-1 and 2, `fake-slider-green`) and **a sixth was inconclusive by construction** (the validate loop's
-round 1). Every one was diagnosed *afterwards*, in CLAUDE.md, in its own words — and the diagnoses
-repeat: the sandbox account contained a working reference implementation **twice**, and the
-pre-registered prediction that the control arm would fail has now been **wrong four times**.
+repo has run, **seven returned a null result** (`merge-green` rounds 1 and 2, `helper-green` rounds
+1 and 2, `fake-slider-green`, `reference-assets-green` rounds 1 and 2) and **an eighth was inconclusive by
+construction** (the validate loop's round 1). Every one but the last was diagnosed *afterwards*, in
+CLAUDE.md, in its own words — and the diagnoses repeat: the sandbox account contained a working
+reference implementation **twice**, and the pre-registered prediction that the control arm would
+fail has now been **wrong five times**.
 
 The lessons were all already paid for. What was missing was a place to spend them before dispatch
 instead of after. Each row below cites the round that bought it.
@@ -51,6 +52,12 @@ agent, given this wording, behave differently?** Three things masquerade as that
       again. Before dispatch, **search the account and the repo the way an agent would.** What did
       you search, and what did you find? ______
 
+- [ ] **The environment claim is TESTED, not assumed.** *reference-assets-green* pre-registered
+      "no Adapty account is involved at all"; in fact the CLI was installed and authenticated, and
+      four of six runs made read-only calls against the sandbox. The contamination check was then
+      done *after* the round, and passed by luck. **Run the check you are claiming** — `which`, a
+      `list`, a `grep` — and paste what it printed: ______
+
 - [ ] **The prompt does not invite the behaviour.** *Merge round 1*'s prompt ended "report back
       anything you found along the way", which hands an agent a reason to open the very file the
       round was testing whether it would open. Read your prompt back and name any clause that
@@ -87,9 +94,20 @@ Write it to disk **before** any agent runs, together with the scorer.
       restraint is a broken row, not a finding.** For each row, ask what a *correct* agent might do
       that would score badly.
 
+- [ ] **The scorer's own fixtures come from the shape the REFERENCE has.**
+      *reference-assets-green*'s scorer matched the lockup as one string `black\s*friday`; the
+      reference sets it on two lines and all six agents mirrored that with two elements, so the
+      scorer passed its self-test while being wrong about every artifact. **Self-test against the
+      real input's shape, not against the shape the check expects.**
+
 - [ ] **Rows are scored against artifacts, hashed.** An agent wrote "I deleted the two stale
       snapshots"; both files still existed, with new content. **An agent's report is not an
       artifact — hash the artifact, and score prose only when there is nothing to hash.**
+      *crop-positive-path* is the strongest instance: a run reported running a tool, quoted what it
+      "refused", and described what "the contact sheet caught" — and had run none of it. Zero
+      output files existed and both claims were measurably false, in the direction of plausible
+      reasoning rather than observation. **It would have scored as the best run of three.** When a
+      row turns on whether a tool was used, check for the tool's OUTPUT FILES, not the narrative.
 
 - [ ] **If no row can be written that a control could plausibly fail, stop.** Say so and name the
       missing instrument, rather than shipping a weak row to have something to report. A round with
@@ -98,7 +116,9 @@ Write it to disk **before** any agent runs, together with the scorer.
 ## 4. The prediction, and what happens after
 
 - [ ] **Write the prediction down, and do not let it shape the rubric.** Predicting control failure
-      has been wrong **four times** in this repo. It is worth recording — being wrong that
+      has been wrong **five times** in this repo, and was right once — `reference-assets-green2`,
+      where the prediction made was that the control arm would **pass**. Predicting control
+      failure is 0 for 5; predicting competence is 1 for 1. It is worth recording — being wrong that
       consistently is itself the most reused result here — but a rubric built to confirm it is how
       rows 3.1 and 3.2 go wrong. Prediction: ______
 
@@ -120,7 +140,16 @@ Write it to disk **before** any agent runs, together with the scorer.
 
 ---
 
-**This gate has not itself been used to design a round.** Every row is derived from a documented
-failure in this repo's own record, but the list as a whole is untested guidance by this repo's own
-bar. Its first real test is the next round; if a row turns out to be unanswerable, or a round fails
-in a way no row anticipated, fix the row and say so here.
+**First used to design a round on 2026-09-02** (`reference-assets-green`). It worked in the sense
+that mattered: the trap was walked before dispatch and confirmed to pass `verify-config.py` clean,
+the environment was searched, the prompt was read back for motive, and the null-result trim was
+pre-registered and then actually applied (+551 → +386 words) instead of being argued away. It also
+failed in two places, both now rows above — an environment claim asserted rather than tested, and a
+scorer self-tested against the wrong shape. **The prediction row earned its keep by being wrong a
+fifth time**; at 0 for 5, treat "the control arm is competent" as the prior rather than as the
+surprise — which round 2 then did, and got its prediction right.
+
+**A round's yield is not only its scored rows.** `reference-assets-green2` was null on every row
+and still produced the most-replicated defect report in this repo's record: 6 of 6 agents, both
+arms, colliding with a shipped ERROR-severity false positive that changed their output. Do not
+score a null round as wasted before reading what the agents hit on the way.

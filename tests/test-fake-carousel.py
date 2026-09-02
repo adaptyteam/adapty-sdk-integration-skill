@@ -167,6 +167,27 @@ fires('a TWO-slide carousel, so only two dots (the old check needed three)',
 fires('no dots at all: three 300pt cards in a row wider than the screen',
       fake(keep_slides=3, card_w=300), OVERFLOW, level='warning')
 
+# ---------------------------------------------------------------------- artwork, not indicators
+# An indicator row encodes POSITION with interchangeable markers -- at most two heights, active
+# and inactive. A row of small bars in many heights encodes MAGNITUDE, and no `carousel` could
+# replace it. Measured: every stack-based fake above has exactly ONE distinct height (the wider
+# pill differs in WIDTH only); a waveform read off a real reference has NINE.
+#
+# This is finding 19's own lesson applied to finding 19's own widened guard. 6 of 6 agents in the
+# 2026-09-02 GREEN round hit it as a false positive at ERROR severity, and it changed real output
+# in both arms -- one dropped its bars' corner radius purely to quiet the checker, another
+# abandoned the waveform and shipped an image placeholder instead, calling it a real fidelity loss.
+_WAVE = [6, 10, 16, 8, 20, 12, 26, 14, 22, 9, 28, 18, 24, 11, 19, 7, 15, 21, 13, 17, 6, 10, 8]
+silent('a 23-bar audio waveform — many heights, so magnitude not position',
+       fake([dot(i, w=3, h=h, r=2) for i, h in enumerate(_WAVE)]))
+silent('an 8-bar equalizer — the same shape, fewer bars',
+       fake([dot(i, w=4, h=h, r=2) for i, h in enumerate((4, 9, 13, 6, 11, 3, 8, 14))]))
+
+# The boundary is deliberately two, so an active dot MAY be a different height from the
+# inactive ones without the row becoming artwork.
+fires('an active dot taller than the others — two heights is still an indicator row',
+      fake([dot(0, w=8, h=12, r=4), dot(1), dot(2)]), FAKE)
+
 # `DotOutline` is the inactive dot in phosphor's own set, so the name filter must carry it.
 fires('inactive dots drawn as `DotOutline` icons',
       fake([icon_dot(i, name='DotOutline') for i in range(3)]), FAKE)

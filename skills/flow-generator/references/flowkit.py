@@ -1060,6 +1060,33 @@ def product(children=(), *, product_id, group_id, default=False, **kw):
     return node
 
 
+def attach_point(*, product_id, group_id, element_id=None):
+    """The hidden `product` element a single-plan screen attaches its product to.
+
+    One product means there is nothing to pick, and a visible lone card carries a permanent
+    `selected` look the user cannot change. But a price variable resolves only against a declared
+    product and only a `product` element can be attached to -- so the element exists, hidden, and
+    the price lives in ordinary copy. See patterns.md, "A single-plan screen".
+
+    `height` is `hug`, never `fixed: 0`. `visibility: hidden` already collapses the space, and a
+    zero height is the shape `verify-config.py` errors on (trap 15: it saves fine and kills the
+    element on device). patterns.md spelled this skeleton with `fixed: 0` until 2026-09-02, and an
+    agent following it hit that error -- which is also why this helper exists at all: the shape was
+    hand-assembled every time because nothing emitted it.
+
+    Evidence tier, since this file's callers rely on it: the composition is AUTHORED, not observed.
+    No real export contains a hidden attach point. Its two halves are attested separately -- `hug`
+    is what every real `product` element uses, and `visibility: hidden` occurs on real builder
+    output elsewhere in the corpus.
+    """
+    node = product((), product_id=product_id, group_id=group_id, default=True,
+                   width='hug', height='hug', visibility=hidden())
+    node['props']['caption'] = 'Product attach point (hidden)'
+    if element_id:
+        node['id'] = element_id
+    return node
+
+
 # The only group types real exports declare. A tab group is `single_choice`; there is no
 # `tabs` group type, and the service refuses one that is not single_choice under a tab bar
 # with `wrong_tab_selectable_group_type`.

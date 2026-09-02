@@ -73,6 +73,7 @@ python3 tests/render-check.py --baseline                                # record
 python3 tests/render-check.py --keep                                    # keep PNGs to look at
 python3 skills/flow-generator/references/render-measure.py shot.png --column 23:68                 # is a column continuous?
 python3 skills/flow-generator/references/render-measure.py shot.png --row 343                       # how wide is it, really?
+python3 skills/flow-generator/references/crop.py ref.png out.png --box 872,543,918,579 --key       # cut a graphic out of a reference
 python3 tests/test-flowkit.py                                            # the authoring helpers
 python3 tests/test-diff-config.py                                        # the diff's two directions
 python3 tests/test-snippet.py                                            # extract/plan/graft
@@ -81,6 +82,8 @@ python3 tests/test-unmapped-elements.py                                  # x-sup
 python3 tests/test-legibility.py                                         # text-vs-background, both appearance variants
 python3 tests/test-price-literals.py                                     # placeholder + baseline-relative price literals
 python3 tests/test-product-fields.py                                     # the closed product-variable field set
+python3 tests/test-crop.py                                               # cutting a graphic out of a reference
+python3 tests/test-icon-declarations.py                                  # icon name+weight, and the no-traceback guarantee
 python3 tests/mobile-preview-check.py                                    # the device-preview link, over the corpus
 ```
 

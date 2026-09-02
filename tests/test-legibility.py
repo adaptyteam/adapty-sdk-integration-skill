@@ -119,6 +119,14 @@ def colorfill(c):
     return [{'type': 'color', 'color': c}]
 
 
+def gradfill(*colors, angle=90):
+    """A gradient fill, v10 one-layer array form, stops spread evenly."""
+    n = max(1, len(colors) - 1)
+    return [{'type': 'gradient', 'angle': angle,
+             'stops': [{'color': c, 'position': round(100 * i / n)}
+                       for i, c in enumerate(colors)]}]
+
+
 PLAIN = [{'id': 'ink', 'light': {'hex': '#111114'}},
          {'id': 'paper', 'light': {'hex': '#FFFFFF'}}]
 # A full light/dark palette, as 5 of the 7 tracked fixtures carry.
@@ -206,6 +214,73 @@ silent('a colorId that resolves to nothing is skipped, not scored',
             text_color=tok('does-not-exist'), tokens=PLAIN))
 
 # ------------------------------------------------------------- SILENT on real builder output
+# --------------------------------------------------------------- gradient backgrounds
+# The regression this section exists for: a gradient used to resolve to NOTHING, so the walk
+# fell through to the screen fill and reported near-black-on-black for black text on a bright
+# foil button. Six independent agent runs hit it, all diagnosed it as a false positive, and two
+# changed their design to route around a checker that was wrong.
+print('\nGradient backgrounds:')
+
+silent('black text on a bright foil gradient — the false positive this fixed',
+       flow(screen_fill=colorfill(hexc('#08080A')),
+            card_fill=gradfill(hexc('#A8E6CF'), hexc('#C9A7F5'), hexc('#E3AACC')),
+            text_color=hexc('#0B0B0B'), tokens=PLAIN))
+
+silent('white text on a dark gradient',
+       flow(screen_fill=colorfill(hexc('#FFFFFF')),
+            card_fill=gradfill(hexc('#101828'), hexc('#1F2A44')),
+            text_color=hexc('#F5F5F7'), tokens=PLAIN))
+
+# The worst stop is the finding: text that survives one end and vanishes at the other is text
+# that vanishes. A mean would have averaged this into looking fine.
+fires('white text over a gradient that ends in white — worst stop wins',
+      flow(screen_fill=colorfill(hexc('#08080A')),
+           card_fill=gradfill(hexc('#101828'), hexc('#FFFFFF')),
+           text_color=hexc('#FDFDFD'), tokens=PLAIN),
+      'gradient stops')
+
+fires('black text on a gradient that is dark throughout',
+      flow(screen_fill=colorfill(hexc('#FFFFFF')),
+           card_fill=gradfill(hexc('#0A0A0A'), hexc('#151515')),
+           text_color=hexc('#050505'), tokens=PLAIN),
+      'effectively invisible')
+
+# Same rule solids follow, and not hypothetical: a real export gradient runs one stop at
+# opacity 100 and the next at 26. What shows through a scrim is the designer's business.
+silent('a translucent gradient stop makes the fill unresolvable, exactly like a translucent solid',
+       flow(screen_fill=colorfill(hexc('#08080A')),
+            card_fill=gradfill(hexc('#FFFFFF', opacity=100), hexc('#FFFFFF', opacity=26)),
+            text_color=hexc('#FAFAFA'), tokens=PLAIN))
+
+silent('a gradient through a theme token resolves like any other token',
+       flow(screen_fill=colorfill(hexc('#08080A')),
+            card_fill=gradfill(tok('paper'), tok('paper')),
+            text_color=tok('ink'), tokens=PLAIN))
+
+# A multi-LAYER fill stays unresolvable whether or not a gradient is in it -- 0 of the real
+# exports contain one, and the one this project shipped reached a device with the tint missing.
+silent('a multi-layer fill is still unresolvable',
+       flow(screen_fill=colorfill(hexc('#08080A')),
+            card_fill=[{'type': 'color', 'color': hexc('#FFFFFF')},
+                       {'type': 'gradient', 'angle': 90,
+                        'stops': [{'color': hexc('#FFFFFF'), 'position': 0},
+                                  {'color': hexc('#EEEEEE'), 'position': 100}]}],
+            text_color=hexc('#FCFCFC'), tokens=PLAIN))
+
+# Text deliberately LEGIBLE against the screen fill: the only way this can fire is if an empty
+# stop list were treated as establishing some background of its own. (First written with
+# near-black text on a near-black screen, which fired for the honest reason -- the fall-through
+# worked -- and tested nothing.)
+silent('a gradient with no stops establishes nothing and the walk falls through',
+       flow(screen_fill=colorfill(hexc('#08080A')),
+            card_fill=[{'type': 'gradient', 'angle': 90, 'stops': []}],
+            text_color=hexc('#F2F2F5'), tokens=PLAIN))
+
+fires('a gradient SCREEN fill is resolved too, not just an element fill',
+      flow(screen_fill=gradfill(hexc('#000000'), hexc('#061532')),
+           card_fill=None, text_color=hexc('#04040A'), tokens=PLAIN),
+      'effectively invisible')
+
 _paths = sorted(glob.glob(os.path.join(CORPUS, '*.json'))) + \
          sorted(glob.glob(os.path.join(RAW, '*.json')))
 _genuine = [p for p in _paths if os.path.basename(p) != HYBRID]

@@ -112,15 +112,94 @@ Work down this ladder and take the first rung that fits:
    which is what makes it follow the theme. Never rasterize this rung.
 2. **A flat or linear-gradient surface → a `fill`** (with `stops`), on a stack you already have.
 3. **A composition → stacks**, using the layout vocabulary before padding or docking.
-4. **Only then: draw it, rasterize it, upload it.**
+4. **Nobody has a file → a styled empty `image` and an ASK** (trap 5). This is rung 4, not the
+   last rung, and that ordering was measured the expensive way — see below.
+5. **Only when the ask cannot be answered:** cut it out of the reference
+   ([`crop.py`](crop.py), below), or draw and rasterize it. A crop first, since their pixels beat
+   your approximation of them.
+
+**Why the ask outranks both, and why this ladder used to say the opposite.** It was first written
+with crop and draw *above* the placeholder, ordered by fidelity-if-it-works. That is the wrong
+axis. The real comparison is crop **versus asking**, and asking wins on the thing that matters:
+
+| | what the user ends up with |
+| :--- | :--- |
+| placeholder + ask | their **real, full-resolution** asset |
+| crop | a **1x** crop of their mockup — lower resolution than their own source, and damaged if keying eats a region that matches the backdrop |
+| draw | your guess at someone's design, wearing a finished look |
+
+A reference is nearly always the user's *own* design, so they already have the file — and cropping
+someone else's design is excluded on provenance anyway. **So for every legitimate case, asking
+strictly dominates.** Crop and draw are for the narrow case where the ask cannot be answered: an
+unattended run, or a graphic that exists only inside a flattened mockup.
+
+Measured, and it is why this is stated so bluntly: across three agent runs on a reference built for
+this exact rung, **two reached the correct outcome by asking and never touched `crop.py`, while the
+one that cropped produced the worst artifact of the three.** The rung is real; it is just not where
+you go first.
+
+### Cutting a graphic out of a reference
+
+`crop.py ref.png out.png --box x0,y0,x1,y1 [--key] [--fit WxH]` — stdlib, PNG in / PNG out,
+8-bit non-interlaced (a macOS screenshot qualifies, a JPEG does not). `--key` floods the backdrop
+away from the border inward, ramps alpha across the anti-aliased band and unpremultiplies it, so
+the cutout composites with no rim. Alpha survives the upload round trip (measured — see above), so
+a transparent crop is a shipping-grade asset.
+
+It **refuses** rather than guessing, and the refusals are the useful part:
+
+| It says | It means |
+| :--- | :--- |
+| border is not a flat backdrop | either the box clips the graphic (widen it) or the backdrop is a texture or gradient, which cannot be keyed at all — there is no single colour to remove and a flat screenshot records no alpha |
+| N% removed, no graphic in this box | the coordinates are wrong; a reference with a device frame needs its screen bounds located first ([preview.md](preview.md)) |
+| Nx into a WxH pt box | the box is in points and the asset scales into it, so a crop from a 1x phone screenshot is soft on a 2x/3x device. Ask for a higher-resolution export; never upscale |
+
+**The one failure it cannot detect is the one you must look for yourself**, which is why `--key`
+also writes `out.contact.png` — the cutout over black, over white and over grey. **Look at it.**
+A graphic that *contains* the backdrop colour loses that part of itself, because the flood walks
+through any region of the key colour that touches the silhouette's edge. Measured on a real
+reference sheet: a US flag survived intact (its white stripes are enclosed by red) while the
+Finnish, Canadian and French flags beside it came back as their coloured parts alone. An enclosed
+region is safe; one that reaches the edge is not, and no threshold separates the two.
+
+Two limits that are about provenance rather than pixels. A crop is right when the reference is
+**the user's own design** — cropping a competitor's wordmark into their media library is lifting a
+brand asset, not a fidelity win. And a crop is still an upload, so it is still an asset in their
+library that no CLI command can remove: crop once, and crop the *visible artwork* rather than a
+canvas with margin baked in.
 
 ### Three things never become an image
 
-**Text.** Not "text in a font the account lacks" — *any* text. Baked words cannot be translated
-(a locale run rewrites fields, not pixels), cannot carry a price variable, and are invisible to the
-locale parity check, so a rasterized price is the exact "renders perfectly, ships a lie" failure
-this skill has already produced once. A missing typeface is a named ask to the user; it is never a
-reason to bake the sentence into a bitmap.
+**Text — drawn by you OR cropped from a reference.** Never bake words into a bitmap: a rasterized
+price is the exact "renders perfectly, ships a lie" failure this skill has already produced once,
+and a missing typeface is a named ask, never a reason to draw the sentence.
+
+**An asset that will never arrive has an exit, and it is not a crop.** When the reference is
+someone else's screen the user cannot supply the file at all, so the placeholder is permanent —
+that is the case for the missing-assets block's third route, *design around it*
+([fidelity.md](fidelity.md)). It is the user's call to make, never yours to assume.
+
+> **The crop rung is the easy way to break this, and it was measured breaking it.** This rule used
+> to read "text you would be rasterizing **yourself**", which is about *drawing* — and a crop is
+> not drawing, so the exclusion did not obviously reach it. An agent cropped a whole
+> server-list card out of a reference, baking in `SERVER LOCATIONS`, `United States`,
+> `21.170.236.49`, `Connected` and `Ready`: untranslatable, and the server names and IP are
+> **live app data that must never be a picture**. It rendered perfectly and nothing objected.
+> **Crop a graphic, never a region containing text or data.** If the region you want is mostly
+> text, it is a composition, not an asset — build it, and crop only the graphic inside it.
+
+> **Corrected 2026-09-02.** This rule used to read "*any* text" and rest on "baked words cannot be
+> translated … and are invisible to the locale parity check". **Both halves are wrong for an
+> `image` element**: its `values` map is keyed by **locale**, so a per-locale lockup is
+> expressible, and `verify-config.py`'s parity walk collects *every* `_localizable` node
+> regardless of key, image maps included. The reason that survives is the variable one, and it is
+> narrower than the old rule — so the old rule forbade the right answer for a **designed lockup**
+> and pushed agents to ship a solid-colour `text` lookalike instead. See
+> [fidelity.md](fidelity.md) for what to do with lettering whose treatment is unreachable.
+
+**Lettering that carries a variable or a price stays a `text`, always** — an image cannot carry
+one, and that is the half of the old rule worth keeping. If its *treatment* is also unreachable,
+that is the one place a solid-colour downgrade is correct, and it ships disclosed.
 
 **Anything selectable.** A group member must be a `product`, a `selectable` or a `tab-item`; an
 `image` carrying a `groupId` is inert. So plan cards, toggles and tab bars cannot be pictures of
