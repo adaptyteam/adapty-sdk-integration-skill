@@ -84,6 +84,7 @@ python3 tests/test-price-literals.py                                     # place
 python3 tests/test-product-fields.py                                     # the closed product-variable field set
 python3 tests/test-crop.py                                               # cutting a graphic out of a reference
 python3 tests/test-icon-declarations.py                                  # icon name+weight, and the no-traceback guarantee
+python3 tests/test-id-hygiene.py                                         # id charset, cross-screen dupes, locale codes
 python3 tests/mobile-preview-check.py                                    # the device-preview link, over the corpus
 ```
 
@@ -174,6 +175,29 @@ Calibration state per check — including which are proven to fire on real data 
 only proven silent — lives in
 [checks.md](../skills/flow-audit/references/checks.md), along with every false-positive trap
 the checks were written against.
+
+## `test-id-hygiene.py` — the black-screen class, and the scope that is the finding
+
+Three checks: element-id charset, the same element id on two screens, and locale-code shape. Each
+is a defect no reachable gate can see — `flows config validate` passes a hyphenated id, the schema
+types ids as bare strings, and `config preview` draws the *config*, so the screen renders
+correctly while a device renders black.
+
+**The scope is the part worth reading before changing anything.** Two of the three checks are
+narrower than the rule they came from, and the corpus is why:
+
+- **Screen ids are excluded.** 4 of 36 screen ids across the tracked and raw fixtures are bare
+  UUIDs, each the entry screen of a `published` flow — and the raw copies carry UUIDs too, so it
+  is real builder output rather than a sanitization artifact. Element ids have no such exception:
+  911 of 911 are clean. Negative-tested — extending the check to screen ids reddens 4 corpus
+  lines plus the pinned UUID case.
+- **The locale pattern allows a script subtag.** The obvious `^[a-z]{2}(-[A-Z]{2})?$` would flag
+  `sr-Latn`, a real code in `onboarding-multilocale.json`. Negative-tested — that regex reddens
+  the fixture plus `zh-Hans`, `zh-Hant-HK`, `es-419` and `fil`.
+
+Each of the three mechanisms was also disabled in turn, reddening exactly its own cases (4 / 1 /
+3 / 6 across charset, cross-screen dupes, the soft identifier family and locale codes) and nothing
+else. `flowkit` refuses to build any of these shapes, with matching checks in `test-flowkit.py`.
 
 ## `test-flowkit.py` — the guardrail on the authoring helpers
 
