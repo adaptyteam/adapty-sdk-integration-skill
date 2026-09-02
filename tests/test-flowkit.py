@@ -734,6 +734,46 @@ def main():
     check('attach_point carries the selected system state like any group member',
           _ap['states'] == [{'id': 'selected', 'type': 'system'}])
 
+    # --- id hygiene: the ids that become identifiers in the generated script ---------------
+    #
+    # An element id outside [A-Za-z0-9_] breaks the generated runtime script and the flow draws
+    # a BLACK SCREEN on device, while validate, the schema check and `config preview` all stay
+    # green. Unrepresentable beats detectable, so config() raises. SCREEN ids are deliberately
+    # NOT checked: 4 of 36 screen ids in the corpus are bare UUIDs on published flows.
+    def _doc(screens, **kw):
+        return fk.config(screens=screens,
+                         colors=[('ink', 'Ink', '#111114', '#F5F5F7')],
+                         typography=[('body', 'Body', 16, 'regular')], **kw)
+
+    def _scr(sid, eid, **kw):
+        return fk.screen(sid, [fk.text(fk.rich('Hi'), node_id=eid, preset='body',
+                                       color_id='ink')], **kw)
+
+    check('config() raises on an element id with a hyphen',
+          raises(lambda: _doc([_scr('scr_1', 'el-hero')])))
+    check('config() raises on an element id with a dot',
+          raises(lambda: _doc([_scr('scr_1', 'el.hero')])))
+    check('config() accepts a UUID SCREEN id — real published exports use one',
+          _doc([_scr('9fd7c4e1-2b3a-4c5d-8e6f-0a1b2c3d4e5f', 'el_ok')]) is not None)
+    check('config() raises on the same element id across two screens',
+          raises(lambda: _doc([_scr('scr_1', 'el_cta'), _scr('scr_2', 'el_cta')])))
+    check('config() raises on an off-charset customId',
+          raises(lambda: _doc([fk.screen('scr_1', [
+              fk.text_input('user-name', node_id='el_in')])])))
+
+    # `pt-br` saves and is refused at publish; `sr-Latn` is a real code in a real export, so the
+    # naive `^[a-z]{2}(-[A-Z]{2})?$` would be wrong in the other direction.
+    check('config() raises on a lowercase region locale code (pt-br)',
+          raises(lambda: _doc([_scr('scr_1', 'el_ok')],
+                              locales=(('en', 'English'), ('pt-br', 'Portuguese')))))
+    check('config() raises on a lowercase script subtag (sr-latn)',
+          raises(lambda: _doc([_scr('scr_1', 'el_ok')],
+                              locales=(('en', 'English'), ('sr-latn', 'Serbian')))))
+    check('config() accepts pt-BR, zh-Hans and sr-Latn',
+          _doc([_scr('scr_1', 'el_ok')],
+               locales=(('en', 'English'), ('pt-BR', 'Portuguese'),
+                        ('zh-Hans', 'Chinese'), ('sr-Latn', 'Serbian'))) is not None)
+
     print()
     if FAILURES:
         print(f'{len(FAILURES)} failure(s): ' + ', '.join(FAILURES))

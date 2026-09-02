@@ -49,6 +49,16 @@ class Ids:
 
 _ids = Ids()
 
+# An id that reaches the generated runtime script as an identifier: element ids, group ids,
+# input customIds, custom variable ids. Screen ids are excluded -- real published exports use
+# bare UUIDs for the entry screen. Same pattern as `verify-config.py`'s `_ID_RE`.
+_IDENT = re.compile(r'[A-Za-z0-9_]+')
+
+# `language[-Script][-REGION]`. The naive `^[a-z]{2}(-[A-Z]{2})?$` is wrong: a script subtag is
+# four letters in Title case and `sr-Latn` is a real code in a real export. Same pattern as
+# `verify-config.py`'s `LOCALE_CODE`.
+LOCALE_CODE = re.compile(r'[a-z]{2,3}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|[0-9]{3}))?\Z')
+
 
 def eid(kind='S'):
     """Mint an id from the module-level counter. Use your own `Ids()` for several documents."""
@@ -1621,6 +1631,67 @@ def config(*, screens, colors=(), typography=(), icons=(), locales=(('en', 'Engl
             'A value under an undeclared code renders nowhere. You wrote it, so declare it: '
             'pass locales=(("en", "English"), ("ru", "Russian"), …) — do not ship it as a '
             'warning for someone else to clear up.')
+
+    # The locale code is what the SDK matches against, and its pattern is case-sensitive per
+    # subtag: `language[-Script][-REGION]`, script four letters in Title case, region two
+    # uppercase letters or three digits. `pt-br` saves fine and is refused at publish with an
+    # output-schema violation on `/localizations/N/id`, and the repair is heavy by then (the key
+    # has to be renamed in `locales`, in every `values` map, and in `remote_configs`) -- so it is
+    # unrepresentable here rather than a warning after the fact. `verify-config.py` warns on the
+    # same shape, for codes that arrive in a config you fetched rather than one you wrote.
+    for code in declared:
+        if not LOCALE_CODE.fullmatch(str(code)):
+            raise ValueError(
+                f'locale code {code!r} is not `language[-Script][-REGION]` with the SDK\'s '
+                f'casing. Region is UPPERCASE (`pt-BR`, not `pt-br`) and a script subtag is '
+                f'four letters in Title case (`zh-Hans`, `sr-Latn`). The transform service '
+                f'refuses the flow at publish with a pattern violation on '
+                f'`/localizations/N/id`.')
+
+    # An element id becomes an IDENTIFIER in the generated runtime script -- the same code path
+    # the condition-variable check below documents. A character outside [A-Za-z0-9_] breaks the
+    # script and the flow draws a BLACK SCREEN on device, with `flows config validate`, the
+    # schema check and `config preview` all green: the preview renders the config, not the
+    # transformer's output. One script per flow, so a reused id collides in it too.
+    #
+    # SCREEN ids are not checked, and that is measured rather than overlooked: 4 of 36 screen
+    # ids in the corpus are bare UUIDs, each the entry screen of a published flow.
+    seen_ids = {}
+    for s_ in screens:
+        for eid in (s_.get('elements') or {}).get('map', {}):
+            if not _IDENT.fullmatch(str(eid)):
+                raise ValueError(
+                    f'element id {eid!r} on screen {s_.get("id")!r} has a character outside '
+                    f'[A-Za-z0-9_]. The id is emitted as an identifier in the generated runtime '
+                    f'script, so this renders a BLACK SCREEN on device while every local gate '
+                    f'stays green. Use `eid()` or an `Ids()` instance.')
+            if eid in seen_ids:
+                raise ValueError(
+                    f'element id {eid!r} is used on both {seen_ids[eid]!r} and '
+                    f'{s_.get("id")!r}. There is one generated script per flow, so the second '
+                    f'declaration collides with the first — use ONE Ids() instance for the '
+                    f'whole document.')
+            seen_ids[eid] = s_.get('id')
+
+    # Same script surface, one tier down: these are the heads of `<customId>.value` and
+    # `<groupId>.selectedOptionId`, and they are the ids an author actually types.
+    for s_ in screens:
+        for g in s_.get('selectableGroups') or []:
+            if g.get('id') and not _IDENT.fullmatch(str(g['id'])):
+                raise ValueError(
+                    f'groupId {g["id"]!r} has a character outside [A-Za-z0-9_]; it is the head '
+                    f'of `{g["id"]}.selectedOptionId` in the generated script.')
+        for eid, e in ((s_.get('elements') or {}).get('map') or {}).items():
+            cid = (e.get('props') or {}).get('customId')
+            if cid and not _IDENT.fullmatch(str(cid)):
+                raise ValueError(
+                    f'customId {cid!r} on {eid} has a character outside [A-Za-z0-9_]; it is the '
+                    f'head of `{cid}.value` in the generated script.')
+    for v in variables:
+        vid = v.get('id') if isinstance(v, dict) else None
+        if vid and not _IDENT.fullmatch(str(vid)):
+            raise ValueError(f'variable id {vid!r} has a character outside [A-Za-z0-9_]; it is '
+                             f'emitted as an identifier in the generated script.')
 
     # Every condition variable must resolve to something this document produces. An id that
     # resolves to nothing is not dropped: the code generator emits it as a BARE IDENTIFIER into

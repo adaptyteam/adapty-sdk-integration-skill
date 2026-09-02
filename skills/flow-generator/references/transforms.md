@@ -14,7 +14,7 @@ authority on both. Do not re-derive any of it here.
 
 | Transform | What it endangers | Publish blocker it trips | What to check |
 | :--- | :--- | :--- | :--- |
-| **Add a locale** | Invariant 11, across **three** localizable families — `text.props.content`, `image.props.image`, `text-input.props.placeholder` — not text alone. A bare-string `content` has no locale slot and cannot hold the translation at all. | None. A locale missing from a `values` map falls back or renders empty: invisible at publish, visible to users. | Every bare-string `content` you met appears in your report under decision 1. **`defaultLocale` is unchanged** — adding a locale is additive, and flipping the default changes what every existing user sees with nothing failing. And every *declared* locale carries every localizable field: `references/verify-config.py` checks parity and errors when a translated block's `variableId`s differ from the default locale's, which is the failure that silently costs a locale its prices. |
+| **Add a locale** | Invariant 11, across **three** localizable families — `text.props.content`, `image.props.image`, `text-input.props.placeholder` — not text alone. A bare-string `content` has no locale slot and cannot hold the translation at all. | **One, and it is the code itself** — see decision 8. A locale missing from a `values` map is not a blocker: it falls back or renders empty, invisible at publish and visible to users. | Every bare-string `content` you met appears in your report under decision 1. **`defaultLocale` is unchanged** — adding a locale is additive, and flipping the default changes what every existing user sees with nothing failing. And every *declared* locale carries every localizable field: `references/verify-config.py` checks parity and errors when a translated block's `variableId`s differ from the default locale's, which is the failure that silently costs a locale its prices. |
 | **Rewrite copy** | Invariants 5 and 11, plus trap 2 — inline `variable` and `token` nodes survive a rewrite only if you edit around them, never through them. Field shape is per field and must survive the edit. | None — and that is the danger. A paragraph rebuilt from its rendered text publishes cleanly and passes every referential check; trap 2 in [`flow-schema.md`](flow-schema.md) states what it costs. | Every locale in `locales[]` got the same edit, or your report says which did not. No field changed shape (decision 1). |
 | **Add / remove / reorder screens** | Invariants 3 and 12, which break in **opposite directions**. Invariant 3: the target dies and the reference survives. Invariant 12: **the consumer survives and the producer dies** — deleting a screen can strand a variable consumer on a screen you never opened. Verified in `quiz`: the `text-input` with `customId: "name"` lives on **Quiz**, and `name.value` is read on **Rock**, **Hip hop** and **Paywall After**. Delete Quiz and all three references stay intact with nothing to resolve against, so nothing on the edited screen looks wrong and three untouched screens render an empty name. Also: `screens[0]` is the entry screen, so a reorder silently moves where the flow starts; and `_meta.screens` is keyed by screen id, so a deleted screen's product declarations leave with it (invariant 4). | Three, all on the [Common issues](https://adapty.io/docs/flow-common-issues.md) list: a dangling `navigate` (invariant 3), a screen with no elements, and — on any screen you add that carries a `product` element — a product element with no product attached, which no edit of yours can clear (see [`products.md`](products.md)). A stranded variable consumer is **not** a blocker; it publishes and renders empty. | Every `<inputCustomId>.value`, `<groupId>.selectedOptionId` and `<productUUID>.prod_*` reference still has a producer. Search `screens` **and** `components`: no component in the corpus holds a reference, but a component is a screen-shaped `{map, hierarchy}` that can, so it is inside the search space. A new screen matches `flow-schema.md`'s `root`-wrapper and `scr_`-id rules. `screens[0]` is still the screen you mean. Orphans and widenings are in your report (decisions 2 and 3). |
 | **Branching and conditions** | Also: **conditions cannot compare numbers.** `<` and `>` are in the schema's `ExpressionType` and are not honoured at runtime, so a threshold must be enumerated as `==` cases against **strings** — see [flow-schema.md](flow-schema.md). Invariants 6 and 7. Renaming a selectable option changes its `customId`; every `const` compared against `<groupId>.selectedOptionId` must change with it, or the case stops matching and **every user takes the `default` branch** — routing changes with nothing failing. | A `conditional` with no operator or value. A `const` that matches nothing is not a blocker; it silently reroutes everyone. | For each predicate `const`, a member of that group carries that `customId`. Each `selectableGroups[]` entry has at least one member, and each `groupId` in use is declared. You know where `default` sends users, because a mismatch sends everyone there. Read `default` as a live route, not a fallback: in `quiz` the switch has one case (`rock`) and `hiphop` is routed **only** by `default`. And a group member may legitimately carry no `customId` at all — `quiz`'s continue button is a `quiz` member and holds the conditional itself — so an absent `customId` is not a gap to fill. |
@@ -247,6 +247,28 @@ make it correct: replace **digraphs before single letters** (`љ њ џ` → `lj 
 them first); map **only the source script's codepoints**, so Latin already in the copy survives
 untouched — a brand name, `·` separators, an em dash; then **assert nothing from the source script
 remains**, which is the one check that catches a letter missing from the table.
+
+
+### 8. The exact code you wrote, because its casing is load-bearing
+
+The locale code is the string the SDK matches a device's language against, and its pattern is
+**case-sensitive per subtag**: `language[-Script][-REGION]`, with the region in UPPERCASE and a
+script subtag in four letters of Title case. `pt-BR` is right and **`pt-br` is refused at
+publish** — an output-schema violation on `/localizations/N/id`, from a document that saved without
+complaint. This is the one way an add-a-locale run can produce something unpublishable.
+
+Two things make it worth a decision rather than a footnote:
+
+- **The repair is expensive once the translations exist.** Renaming means the key in `locales`,
+  every `values` map in the document that carries it, and `remote_configs` — so getting it right
+  costs nothing now and a full pass later.
+- **A code that arrives in a config you FETCHED is not yours to rewrite in passing.** Report it
+  and ask. `verify-config.py` warns for exactly that case; `flowkit.config()` refuses to emit one,
+  because a code you are writing now has no excuse.
+
+**Your report names the code, not the language** — `pt-BR`, not "Brazilian Portuguese" — which is
+the same reason decision 7 asks for `sr` versus `sr-Latn`: the code is what gets matched, and it
+is the only part of "add Portuguese" that can be wrong.
 
 **Report:** the language, the locale codes you added, which is the source and which is derived,
 and — if derived — that it is a transliteration, so the user knows a copy edit must be re-derived

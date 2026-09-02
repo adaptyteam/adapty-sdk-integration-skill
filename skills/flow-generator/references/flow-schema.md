@@ -1281,8 +1281,34 @@ nothing more; for anything about whether users see it, that surface does not qua
   10's rule is confirmed, not inferred.
 - `_meta.screens[].products[]` requires `flowProductId`, matching the publish 422 from the other
   side. `webPaywallURL` also lives there.
-- **Element and variable ids should stay simple identifiers** — letters, digits, underscore. Exotic
-  characters are the one place a malformed value causes trouble.
+- **Element and variable ids must be simple identifiers** — letters, digits, underscore. Not a
+  style preference: see [Element and screen ids become identifiers](#element-and-screen-ids-become-identifiers).
+
+### Element and screen ids become identifiers
+
+An element id is emitted as an **identifier in the generated runtime script** — the same code path
+that makes an unresolved condition variable a `script_type_violation`, where the head is written
+out bare and the script fails to compile. So a character outside `[A-Za-z0-9_]` in an element id
+produces a syntactically broken script and the flow renders a **black screen on device**. An id
+reused on a second screen collides in the same script, because there is one script per flow.
+
+**Every gate reachable from here is blind to it.** `flows config validate` passes a hyphenated id
+(recorded in [validate.md](validate.md) as a thing it does not catch), the schema types ids as
+bare strings, and `config preview` renders the *config* rather than the transformer's output, so
+it draws the screen correctly. `verify-config.py` errors on both shapes, and `flowkit` cannot
+build either.
+
+**Screen ids are the exception, and it is measured rather than assumed.** Across the 7 tracked and
+5 raw fixtures, **4 of 36 screen ids are bare UUIDs** — hyphens included — and each is the *entry*
+screen of a flow whose status is `published`; `comparison-paywall.json`'s only screen is one, and
+the raw export carries a UUID too, so it is not a sanitization artifact. A rule extended to screen
+ids would fire on real published builder output. Element ids carry no such exception: **911 of 911**
+across the same 12 configs are clean.
+
+The softer family is the same script surface one tier down: a `groupId`, an input `customId` and a
+custom variable id are the heads of `<groupId>.selectedOptionId` and `<customId>.value`. All are
+corpus-clean, with no black screen reproduced behind them, so they warn rather than error — and a
+new screen still takes the `scr_` form and a new element an `el_`-prefixed one.
 
 ### `verticalAlign`, precisely
 

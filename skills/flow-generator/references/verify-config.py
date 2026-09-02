@@ -151,6 +151,17 @@ COND_ILLEGAL_TYPES = {'assign'}
 # in `props.fill.color` / `props.color` and validate clean -- so a blanket hex rule would fire
 # on the builder's own output. Theme colours only.
 THEME_HEX = re.compile(r'#[0-9A-Fa-f]{6}\Z')
+
+# An id that reaches the generated runtime script as an identifier. Element ids, group ids,
+# input `customId`s and custom variable ids all do; SCREEN ids do not get this treatment here,
+# because 4 of 36 screen ids in the corpus are bare UUIDs on published flows (see the check).
+_ID_RE = re.compile(r'[A-Za-z0-9_]+')
+
+# `language[-Script][-REGION]`, with the case of each subtag load-bearing: the SDK's own pattern
+# wants `pt-BR`, not `pt-br`, and refuses the flow at publish with an output-schema violation on
+# `/localizations/N/id`. Script is FOUR letters in Title case and is why a naive
+# `^[a-z]{2}(-[A-Z]{2})?$` is wrong: `sr-Latn` is a real code in a real export and would fail it.
+LOCALE_CODE = re.compile(r'[a-z]{2,3}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|[0-9]{3}))?\Z')
 _BINARY = {'==', '!=', '>', '<', 'has', 'notHas', 'in', 'notIn'}
 _UNARY = {'empty', 'notEmpty', 'size'}
 
@@ -603,6 +614,74 @@ def check(path, baseline_text=None):
             bad.append(f"{label} declared more than once: "
                        f"{', '.join(str(x) for x in dupes)}")
 
+    # --- id hygiene: the black-screen class ------------------------------------------------
+    #
+    # An element id becomes an IDENTIFIER in the generated runtime script, the same code path
+    # `config()`'s condition-variable check already documents for variable ids (an unresolved
+    # head is emitted as a bare identifier and fails to compile). A character outside
+    # `[A-Za-z0-9_]` therefore produces a syntactically broken script, and the flow draws a
+    # BLACK SCREEN on device while every gate here is green: `flows config validate` passes a
+    # hyphenated id, the schema types ids as bare strings, and `config preview` renders the
+    # config rather than the transformer's output, so it draws the screen correctly.
+    #
+    # SCREEN IDS ARE DELIBERATELY EXCLUDED, and this is a correction rather than an omission.
+    # The rule as stated upstream covers screen ids too, and the corpus refutes that: 4 of 36
+    # screen ids across the tracked and raw exports are bare UUIDs (hyphens and all), each the
+    # ENTRY screen of a flow whose status is `published` — `comparison-paywall.json`'s only
+    # screen is one. A check that fires on real published builder output is worse than none.
+    # Element ids carry no such exception: 911 of 911 across the same 12 configs are clean.
+    off = [(s_['id'], eid) for s_ in d.get('screens') or []
+           for eid in (s_.get('elements') or {}).get('map', {})
+           if not _ID_RE.fullmatch(str(eid))]
+    if off:
+        bad.append(f"element id(s) outside [A-Za-z0-9_]: "
+                   f"{', '.join(f'{a}/{b}' for a, b in off[:4])}"
+                   f"{', …' if len(off) > 4 else ''} — the id becomes an identifier in the "
+                   f"generated runtime script, so a hyphen or a dot breaks the script and the "
+                   f"screen renders BLACK on device. Nothing else catches it: validate passes "
+                   f"it, the schema types ids as plain strings, and the preview draws the "
+                   f"config rather than the transformer's output")
+
+    # One script per flow, so an id reused on a second screen collides in it — and it is the
+    # same argument as every other duplicate above: a repeated id makes one entry unreachable
+    # however the consumer decodes it. It also breaks this skill's own rewriters, which address
+    # an element by id and nothing else. 0 of 12 real configs contain one.
+    xs = {}
+    for s_ in d.get('screens') or []:
+        for eid in (s_.get('elements') or {}).get('map', {}):
+            xs.setdefault(eid, []).append(s_['id'])
+    shared = {k: v for k, v in xs.items() if len(v) > 1}
+    if shared:
+        bad.append("element id(s) used on more than one screen: "
+                   + '; '.join(f'{k} on {", ".join(v)}' for k, v in sorted(shared.items())[:4])
+                   + (', …' if len(shared) > 4 else '')
+                   + " — one generated script per flow, so the second declaration collides "
+                     "with the first")
+
+    # The same script surface, one tier weaker: these are the heads of `<customId>.value`,
+    # `<groupId>.selectedOptionId` and custom variables, so a malformed one lands in the
+    # generated script too. Corpus-clean (0 off-charset across group ids, customIds and
+    # variable ids in all 12 configs) but with no reproduced black screen behind it, so it
+    # warns where an element id errors.
+    soft = []
+    for s_ in d.get('screens') or []:
+        for g in s_.get('selectableGroups') or []:
+            if g.get('id') and not _ID_RE.fullmatch(str(g['id'])):
+                soft.append(f"groupId {g['id']}")
+        for eid, e in ((s_.get('elements') or {}).get('map') or {}).items():
+            cid = (e.get('props') or {}).get('customId')
+            if cid and not _ID_RE.fullmatch(str(cid)):
+                soft.append(f"customId {cid} on {eid}")
+    for v in d.get('variables') or []:
+        if v.get('id') and not _ID_RE.fullmatch(str(v['id'])):
+            soft.append(f"variables[].id {v['id']}")
+    if soft:
+        warn.append(f"identifier(s) outside [A-Za-z0-9_]: {', '.join(soft[:4])}"
+                    f"{', …' if len(soft) > 4 else ''} — these are the heads of "
+                    f"`<customId>.value` / `<groupId>.selectedOptionId`, which the code "
+                    f"generator emits into the runtime script. Rename before a condition or a "
+                    f"price variable reads one")
+
     # Same NAME at two weights is legal as far as anything here can prove -- but no real export
     # does it (0 of 8), and if the consumer keys icons by name alone it is the theme bug again.
     name_dupes = _dups([i.get('name') for i in icons])
@@ -675,6 +754,22 @@ def check(path, baseline_text=None):
                     f"nothing renders them. If this run wrote them, declaring the locale is the "
                     f"fix, not this warning; if they were already in the fetched config, report "
                     f"and ask")
+
+    # Locale code SHAPE, which is separate from whether the code is declared. The SDK matches on
+    # this string and its pattern is case-sensitive per subtag, so `pt-br` publishes nothing: the
+    # transform service refuses the flow with `/localizations/N/id … must match pattern`. It is a
+    # warning rather than an error because the code can arrive in a config you fetched — the
+    # dashboard's own language list has served lowercase region tags — and the repair is heavy
+    # (the key has to be renamed in `locales`, in every `values` map in the document, and in
+    # `remote_configs`), so it is a report-and-ask rather than something to rewrite in passing.
+    # If THIS run wrote the code, fix the code; `flowkit.config()` refuses to emit one.
+    misshapen = [c for c in declared if not LOCALE_CODE.fullmatch(str(c))]
+    if misshapen:
+        warn.append(f"locale code(s) {', '.join(misshapen)} are not `language[-Script][-REGION]` "
+                    f"with the SDK's casing (`pt-BR`, `zh-Hans`, `sr-Latn`) — the transform "
+                    f"service refuses the flow at publish with a pattern violation on "
+                    f"`/localizations/N/id`. Renaming means the key in `locales`, every `values` "
+                    f"map that carries it, and `remote_configs`")
 
     if len(declared) > 1:
         base = d.get('defaultLocale') or declared[0]

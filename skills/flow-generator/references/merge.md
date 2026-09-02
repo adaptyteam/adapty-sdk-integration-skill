@@ -130,6 +130,28 @@ a diff:
 - **Anything under a top-level key it does not enumerate.** A key the format gains next release is
   compared as one opaque blob under `other:<key>` — coarse, but never silent.
 
+## The file deliverable has its own way to lose the flow
+
+The diff protects a write you make. A **file** you hand over is imported by the user, and the
+import is not a write you can diff — so it needs its own rule.
+
+**A shape-invalid config can open EMPTY in the builder, and the next save writes that emptiness
+over the real flow.** The screens are not rejected with an error the user can act on; the editor
+comes up blank, they assume the import failed, they save or keep working, and the save is
+authoritative. Losing the flow this way needs no unlucky timing and no concurrent editor.
+
+Two consequences for a file deliverable, and neither is optional:
+
+- **The gates in phase 3 are what stand between the file and this**, so a file that has not been
+  through `verify-config.py`, the schema check and `flows config validate` is not a deliverable.
+  A clean `validate` does not promise the builder can open it — different renderer, and two
+  configs in this project's history broke the editor while rendering fine
+  ([preview.md](preview.md)) — but a config that fails the gates is one you already know is unsafe
+  to import.
+- **Say to back up before importing.** The user's untouched config is the only copy that survives
+  a blank-open followed by a save, and by the time the editor is blank there is nothing left to
+  export. One line in the handoff, next to the import step.
+
 ## Open
 
 **Two GREEN rounds, both null on the decisive row.** Round 1: six agents, a one-screen flow, a

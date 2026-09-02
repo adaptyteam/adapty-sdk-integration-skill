@@ -180,8 +180,9 @@ one it shows that is not there:
   *far longer than any price*. It wraps to extra lines and can push text under a docked CTA, so the
   screenshot shows an overlap that will not exist once the price resolves. **Never restyle a layout
   to fix crowding you only see around a token.** Substitute a plausible price into a throwaway copy
-  of the config, render that, and judge the layout at production text length.
-  render the source too and compare before blaming your own edit.
+  of the config, render that, and judge the layout at production text length. And when an element
+  is missing rather than merely crowded, render the *source* config too and compare before blaming
+  your own edit.
 
 - **Navigation, so the flow cannot be walked.** The page renders the screen named by `--screen`
   and stops there: measured on a two-screen config, a button carrying a `navigate` action left the
@@ -207,12 +208,34 @@ one it shows that is not there:
   **hug**-width text box renders correctly here and is **clipped on iOS**: reported from a device
   screenshot of a flow whose preview was clean. The glyph's ink is wider than the advance width the
   layout engine measures, and a hug box leaves no slack. Give an emoji a **fixed box** — a fixed
-  `width` and `height` with `align: center` and `verticalAlign: middle` (`middle`, not `center`,
-  which the schema check rejects) — and the same rule applies to any glyph you are hugging tightly.
+  `width` and `height`, with `align: center` for the horizontal — and the same rule applies to any
+  glyph you are hugging tightly. **Do not reach for `verticalAlign` here**: it is schema-legal on
+  text and the transform service reports it `unsupported_text_typography_setting … will be
+  ignored`, so it buys a warning per element and no centring
+  ([flow-schema.md](flow-schema.md#verticalalign-precisely)). Vertical placement comes from the
+  parent's `layout.alignV`.
   Team-confirmed independently in the support channel: the transformer measures a size-24 emoji as
   17px, and their recipe is the same — a fixed width (theirs: 28). This is the one blindness on the
   list with **no** preview-side symptom at all, so it cannot be found by iterating here: it is
   found on a device, or by a user.
+
+- **An element id that cannot be an identifier — the black-screen class.** An element id is
+  emitted as an **identifier in the generated runtime script**, so a character outside
+  `[A-Za-z0-9_]` (a hyphen, a dot, a space) makes that script syntactically broken and the
+  screen renders **black on device**. Nothing here can see it: this page draws the *config*, so
+  it draws the screen correctly, and `flows config validate` passes a hyphenated id too
+  ([validate.md](validate.md)). An id reused on a second screen collides in the same script.
+  `verify-config.py` errors on both — **screen** ids are the exception and are left alone,
+  because real published exports use a bare UUID for the entry screen
+  ([flow-schema.md](flow-schema.md#element-and-screen-ids-become-identifiers)).
+
+- **Which typeface the device will actually use.** The page loads the webfont from
+  `_meta.fonts[].url`, so a custom face renders here from a URL alone. The device resolves it by
+  **family name** out of the app bundle (`iosName` / `androidName`) and falls back to the system
+  font, silently, when the file is not there — which is the normal state, since a font is not
+  shipped by the flow ([flow-schema.md trap 8](flow-schema.md)). So a correct-looking heading in
+  this render is not evidence about the face on a phone, and a font-carrying screen goes into the
+  handoff as a named device check.
 
 - **Any device but the frames the page knows, so a short-phone check is not available here.**
   `--device` defaults to `iphone-14`; `ipad-pro` appears in the CLI's own example. **The valid set
@@ -281,13 +304,37 @@ this size", never as "the flow works".
 | Surface | What it tells you |
 | :--- | :--- |
 | `config preview` + a screenshot | fast, scriptable, and a *different renderer* — layout and spacing only |
-| the **Adapty mobile app** | also the strictest *validator* you can reach: it runs the transform service, which `config update` does not. On a newly authored flow it returns 422 for a missing `flowProductId` until the flow has been published once |
+| the **Adapty mobile app** | two things at once. The real **SDK** renderer — the only preview that reflects what a user gets, and therefore the one that would surface an `unsupported_…_setting` the transform service warned about. And the strictest *validator* you can reach: it runs the transform service, which `config update` does not, so on a newly authored flow it returns 422 for a missing `flowProductId` until the flow has been published once |
 | the Flow Builder editor | whether the authoring tool can open it; where the user reviews and publishes |
-| the **Adapty mobile app** | the real **SDK** renderer — the only preview that reflects what a user gets, and therefore the one that would surface an `unsupported_…_setting` the transform service warned about |
 | published and live | the truth, and the only state your users ever see |
 
 You can reach the first. Everything below it belongs to the user, which is why the callout in phase 5
 asks for the mobile-app preview explicitly rather than treating a screenshot as sign-off.
+
+## Which layer owns the defect
+
+The table above reads one way — what a surface proves. Read it the other way and the **pattern of
+disagreement** narrows the cause down before you touch anything, which is the difference between a
+diagnosis and a guess. Four layers can own a defect: the **config data** you are holding, the
+**preview page** (Chromium and CSS), the **transform service** (config → SDK document), and the
+**SDK renderer** (native). Route by what agrees with what:
+
+| What you observe | The layer to suspect first |
+| :--- | :--- |
+| wrong in the preview **and** on the device | the **config data** — and that is the good case, because it is the only layer you can fix |
+| right in the preview, wrong on the device | the **transformer or the SDK**. Check the known one-way blindnesses on this page before concluding it is a bug: an unsupported element type, a `propsByState` merge, a font, an id, an emoji |
+| right on the device, wrong in the preview | the **preview page**. Do not restyle a config to make a screenshot look right — see the section above; that has broken working configs |
+| the transform is green and the device is wrong | not a validation problem at all. Nothing you can publish differently will help; the defect is in one of the two layers downstream of the document |
+| the flow will not open in the **builder** | the config data again, but a shape the *authoring tool* rejects rather than one the SDK does — a different renderer with its own failures, and both configs that broke it in this project's history render fine here |
+
+Two rules that keep this honest, and both have cost this project a round:
+
+- **A suspicious-looking shape in the JSON is not evidence of a bug, and a clean-looking one is
+  not evidence of a fix.** The burden is on the claim, and the only thing that discharges it for
+  the last two rows is a device.
+- **Say which layer you are claiming, and say what would show it.** "The preview draws it and the
+  device does not, and the schema flags that element type as having no mapper" is a diagnosis.
+  "The layout looks broken" is a screenshot.
 
 ## The mobile-app link, and why it is not the render URL
 
@@ -307,6 +354,29 @@ opens the link and fetches the flow's current draft from Adapty. So it is a phas
 *after* `config update`; built before the write, it shows the previous version and reads as "the
 agent's edit did nothing". The upside of that fetch: one link stays valid across later writes, so
 hand it over once rather than regenerating it per change.
+
+**And it is the DRAFT it fetches — which is the first question to ask when the user says they
+published and the device did not change.** The app has its own handle and does not need a publish;
+the dashboard's own device preview shows the **published** version. So the two surfaces read two
+different snapshots of the same flow, and the commonest cause of "I published and nothing changed"
+is not propagation or caching but a comparison across that boundary. Establish which surface the
+user is looking at *before* diagnosing anything downstream:
+
+| What they are looking at | What it shows |
+| :--- | :--- |
+| the `mobile-app.adapty.io` link (this one, or the builder's Test on Device QR) | the current **draft** — your last `config update`, published or not |
+| the dashboard's device preview | the **published** version — unchanged until they press publish |
+| their own app, through the SDK | the **published** version, and the only one their users see |
+
+Two consequences. A user who checks the link after your write sees the change *without publishing*,
+which is what makes phase 5's callout honest — and also why nobody should read "it looks right on
+my phone" as "it is live". And a user still on the dashboard preview will report your change as
+missing until they publish, correctly.
+
+**Do not leave the preview open while the flow is being edited.** The draft save and an open
+preview contend for the same draft, and the reported symptom is a save conflict rather than a
+stale render. If a write comes back conflicting, the fix is the one the lock already implies:
+re-read the config and re-apply, never force.
 
 **Print this URL freely.** At ~170 characters it is the opposite of the render URL above — every
 part of it is meaningful and a human may well need to read it aloud or retype it.

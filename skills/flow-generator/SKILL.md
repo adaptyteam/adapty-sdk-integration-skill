@@ -626,6 +626,11 @@ When the user asked for a file rather than a write, there is no approval gate â€
 in phase 2, **at the moment the file is written**, and your closing report repeats which
 `status`/`id` shape you chose. A file handed over without that sentence is undelivered.
 
+**Tell them to back up before importing it.** A shape-invalid config can open **empty** in the
+builder, and the next save writes that emptiness over the real flow â€” no error to act on, no
+unlucky timing needed. Their untouched config is the only copy that survives it
+([merge.md](references/merge.md)).
+
 **Never end with the work in a local file.** `config update` is the only save this surface has, and
 there is no publish command, so saving is as far as you can take it.
 

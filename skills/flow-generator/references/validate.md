@@ -141,7 +141,7 @@ A clean `validate` is a floor, not a proof. Every one of these passed with `vali
 | A top-level `status` / `id` on a file deliverable | `references/verify-config.py` |
 | An element with no `states` key — a config the builder cannot open | `references/verify-config.py` |
 | A missing `defaultLocale` | nothing — and the schema is wrong to call it required |
-| A hyphen in an element id, which breaks the generated runtime script | nothing; renders as a black screen on device |
+| A hyphen in an element id, which breaks the generated runtime script | `references/verify-config.py` (added after this row; the render still cannot show it — see [flow-schema.md](flow-schema.md#element-and-screen-ids-become-identifiers)) |
 | A product id that does not exist in this app | nothing; no price on device and the purchase fails |
 | Advisory warnings about silently dropped props (`verticalAlign` and friends) | nothing reachable from the CLI |
 
@@ -167,6 +167,15 @@ These are the reason the phase-5 device-preview callout stays load-bearing. In p
 - **Publishable is not the same as it published.** A flow sitting in `publication_failed`
   validated clean. Treat `valid: true` as "the transform service has no blocking objection to this
   document", never as "publishing will succeed" and never as "the screen is right".
+
+- **A publish that never settles is not a document problem.** The flow's status moves through
+  `publishing` and the transform through `transforming` on the way to `published`. One that stays
+  there indefinitely is an infrastructure failure, not a config the user can edit their way out
+  of — a very large accumulated config has hung the transform before. So **do not start rewriting
+  the flow**: say the status is stuck, that the document validated clean, and that this one is for
+  Adapty support with the flow id. Rewriting a clean config to chase a stuck job destroys work and
+  fixes nothing. A `publication_failed` status is the opposite case and *is* yours: it means the
+  transform ran and objected, so re-run `validate` over the bytes and read the objection.
 
 Say what you checked, in those terms. The gap between "publishable" and "renders correctly" is
 [preview.md](preview.md), and neither closes it — only a device does.
