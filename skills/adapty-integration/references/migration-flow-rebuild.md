@@ -19,21 +19,25 @@ Flow Builder option in Phase 2, so this file never applies to them.
 
 ## 1. The hard gate
 
-**A flow exists only if a human built it in the Adapty dashboard.** The CLI cannot create a flow, and
-it cannot attach one to a placement. No amount of code gets you a rendering paywall until that
-dashboard work is done, so it is the gate everything else queues behind — not a step you sequence at
-your convenience.
+**The gate is that the flow is live, not that a dashboard was involved.** `flow-generator` can
+author the config and save it, and the CLI can publish it (`flows publish`) and point a placement at
+it — but neither route is live on every account yet, and on this run the user is rebuilding a screen
+they will want to approve for themselves. No amount of code gets you a rendering paywall until the
+flow is published and placed, so that is the gate everything else queues behind — not a step you
+sequence at your convenience.
 
 Two consequences, and neither is negotiable:
 
-- **Never create the placement with the CLI on a flow_builder run.** `references/migration.md`
-  section 3 already reserves the placement ID when the source's paywall came out of the source's own
-  visual builder. A hand-built paywall reaches the same outcome by a different route: the flow needs
-  that ID, and a placement created on it blocks the flow placement with that ID. So on this run
+- **Create no placement on a flow_builder run until the flow it points at is published.**
+  `references/migration.md` section 3 already reserves the placement ID when the source's paywall
+  came out of the source's own visual builder. A hand-built paywall reaches the same outcome by a
+  different route: the flow needs that ID, and a **paywall** placement created on it blocks the flow
+  placement with that ID permanently. So while the flow is a draft or does not exist,
   `npx adapty@latest placements create` is not a command you run at all — not for the source's
-  default offering, not for one the code names, not "to have something to point the code at". Every
-  placement here is created in the dashboard, attached to its flow, per SKILL.md Phase 3 Step 5's
-  Flow Builder path.
+  default offering, not for one the code names, not "to have something to point the code at". Once
+  the flow is published, create it as a **flow** placement on that reserved developer ID, per
+  SKILL.md Phase 3 Step 5's Flow Builder path and its five preconditions; where that route is
+  refused, every placement here is created in the dashboard instead, attached to its flow.
 - **The paywall swap is atomic.** Fetch, presentation, purchase, and entitlement gating move to
   Adapty together, in one stage, or none of them move. Section 7 explains the specific way a partial
   swap ships an app that still builds and still locks paying users out.
@@ -49,7 +53,9 @@ another:
    a flow with no products to attach is not worth building twice.
 3. Rebuild spec extracted from the existing paywall code — section 3. Do this **before** any code
    changes, while the screen is still intact and readable.
-4. User builds the flow in the dashboard and attaches it to a placement — SKILL.md Phase 3 Step 5.
+4. The flow is built, **published**, and attached to its placement — the user in the dashboard, or
+   you with `flow-generator` plus `flows publish` and `placements create` where those routes are
+   live. Either way the user approves the rebuilt screen first. SKILL.md Phase 3 Step 5.
 5. Code swap, atomic per section 1, in the platform reference's Stage 2 Flow Builder section.
 6. Checkpoint on a device: flow renders, products appear, a sandbox purchase completes, access level
    is granted.

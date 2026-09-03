@@ -31,6 +31,7 @@ Every install below gives you the whole toolkit — and it grows, so an update b
 | [`ads-manager`](#managing-apple-search-ads) | Runs your Apple Search Ads: performance across campaigns and keywords, bid and budget changes, search-term harvesting, campaigns on and off | Adapty CLI, Apple Ads account |
 | [`flow-audit`](#auditing-a-flow) | Answers "did I forget anything?" before you publish a flow — triggers, products, variables — with a verdict and ranked fixes | Adapty CLI |
 | [`flow-generator`](#building-flows-and-paywalls) | Builds a paywall or onboarding flow, or changes one you have: translate it, rewrite the copy, add or reorder screens, add tabs and plan pickers, wire quiz branching | Adapty CLI |
+| [`migrate-placements`](#migrating-placements-to-flows) | Moves an app from paywall placements to flows — creates the new flow placements alongside your existing ones and hands back the old→new mapping and the one call to change | Adapty CLI |
 | [`onboarding-teardown`](#tearing-down-an-onboarding-flow) | Reads an onboarding flow — described, screenshotted, or as a config — and ranks what to change and test, seam with the paywall included | nothing |
 | [`paywall-teardown`](#tearing-down-a-paywall) | Reads any paywall — yours, a competitor's, a work in progress — and ranks what to change and test | nothing |
 
@@ -182,7 +183,7 @@ It reads and writes the config through the Adapty CLI, so you don't export or up
 /flow-generator
 ```
 
-It runs five phases: authenticate, work out whether to create a flow or edit an existing one, validate the config, preview it and iterate until it looks right, then save and hand the publish back to you. Validate and preview both run on a local file, so the agent gets it right before anything reaches your dashboard.
+It runs five phases: authenticate, work out whether to create a flow or edit an existing one, validate the config, preview it and iterate until it looks right, then save and ask before it publishes. Validate and preview both run on a local file, so the agent gets it right before anything reaches your dashboard.
 
 Four transforms:
 
@@ -191,7 +192,27 @@ Four transforms:
 - **Screens** — add, remove, or reorder, repairing the navigation that a deletion breaks
 - **Branching and conditions** — selectable groups, option IDs, and the conditional actions that route on them
 
-**It saves to a draft; it never publishes.** There is no publish command in the CLI and no delete either, so both stay yours. Every write after the first carries the flow's `updated_at` as an optimistic lock, so a save can't quietly overwrite an edit someone else made in the meantime — it fails instead. It asks before creating a product. And because a config can save cleanly and still not render, the agent screenshots the preview and looks at it before telling you it's done.
+**It saves to a draft; publishing is a separate word from you.** A newer CLI has a publish command, but the skill never folds it into a save — it asks first. And the publish endpoint isn't in production yet, on any account, so for now it hands you the editor's publish button instead. There is no delete command at all, so removing a flow stays yours. Every write after the first carries the flow's `updated_at` as an optimistic lock, so a save can't quietly overwrite an edit someone else made in the meantime — it fails instead. It asks before creating a product. And because a config can save cleanly and still not render, the agent screenshots the preview and looks at it before telling you it's done.
+
+## Migrating placements to flows
+
+You have [placements](https://adapty.io/docs/placements.md) pointing at paywalls, and you want them pointing at [flows](https://adapty.io/docs/adapty-flow-builder.md) instead. `migrate-placements` reads every placement in the app, works out which ones are worth moving, and creates the flow placements for you.
+
+```
+/migrate-placements
+```
+
+**None of this is in production yet, on any account** — neither the publish endpoint nor the placement audience a flow needs — so the skill probes for the capability first and, until it ships, hands you [Placements](https://app.adapty.io/placements) in the dashboard instead of a half-finished migration.
+
+**Placements are created, never converted.** A placement's content type is fixed the moment it exists — the backend refuses a change — so there is no in-place upgrade to be had. Every migration is a new placement standing next to the old one.
+
+That shape is what makes it safe: **your paywall placements are left untouched, and that is the rollback.** Ship the new call, and if anything looks wrong, point the app back at the old ID — nothing was taken away.
+
+The cost is the ID. A new placement **cannot reuse** the old developer ID (IDs are unique across every placement in the app, whatever its type) and a placement cannot be deleted, so a name you regret is permanent. Every proposed ID is shown to you for approval before anything is created.
+
+One flow per distinct paywall, reused across every placement that pointed at it — two placements sharing a paywall get one flow, not two. You get back the old→new mapping, and the single call in your code that has to change.
+
+**The migration is not done when the placements exist.** Nothing reaches users until the app ships the new call, so the last row of the report is yours.
 
 ## Tearing down a paywall
 
