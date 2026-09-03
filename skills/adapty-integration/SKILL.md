@@ -205,7 +205,7 @@ npx adapty@latest paywalls list --app <APP_ID>
 npx adapty@latest placements list --app <APP_ID>
 ```
 
-**Note for `paywallApproach == "flow_builder"`:** flows are their own CLI topic, not paywalls — `paywalls list` never returns them, so an empty `paywalls list` does **not** mean nothing is set up. List them with `npx adapty@latest flows list --app <APP_ID>` instead of asking. What the CLI has no command for is *publishing* a flow or attaching one to a placement, so a flow it lists may still be an unpublished draft that no placement points at; Step 5 settles that with the user. `placements list` is the source of truth for placement developer IDs.
+**Note for `paywallApproach == "flow_builder"`:** flows are their own CLI topic, not paywalls — `paywalls list` never returns them, so an empty `paywalls list` does **not** mean nothing is set up. List them with `npx adapty@latest flows list --app <APP_ID>` instead of asking. A flow it lists may still be an unpublished draft that no placement points at — the CLI can now publish a flow and create a placement pointing at it, but neither happens on its own; Step 5 settles both with the user. `placements list` is the source of truth for placement developer IDs.
 
 Use this to determine the path through Steps 4 and 5:
 
@@ -285,7 +285,7 @@ Repeat for each product to create.
 
 **Prerequisite: do not start this step until at least one product has been successfully created (or confirmed to exist) in Step 4.** A paywall/flow without products is a non-functional empty shell — if Step 4 deferred product creation, defer this step the same way: create nothing now and put the full command sequence (paywall, then placement) into ADAPTY_SETUP.md right after the deferred `products create` commands, keeping the placement ID consistent with the one used in code. On the Flow Builder path that sequence has no paywall and no placement command in it at all — see the rule in that branch below.
 
-**If `migrationSource` is not empty:** skip the locations interview below. Placements come from the source's offerings, not from the project's UI: create one per offering the app actually uses — the source's current/default one plus any referenced in code by name — with the developer ID equal to the source's own offering identifier, per `references/migration.md` section 3. Offerings the app never uses get listed in `ADAPTY_SETUP.md`, not created. An offering whose paywall was built in the source's own visual builder gets nothing created here at all: that placement ID is reserved for the Adapty flow that replaces it, and a placement created on it blocks that flow permanently. The same reservation covers **every** placement when `paywallApproach` is `flow_builder` and the app renders its paywall itself — on that run you create no placements with the CLI at all, only in the dashboard path below; read `references/migration-flow-rebuild.md` first. `main` in this step's examples is greenfield-only — use the source's identifier instead, and when you defer a command into `ADAPTY_SETUP.md` for an identifier you inferred rather than recovered, write a `<PLACEMENT_ID>` slot, never a literal (`references/migration.md` section 5).
+**If `migrationSource` is not empty:** skip the locations interview below. Placements come from the source's offerings, not from the project's UI: create one per offering the app actually uses — the source's current/default one plus any referenced in code by name — with the developer ID equal to the source's own offering identifier, per `references/migration.md` section 3. Offerings the app never uses get listed in `ADAPTY_SETUP.md`, not created. An offering whose paywall was built in the source's own visual builder gets nothing created here at all: that placement ID is reserved for the Adapty flow that replaces it, and a placement created on it blocks that flow permanently. The same reservation covers **every** placement when `paywallApproach` is `flow_builder` and the app renders its paywall itself — on that run the flow that each placement will point at does not exist yet, so you create none of them until it does and is published; read `references/migration-flow-rebuild.md` first. `main` in this step's examples is greenfield-only — use the source's identifier instead, and when you defer a command into `ADAPTY_SETUP.md` for an identifier you inferred rather than recovered, write a `<PLACEMENT_ID>` slot, never a literal (`references/migration.md` section 5).
 
 First, analyze the project to identify natural locations to show the paywall/flow. Look for:
 - Onboarding flows (welcome screens, feature intro screens)
@@ -304,11 +304,25 @@ Then use `AskUserQuestion` to present your findings and confirm. Example:
 
 Then branch by `paywallApproach`:
 
-#### `paywallApproach == "flow_builder"` (Flow Builder) — dashboard path
+#### `paywallApproach == "flow_builder"` (Flow Builder) — flow path
 
-The CLI cannot publish a flow or attach one to a placement — both are dashboard-only. Skip the CLI commands below. It *can* build the flow itself: the **`flow-generator`** skill authors the config and saves it as a draft. So the division on this path is fixed and does not depend on who builds the flow — **you or the user can produce it; only the user can publish it and create the flow placement.**
+**The division on this path is conditional, so establish which side of it you are on before promising anything.** The **`flow-generator`** skill authors the config and saves it as a draft; from there the CLI can publish the flow (`flows publish`) and create a placement whose audience points at it. Two things gate both routes and **neither of them is the account**: the **CLI version** (`flows publish` exists in `0.8.3-beta.1`, not in `0.8.2`) and the **API deployment, which has not happened** — so in production `flows publish` returns `http_404` and a flow audience is refused with `audiences.0.paywall_id: Field required`, for every account alike. On either error, stop reaching for the CLI and walk the user through the dashboard steps below — they are the fallback, not a fossil, and switching accounts changes nothing. `flow-generator` still owns building and publishing the flow; you only ask for the go-ahead and read back what it reports.
 
-**Create no placement with the CLI on this path — not even as a stopgap, and not "so the code has an ID to point at".** A placement carries a type — flow, paywall, or onboarding — fixed at creation and not convertible afterwards; the CLI creates paywall placements only (an audience entry requires a `paywall_id`); and a developer ID cannot be changed or reused. So a placement created here permanently blocks the flow placement with that ID: the user has to invent a different ID in the dashboard and you have to edit the code to match. This is the same reservation `references/migration.md` section 3 applies to a source's visual-builder paywalls, reached from the greenfield side. When this step is deferred for missing products (see the prerequisite above), the deferred sequence carries the `products create` commands only — no `paywalls create`, no `placements create` — and the flow placement stays a dashboard step in `ADAPTY_SETUP.md`, written with the exact developer ID the code uses.
+**If you do create the placement here, create a *flow* placement — never a paywall one as a stopgap, and not "so the code has an ID to point at".** A placement carries a type — flow, paywall, or onboarding — fixed at creation and not convertible afterwards (the backend refuses with `Placement type can not be changed.`), and a developer ID cannot be changed or reused. So a paywall placement created here permanently blocks the flow placement with that ID: the user has to invent a different ID in the dashboard and you have to edit the code to match. This is the same reservation `references/migration.md` section 3 applies to a source's visual-builder paywalls, reached from the greenfield side. When this step is deferred for missing products (see the prerequisite above), the deferred sequence carries the `products create` commands only — no `paywalls create`, and no `placements create`, because the flow it would point at does not exist yet — and the flow placement stays a step in `ADAPTY_SETUP.md`, written with the exact developer ID the code uses.
+
+**Preconditions — all five, checked before you run anything:**
+
+1. **The flow exists** — `npx adapty@latest flows list --app <APP_ID>`. Flows are their own topic; `paywalls list` never shows them.
+2. **Its status is `published`** — `npx adapty@latest flows get <FLOW_ID> --app <APP_ID>`. A draft is refused with `Flow must be published before placing in a placement.`
+3. **`content_type` is present** on every audience entry — without it the CLI exits 2 and sends no request.
+4. **The developer ID is not already taken** — check `placements list` first. IDs are unique across every placement in the app whatever its type, and a collision is permanent.
+5. **Neither call has been refused for want of the deployment.** `flows publish` answering `http_404`, or `placements create` answering `audiences.0.paywall_id: Field required`, are two different failures with two different causes on the same missing deployment; either one sends you to the dashboard steps below.
+
+Only then, the command:
+
+```bash
+npx adapty@latest placements create --app <APP_ID> --title "Main" --developer-id "main" --audiences '[{"content_type":"flow","flow_id":"<FLOW_ID>","segment_ids":[],"priority":0}]'
+```
 
 Ask the user via `AskUserQuestion`:
 
@@ -336,10 +350,10 @@ claude plugin install adapty-skills@adapty
 
 The flow config carries traps that cost real money when they are got wrong — a plan card whose selected state is baked in, a footer that vanishes on device, a carousel that does not swipe — and that skill is where every one of them is checked. If the user declines the install, say so plainly and take the walk-me-through branch below instead.
 
-**`flow-generator` stops at a saved draft, and that is the reason this path stays a dashboard step.** There is no publish command and no way to create a flow placement from the CLI, so when it hands back, the user does both — confirm each with `AskUserQuestion` before moving on:
+**`flow-generator` stops at a saved draft, so two steps remain after it hands back.** Each is a write the user has to agree to first — confirm with `AskUserQuestion` before each, and never run both off one yes:
 
-1. **Publish the flow** — the button at the **top right of the builder**. Until they publish, the SDK gets nothing.
-2. **Create the placement** at [Adapty Dashboard → Placements](https://app.adapty.io/placements) — **Create placement**, set a **Developer ID** (e.g. `main`, `onboarding`, `settings`, the exact string the SDK uses in `Adapty.getFlow`), attach the flow under the **All Users** audience, save.
+1. **Publish the flow.** With the go-ahead, run it yourself — `npx adapty@latest flows publish --app <APP_ID> <FLOW_ID> --yes`. Publication is asynchronous, so the response reads `publishing`: report that, and re-read `flows get` before treating the flow as published. On an `http_404` the route is not live for any account — hand it back to the user, who publishes with the button at the **top right of the builder**. Until it is published, the SDK gets nothing and the placement below is refused.
+2. **Create the placement.** With the go-ahead and all five preconditions above met, run the `placements create` command above with the confirmed developer ID. If the audience is refused (`audiences.0.paywall_id: Field required`), the user does it at [Adapty Dashboard → Placements](https://app.adapty.io/placements) — **Create placement**, set a **Developer ID** (e.g. `main`, `onboarding`, `settings`, the exact string the SDK uses in `Adapty.getFlow`), attach the flow under the **All Users** audience, save.
 
 Then collect the **placement developer ID(s)** via `AskUserQuestion` and continue to Phase 4.
 
@@ -371,10 +385,10 @@ After the user finishes, collect the **placement developer ID(s)** via `AskUserQ
 npx adapty@latest paywalls create --app <APP_ID> --title "Main Paywall"
 
 # Repeat for each placement location, using the paywall id from above
-npx adapty@latest placements create --app <APP_ID> --title "Main" --developer-id "main" --audiences '[{"segment_ids":[],"paywall_id":"<PAYWALL_ID>","priority":0}]'
+npx adapty@latest placements create --app <APP_ID> --title "Main" --developer-id "main" --audiences '[{"content_type":"paywall","segment_ids":[],"paywall_id":"<PAYWALL_ID>","priority":0}]'
 ```
 
-`--audiences` is the canonical flag. The legacy `--paywall-id` shorthand still works but emits a deprecation warning.
+`--audiences` is the canonical flag. The legacy `--paywall-id` shorthand still works but emits a deprecation warning. **Every audience entry needs an explicit `content_type`** — for a paywall it is `"paywall"`. Newer CLI versions validate this client-side and exit 2 without sending a request if it is missing; older ones accept the field and ignore it, so include it always — it is safe on both.
 
 After all commands succeed, you will have collected from CLI output:
 - **Public SDK key** — from `apps list` or `apps create` output

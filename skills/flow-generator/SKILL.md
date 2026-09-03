@@ -97,6 +97,8 @@ $ADAPTY flows config update   <FLOW_ID> --app <APP_UUID> \
     (--config-file <file|-> | --config <json-string>) \
     [--expected-updated-at <int>] [--remote-configs <json>]
 $ADAPTY flows media upload    <IMAGE_FILE> --app <APP_UUID>   # PNG/JPEG/WEBP/GIF, < ~2.5 MB; no SVG
+$ADAPTY flows update  --app <APP_UUID> <FLOW_ID> --name <name>      # 0.8.3-beta.1; --name required; 405 in prod, rename in the builder
+$ADAPTY flows publish --app <APP_UUID> <FLOW_ID> [--yes]            # 0.8.3-beta.1; async; 404 in prod, see below
 ```
 
 **Resolve `$ADAPTY` once, here, and use it for every command.** A global `adapty` is frequently old
@@ -130,9 +132,26 @@ returns `http_500`**, and the ceiling is **~2.5 MB of file bytes** (a bare `http
 large). Call shape, the two config shapes it binds into, and the geometry:
 [media.md](references/media.md).
 
-**There is no `flows publish` and no `flows delete`.** Both are dashboard actions. Never write a
-command name the CLI does not have, and never invent a flag — `config validate` takes only `--app`,
-`--config`/`--config-file` and `--json`.
+**`flows publish --app <APP_UUID> <FLOW_ID>` exists — in `0.8.3-beta.1`, and not in `0.8.2`.** So a
+`$ADAPTY` resolved at `0.8.2` lacks it; per the rule above, try `npx --yes adapty@beta` before
+calling it absent. Its own flags are `--app` plus `--yes`/`-y`, and the CLI's global `--json` on
+top of them. Five measured facts shape how you call it: publication is **asynchronous**, so the
+response reads `status: publishing` and never `published` — report it that way rather than claiming
+the flow is live; the confirmation prompt goes to **stderr**, so `--json` stdout stays parseable;
+`--json` or a non-TTY **without** `--yes` refuses with **exit 2** (`Re-run with --yes`) instead of
+hanging, so a headless run passes `--yes` only once the user has said yes in the conversation; a
+declined prompt exits **1** (`Cancelled, nothing was sent.`); and a flow with no config exits **1**
+with `Flow has no current version.`
+
+**Two things gate this, and neither of them is the account.** One is the **CLI version**, above. The
+other is the **API deployment, which has not happened** — so in production `flows publish` returns
+`http_404` and `flows update --name` returns `Method "PUT" not allowed`, for every account alike.
+Neither error means you wrote the command wrong, and neither is fixable by switching accounts: say
+so, and hand the user the editor's publish button or the builder's rename field.
+
+**There is still no `flows delete`.** Deleting is a dashboard action, so never claim to have
+deleted a flow. Never write a command name the CLI does not have, and never invent a flag —
+`config validate` takes only `--app`, `--config`/`--config-file` and `--json`.
 
 Four facts about the config commands that are not guessable:
 
@@ -632,10 +651,11 @@ unlucky timing needed. Their untouched config is the only copy that survives it
 ([merge.md](references/merge.md)).
 
 **Never end with the work in a local file.** `config update` is the only save this surface has, and
-there is no publish command, so saving is as far as you can take it.
+saving is where you stop by default. Publishing is a separate, explicitly confirmed step the user
+asks for — never something you fold into a write.
 
-**Then end with this callout, every time.** A save is not a release, and the user is the only one
-who can finish it. Fill the slots and keep all three steps plus the closing line — that line is the
+**Then end with this callout, every time.** A save is not a release, and it takes their word to
+finish it. Fill the slots and keep all three steps plus the closing line — that line is the
 point:
 
 > **Saved as a draft — your users can't see this yet.**
@@ -651,7 +671,13 @@ point:
 >
 >    On mobile, tap the link to preview.
 >    <the QR image line if they asked for one; otherwise the offer, or nothing>
-> 3. **Publish:** the button at the **top right of the editor**.
+> 3. **Publish** — say the word and I'll run it, or do it yourself with the button at the
+>    **top right of the editor**:
+>
+>    `<$ADAPTY> flows publish --app <APP_ID> <FLOW_ID>`
+>
+>    It asks for confirmation, then publishes asynchronously — the status reads `publishing`
+>    before it reads `published`.
 >
 > `<one line, only if the phase-2 missing-assets list still has open items:>`
 > `<n>` assets are still placeholders — see the list above.
