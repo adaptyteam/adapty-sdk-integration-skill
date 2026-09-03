@@ -1,15 +1,26 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "adapty",
-  "description": "Adapty's official Claude Code plugins.",
+  "description": "Official Adapty plugins — subscriptions, paywalls and app marketing, run by your agent.",
   "owner": {
     "name": "Adapty",
     "email": "support@adapty.io"
   },
   "plugins": [
     {
+      "name": "adapty-skills",
+      "description": "Skills that hand your app's subscription surface to your agent: integrate the Adapty SDK on any mobile platform (iOS, Android, Flutter, React Native, Unity, KMP, Capacitor), run Apple Search Ads, audit a Flow Builder flow before you publish, edit a flow's config, and turn a paywall screenshot or an onboarding flow into ranked conversion tests.",
+      "author": {
+        "name": "Adapty",
+        "email": "support@adapty.io"
+      },
+      "source": "./",
+      "category": "development",
+      "homepage": "https://adapty.io/docs"
+    },
+    {
       "name": "adapty-sdk-integration",
-      "description": "End-to-end Adapty SDK integration for mobile apps — dashboard setup, SDK install, paywall, and store configuration. Supports iOS, Android, Flutter, React Native, Unity, KMP, and Capacitor.",
+      "description": "Deprecated alias for adapty-skills — same plugin, same skills. Install adapty-skills@adapty instead; this entry exists so earlier installs keep resolving and will be removed in a future release.",
       "author": {
         "name": "Adapty",
         "email": "support@adapty.io"
@@ -20,7 +31,7 @@
     },
     {
       "name": "apple-ads",
-      "description": "Run and audit Apple Ads from your agent — cohort bid reviews, Market Intelligence keyword opportunities, search-term harvesting, negatives, CPP routing, and read-only account diagnostics through the Adapty CLI.",
+      "description": "Put your Apple Ads budget where it actually returns: cohort bid reviews, Market Intelligence keyword opportunities, search-term harvesting, negatives, CPP routing, and read-only account diagnostics through the Adapty CLI.",
       "source": {
         "source": "github",
         "repo": "adaptyteam/apple-ads-cli"
@@ -30,7 +41,7 @@
     },
     {
       "name": "apple-ads-benchmarks",
-      "description": "Apple Ads benchmarks for subscription apps: TTR, CR, CPT and CPA by country, App Store genre and niche, plus subscriber economics and relative effect studies.",
+      "description": "Know whether your Apple Ads numbers are any good: TTR, CR, CPT and CPA benchmarks by country, App Store genre and niche, plus subscriber economics and relative effect studies for subscription apps.",
       "source": {
         "source": "github",
         "repo": "adaptyteam/apple-ads-benchmarks"

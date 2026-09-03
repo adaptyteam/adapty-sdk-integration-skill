@@ -1,0 +1,49 @@
+[
+  {
+    "id": "6cdd73d5-bdb2-4b2e-c207-784fbcb2f408",
+    "title": "Pro Annual",
+    "period": "annual",
+    "access_level_id": "aaaaaaaa-0000-4000-8000-000000000001",
+    "vendor_products": {
+      "app_store": {"id": "11111111-0000-4000-8000-000000000001",
+                    "product_id": "com.example.fixture.pro.annual",
+                    "base_plan_id": null}
+    }
+  },
+  {
+    "id": "fbc63856-bf3a-45d1-7bee-dd4bcb54b10a",
+    "title": "Pro Monthly",
+    "period": "monthly",
+    "access_level_id": "aaaaaaaa-0000-4000-8000-000000000001",
+    "vendor_products": {
+      "app_store": {"id": "11111111-0000-4000-8000-000000000002",
+                    "product_id": "com.example.fixture.pro.monthly",
+                    "base_plan_id": null},
+      "play_store": {"id": "22222222-0000-4000-8000-000000000002",
+                     "product_id": "com.example.fixture.pro.monthly",
+                     "base_plan_id": "monthly"}
+    }
+  },
+  {
+    "id": "cccccccc-0000-4000-8000-000000000003",
+    "title": "Weekly Unused",
+    "period": "weekly",
+    "access_level_id": "aaaaaaaa-0000-4000-8000-000000000001",
+    "vendor_products": {
+      "play_store": {"id": "22222222-0000-4000-8000-000000000003",
+                     "product_id": "com.example.fixture.weekly",
+                     "base_plan_id": null}
+    }
+  },
+  {
+    "id": "dddddddd-0000-4000-8000-000000000004",
+    "title": "No Access Level",
+    "period": "monthly",
+    "access_level_id": null,
+    "vendor_products": {
+      "app_store": {"id": "11111111-0000-4000-8000-000000000004",
+                    "product_id": "com.example.fixture.noaccess",
+                    "base_plan_id": null}
+    }
+  }
+]

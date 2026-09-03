@@ -1,0 +1,4981 @@
+{
+  "screens": [
+    {
+      "id": "scr_RvSel001",
+      "props": {
+        "fill": [
+          {
+            "type": "color",
+            "color": {
+              "type": "color-style",
+              "colorId": "clr_RvBg"
+            }
+          }
+        ],
+        "layout": {
+          "alignH": "start",
+          "alignV": "start",
+          "direction": "vertical",
+          "distribution": {
+            "gap": 8,
+            "type": "gap"
+          }
+        },
+        "padding": {
+          "top": 4,
+          "left": 20,
+          "right": 20,
+          "bottom": 8
+        },
+        "safeArea": true,
+        "statusBar": true,
+        "scrollable": true,
+        "progressBar": {
+          "enabled": false
+        },
+        "statusBarTheme": "dark"
+      },
+      "caption": "Select plan",
+      "elements": {
+        "map": {
+          "el_RvI017": {
+            "id": "el_RvI017",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "Lightning",
+                "size": 22,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "clr_RvInk"
+                },
+                "weight": "regular"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvI023": {
+            "id": "el_RvI023",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "CheckCircle",
+                "size": 22,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "clr_RvInk"
+                },
+                "weight": "fill"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvI029": {
+            "id": "el_RvI029",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "Barbell",
+                "size": 22,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "clr_RvInk"
+                },
+                "weight": "regular"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvI047": {
+            "id": "el_RvI047",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "Lightning",
+                "size": 22,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "clr_RvInk"
+                },
+                "weight": "regular"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvI053": {
+            "id": "el_RvI053",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "CheckCircle",
+                "size": 22,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "clr_RvInk"
+                },
+                "weight": "fill"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvI059": {
+            "id": "el_RvI059",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "Barbell",
+                "size": 22,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "clr_RvInk"
+                },
+                "weight": "regular"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvI072": {
+            "id": "el_RvI072",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "Check",
+                "size": 15,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "clr_RvInk"
+                },
+                "weight": "regular"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvI080": {
+            "id": "el_RvI080",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "Lightning",
+                "size": 22,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "clr_RvInk"
+                },
+                "weight": "regular"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvI086": {
+            "id": "el_RvI086",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "CheckCircle",
+                "size": 22,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "clr_RvInk"
+                },
+                "weight": "fill"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvI092": {
+            "id": "el_RvI092",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "Barbell",
+                "size": 22,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "clr_RvInk"
+                },
+                "weight": "regular"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS001": {
+            "id": "el_RvS001",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "end",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Header"
+          },
+          "el_RvS002": {
+            "id": "el_RvS002",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 6,
+                "left": 8,
+                "right": 8,
+                "bottom": 6
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Skip",
+            "interactions": [
+              {
+                "id": "int_RvSkip",
+                "actions": [
+                  {
+                    "id": "act_RvSkip",
+                    "type": "closeFlow"
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_RvS008": {
+            "id": "el_RvS008",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "clr_RvDark"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 6,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 24,
+                "left": 24,
+                "right": 24,
+                "bottom": 24
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 22,
+                "br": 22,
+                "tl": 22,
+                "tr": 22
+              }
+            },
+            "states": [],
+            "caption": "Plan card"
+          },
+          "el_RvS009": {
+            "id": "el_RvS009",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 12,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS014": {
+            "id": "el_RvS014",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "clr_RvCard"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 22,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 20,
+                "left": 18,
+                "right": 18,
+                "bottom": 20
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 20,
+                "br": 20,
+                "tl": 20,
+                "tr": 20
+              }
+            },
+            "states": [],
+            "caption": "Features"
+          },
+          "el_RvS015": {
+            "id": "el_RvS015",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 14,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS016": {
+            "id": "el_RvS016",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 26
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS018": {
+            "id": "el_RvS018",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 4,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS021": {
+            "id": "el_RvS021",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 14,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS022": {
+            "id": "el_RvS022",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 26
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS024": {
+            "id": "el_RvS024",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 4,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS027": {
+            "id": "el_RvS027",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 14,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS028": {
+            "id": "el_RvS028",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 26
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS030": {
+            "id": "el_RvS030",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 4,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS038": {
+            "id": "el_RvS038",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "clr_RvDark"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 6,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 24,
+                "left": 24,
+                "right": 24,
+                "bottom": 24
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 22,
+                "br": 22,
+                "tl": 22,
+                "tr": 22
+              }
+            },
+            "states": [],
+            "caption": "Plan card"
+          },
+          "el_RvS039": {
+            "id": "el_RvS039",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 12,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS044": {
+            "id": "el_RvS044",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "clr_RvCard"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 22,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 20,
+                "left": 18,
+                "right": 18,
+                "bottom": 20
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 20,
+                "br": 20,
+                "tl": 20,
+                "tr": 20
+              }
+            },
+            "states": [],
+            "caption": "Features"
+          },
+          "el_RvS045": {
+            "id": "el_RvS045",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 14,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS046": {
+            "id": "el_RvS046",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 26
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS048": {
+            "id": "el_RvS048",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 4,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS051": {
+            "id": "el_RvS051",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 14,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS052": {
+            "id": "el_RvS052",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 26
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS054": {
+            "id": "el_RvS054",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 4,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS057": {
+            "id": "el_RvS057",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 14,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS058": {
+            "id": "el_RvS058",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 26
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS060": {
+            "id": "el_RvS060",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 4,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS068": {
+            "id": "el_RvS068",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "clr_RvDark"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 6,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 24,
+                "left": 24,
+                "right": 24,
+                "bottom": 24
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 22,
+                "br": 22,
+                "tl": 22,
+                "tr": 22
+              }
+            },
+            "states": [],
+            "caption": "Plan card"
+          },
+          "el_RvS069": {
+            "id": "el_RvS069",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 12,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS071": {
+            "id": "el_RvS071",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "clr_RvCard"
+                  }
+                }
+              ],
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 6,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 7,
+                "left": 12,
+                "right": 12,
+                "bottom": 7
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": []
+          },
+          "el_RvS077": {
+            "id": "el_RvS077",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "clr_RvCard"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 22,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 20,
+                "left": 18,
+                "right": 18,
+                "bottom": 20
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 20,
+                "br": 20,
+                "tl": 20,
+                "tr": 20
+              }
+            },
+            "states": [],
+            "caption": "Features"
+          },
+          "el_RvS078": {
+            "id": "el_RvS078",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 14,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS079": {
+            "id": "el_RvS079",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 26
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS081": {
+            "id": "el_RvS081",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 4,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS084": {
+            "id": "el_RvS084",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 14,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS085": {
+            "id": "el_RvS085",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 26
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS087": {
+            "id": "el_RvS087",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 4,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS090": {
+            "id": "el_RvS090",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 14,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS091": {
+            "id": "el_RvS091",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 26
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS093": {
+            "id": "el_RvS093",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 4,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvS101": {
+            "id": "el_RvS101",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 40
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "type": "space-between"
+                }
+              },
+              "padding": {
+                "top": 0,
+                "left": 12,
+                "right": 12,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Links"
+          },
+          "el_RvS102": {
+            "id": "el_RvS102",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Button",
+            "interactions": [
+              {
+                "id": "Rvint103",
+                "actions": [
+                  {
+                    "id": "act_RvTerms",
+                    "type": "openUrl",
+                    "payload": {
+                      "url": "https://example.com/terms"
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_RvS105": {
+            "id": "el_RvS105",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Button",
+            "interactions": [
+              {
+                "id": "Rvint106",
+                "actions": [
+                  {
+                    "id": "act_RvRest",
+                    "type": "restorePurchases"
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_RvS108": {
+            "id": "el_RvS108",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Button",
+            "interactions": [
+              {
+                "id": "Rvint109",
+                "actions": [
+                  {
+                    "id": "act_RvPriv",
+                    "type": "openUrl",
+                    "payload": {
+                      "url": "https://example.com/privacy"
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_RvS111": {
+            "id": "el_RvS111",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fill"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 16,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Content"
+          },
+          "el_RvT003": {
+            "id": "el_RvT003",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "small-label"
+              },
+              "align": "right",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvLink"
+              },
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Skip",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT004": {
+            "id": "el_RvT004",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h1"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 4,
+                "left": 0,
+                "right": 0,
+                "bottom": 8
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Select plan",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT006": {
+            "id": "el_RvT006",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "typ_RvTab"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvTabOff"
+              },
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Metal",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": [],
+            "propsByState": {
+              "selected": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "clr_RvInk"
+                }
+              }
+            }
+          },
+          "el_RvT010": {
+            "id": "el_RvT010",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "typ_RvPlan"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvOnDark"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Metal",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT011": {
+            "id": "el_RvT011",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvOnDark"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 12,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Premium metal card",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT012": {
+            "id": "el_RvT012",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvDim"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Everything, plus the card",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT013": {
+            "id": "el_RvT013",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 12,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Top features",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT019": {
+            "id": "el_RvT019",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Commodities",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT020": {
+            "id": "el_RvT020",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvMuted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Exchange commodities with fees of 1.99% (minimum fee S$1.49)",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT025": {
+            "id": "el_RvT025",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Safer online shopping",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT026": {
+            "id": "el_RvT026",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvMuted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Unlimited single-use virtual cards that keep your card details safe",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT031": {
+            "id": "el_RvT031",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Concierge & lounges",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT032": {
+            "id": "el_RvT032",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvMuted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Unlimited airport lounge access for you and a guest",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT034": {
+            "id": "el_RvT034",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "button-label"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvOnDark"
+              },
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Get Metal",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT036": {
+            "id": "el_RvT036",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "typ_RvTab"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvTabOff"
+              },
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Premium",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": [],
+            "propsByState": {
+              "selected": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "clr_RvInk"
+                }
+              }
+            }
+          },
+          "el_RvT040": {
+            "id": "el_RvT040",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "typ_RvPlan"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvOnDark"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Premium",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT041": {
+            "id": "el_RvT041",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvOnDark"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 12,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Most popular",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT042": {
+            "id": "el_RvT042",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvDim"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "For everyday spending abroad",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT043": {
+            "id": "el_RvT043",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 12,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Top features",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT049": {
+            "id": "el_RvT049",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Commodities",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT050": {
+            "id": "el_RvT050",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvMuted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Exchange commodities with fees of 1.99% (minimum fee S$1.49)",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT055": {
+            "id": "el_RvT055",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Safer online shopping",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT056": {
+            "id": "el_RvT056",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvMuted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Unlimited single-use virtual cards that keep your card details safe",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT061": {
+            "id": "el_RvT061",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Overseas medical cover",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT062": {
+            "id": "el_RvT062",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvMuted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Travel insurance for you and your family while abroad",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT064": {
+            "id": "el_RvT064",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "button-label"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvOnDark"
+              },
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Get Premium",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT066": {
+            "id": "el_RvT066",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "typ_RvTab"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Standard",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": [],
+            "propsByState": {
+              "selected": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "clr_RvInk"
+                }
+              }
+            }
+          },
+          "el_RvT070": {
+            "id": "el_RvT070",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "typ_RvPlan"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvOnDark"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Standard",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT073": {
+            "id": "el_RvT073",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "typ_RvPill"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Active",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT074": {
+            "id": "el_RvT074",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvOnDark"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 12,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Complimentary",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT075": {
+            "id": "el_RvT075",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvDim"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Just the basics",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT076": {
+            "id": "el_RvT076",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 12,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Top features",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT082": {
+            "id": "el_RvT082",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Commodities",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT083": {
+            "id": "el_RvT083",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvMuted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Exchange commodities with fees of 1.99% (minimum fee S$1.49)",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT088": {
+            "id": "el_RvT088",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Safer online shopping",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT089": {
+            "id": "el_RvT089",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvMuted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Unlimited single-use virtual cards that keep your card details safe",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT094": {
+            "id": "el_RvT094",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h3"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvInk"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Revolut <18 account",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT095": {
+            "id": "el_RvT095",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvMuted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Create a Revolut <18 account, for a family member aged 6-17",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT097": {
+            "id": "el_RvT097",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "button-label"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvOnDark"
+              },
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Get Standard on us",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT104": {
+            "id": "el_RvT104",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvMuted"
+              },
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Terms",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT107": {
+            "id": "el_RvT107",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvMuted"
+              },
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Restore",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvT110": {
+            "id": "el_RvT110",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "clr_RvMuted"
+              },
+              "width": {
+                "type": "hug"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Privacy",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "verticalAlign": "top"
+            },
+            "states": []
+          },
+          "el_RvCTA033": {
+            "id": "el_RvCTA033",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "clr_RvDark"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 58
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "margin": {
+                "top": 8,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": [],
+            "caption": "Buy Metal",
+            "interactions": [
+              {
+                "id": "int_Rvmetal",
+                "actions": [
+                  {
+                    "id": "act_Rvmetal",
+                    "type": "purchase",
+                    "payload": {
+                      "product": {
+                        "type": "const",
+                        "value": {
+                          "id": "64364f33-610c-4eb7-c19f-46b64b5dc59b"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_RvCTA063": {
+            "id": "el_RvCTA063",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "clr_RvDark"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 58
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "margin": {
+                "top": 8,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": [],
+            "caption": "Buy Premium",
+            "interactions": [
+              {
+                "id": "int_Rvpremi",
+                "actions": [
+                  {
+                    "id": "act_Rvpremi",
+                    "type": "purchase",
+                    "payload": {
+                      "product": {
+                        "type": "const",
+                        "value": {
+                          "id": "134badab-bd2f-416c-0d7a-e04b4a1a029a"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_RvCTA096": {
+            "id": "el_RvCTA096",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "clr_RvDark"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 58
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "margin": {
+                "top": 8,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": [],
+            "caption": "Buy Standard",
+            "interactions": [
+              {
+                "id": "int_Rvstand",
+                "actions": [
+                  {
+                    "id": "act_Rvstand",
+                    "type": "purchase",
+                    "payload": {
+                      "product": {
+                        "type": "const",
+                        "value": {
+                          "id": "097b40ac-92dd-41c3-403b-0923cb62c7d9"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_RvTabs100": {
+            "id": "el_RvTabs100",
+            "type": "tabs",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fill"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "clipContent": true,
+                "distribution": {
+                  "gap": 16,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Tabs"
+          },
+          "el_RvTabbar098": {
+            "id": "el_RvTabbar098",
+            "type": "tab-bar",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "clr_RvTabBar"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 4,
+                "left": 4,
+                "right": 4,
+                "bottom": 4
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 16,
+                "br": 16,
+                "tl": 16,
+                "tr": 16
+              }
+            },
+            "states": [],
+            "caption": "Tab bar"
+          },
+          "el_RvTabcon007": {
+            "id": "el_RvTabcon007",
+            "type": "tab-content",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fill"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 16,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Panel Metal"
+          },
+          "el_RvTabcon037": {
+            "id": "el_RvTabcon037",
+            "type": "tab-content",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fill"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 16,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Panel Premium"
+          },
+          "el_RvTabcon067": {
+            "id": "el_RvTabcon067",
+            "type": "tab-content",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fill"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 16,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Panel Standard"
+          },
+          "el_RvTabcon099": {
+            "id": "el_RvTabcon099",
+            "type": "tab-content-wrapper",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fill"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_RvTabite005": {
+            "id": "el_RvTabite005",
+            "type": "tab-item",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 44
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "default": false,
+              "groupId": "tabs",
+              "padding": {
+                "top": 0,
+                "left": 12,
+                "right": 12,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": [
+              {
+                "id": "selected",
+                "type": "system"
+              }
+            ],
+            "caption": "Tab Metal",
+            "propsByState": {
+              "selected": {
+                "fill": [
+                  {
+                    "type": "color",
+                    "color": {
+                      "type": "color-style",
+                      "colorId": "clr_RvCard"
+                    }
+                  }
+                ],
+                "borderRadius": {
+                  "bl": 12,
+                  "br": 12,
+                  "tl": 12,
+                  "tr": 12
+                }
+              }
+            }
+          },
+          "el_RvTabite035": {
+            "id": "el_RvTabite035",
+            "type": "tab-item",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 44
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "default": false,
+              "groupId": "tabs",
+              "padding": {
+                "top": 0,
+                "left": 12,
+                "right": 12,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": [
+              {
+                "id": "selected",
+                "type": "system"
+              }
+            ],
+            "caption": "Tab Premium",
+            "propsByState": {
+              "selected": {
+                "fill": [
+                  {
+                    "type": "color",
+                    "color": {
+                      "type": "color-style",
+                      "colorId": "clr_RvCard"
+                    }
+                  }
+                ],
+                "borderRadius": {
+                  "bl": 12,
+                  "br": 12,
+                  "tl": 12,
+                  "tr": 12
+                }
+              }
+            }
+          },
+          "el_RvTabite065": {
+            "id": "el_RvTabite065",
+            "type": "tab-item",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 44
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "default": true,
+              "groupId": "tabs",
+              "padding": {
+                "top": 0,
+                "left": 12,
+                "right": 12,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": [
+              {
+                "id": "selected",
+                "type": "system"
+              }
+            ],
+            "caption": "Tab Standard",
+            "propsByState": {
+              "selected": {
+                "fill": [
+                  {
+                    "type": "color",
+                    "color": {
+                      "type": "color-style",
+                      "colorId": "clr_RvCard"
+                    }
+                  }
+                ],
+                "borderRadius": {
+                  "bl": 12,
+                  "br": 12,
+                  "tl": 12,
+                  "tr": 12
+                }
+              }
+            }
+          }
+        },
+        "hierarchy": {
+          "id": "root",
+          "children": [
+            {
+              "id": "el_RvS001",
+              "children": [
+                {
+                  "id": "el_RvS002",
+                  "children": [
+                    {
+                      "id": "el_RvT003"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "el_RvS111",
+              "children": [
+                {
+                  "id": "el_RvT004"
+                },
+                {
+                  "id": "el_RvTabs100",
+                  "children": [
+                    {
+                      "id": "el_RvTabbar098",
+                      "children": [
+                        {
+                          "id": "el_RvTabite005",
+                          "children": [
+                            {
+                              "id": "el_RvT006"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "el_RvTabite035",
+                          "children": [
+                            {
+                              "id": "el_RvT036"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "el_RvTabite065",
+                          "children": [
+                            {
+                              "id": "el_RvT066"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "el_RvTabcon099",
+                      "children": [
+                        {
+                          "id": "el_RvTabcon007",
+                          "children": [
+                            {
+                              "id": "el_RvS008",
+                              "children": [
+                                {
+                                  "id": "el_RvS009",
+                                  "children": [
+                                    {
+                                      "id": "el_RvT010"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "el_RvT011"
+                                },
+                                {
+                                  "id": "el_RvT012"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "el_RvT013"
+                            },
+                            {
+                              "id": "el_RvS014",
+                              "children": [
+                                {
+                                  "id": "el_RvS015",
+                                  "children": [
+                                    {
+                                      "id": "el_RvS016",
+                                      "children": [
+                                        {
+                                          "id": "el_RvI017"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "el_RvS018",
+                                      "children": [
+                                        {
+                                          "id": "el_RvT019"
+                                        },
+                                        {
+                                          "id": "el_RvT020"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "el_RvS021",
+                                  "children": [
+                                    {
+                                      "id": "el_RvS022",
+                                      "children": [
+                                        {
+                                          "id": "el_RvI023"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "el_RvS024",
+                                      "children": [
+                                        {
+                                          "id": "el_RvT025"
+                                        },
+                                        {
+                                          "id": "el_RvT026"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "el_RvS027",
+                                  "children": [
+                                    {
+                                      "id": "el_RvS028",
+                                      "children": [
+                                        {
+                                          "id": "el_RvI029"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "el_RvS030",
+                                      "children": [
+                                        {
+                                          "id": "el_RvT031"
+                                        },
+                                        {
+                                          "id": "el_RvT032"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "el_RvCTA033",
+                              "children": [
+                                {
+                                  "id": "el_RvT034"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "el_RvTabcon037",
+                          "children": [
+                            {
+                              "id": "el_RvS038",
+                              "children": [
+                                {
+                                  "id": "el_RvS039",
+                                  "children": [
+                                    {
+                                      "id": "el_RvT040"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "el_RvT041"
+                                },
+                                {
+                                  "id": "el_RvT042"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "el_RvT043"
+                            },
+                            {
+                              "id": "el_RvS044",
+                              "children": [
+                                {
+                                  "id": "el_RvS045",
+                                  "children": [
+                                    {
+                                      "id": "el_RvS046",
+                                      "children": [
+                                        {
+                                          "id": "el_RvI047"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "el_RvS048",
+                                      "children": [
+                                        {
+                                          "id": "el_RvT049"
+                                        },
+                                        {
+                                          "id": "el_RvT050"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "el_RvS051",
+                                  "children": [
+                                    {
+                                      "id": "el_RvS052",
+                                      "children": [
+                                        {
+                                          "id": "el_RvI053"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "el_RvS054",
+                                      "children": [
+                                        {
+                                          "id": "el_RvT055"
+                                        },
+                                        {
+                                          "id": "el_RvT056"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "el_RvS057",
+                                  "children": [
+                                    {
+                                      "id": "el_RvS058",
+                                      "children": [
+                                        {
+                                          "id": "el_RvI059"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "el_RvS060",
+                                      "children": [
+                                        {
+                                          "id": "el_RvT061"
+                                        },
+                                        {
+                                          "id": "el_RvT062"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "el_RvCTA063",
+                              "children": [
+                                {
+                                  "id": "el_RvT064"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "el_RvTabcon067",
+                          "children": [
+                            {
+                              "id": "el_RvS068",
+                              "children": [
+                                {
+                                  "id": "el_RvS069",
+                                  "children": [
+                                    {
+                                      "id": "el_RvT070"
+                                    },
+                                    {
+                                      "id": "el_RvS071",
+                                      "children": [
+                                        {
+                                          "id": "el_RvI072"
+                                        },
+                                        {
+                                          "id": "el_RvT073"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "el_RvT074"
+                                },
+                                {
+                                  "id": "el_RvT075"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "el_RvT076"
+                            },
+                            {
+                              "id": "el_RvS077",
+                              "children": [
+                                {
+                                  "id": "el_RvS078",
+                                  "children": [
+                                    {
+                                      "id": "el_RvS079",
+                                      "children": [
+                                        {
+                                          "id": "el_RvI080"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "el_RvS081",
+                                      "children": [
+                                        {
+                                          "id": "el_RvT082"
+                                        },
+                                        {
+                                          "id": "el_RvT083"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "el_RvS084",
+                                  "children": [
+                                    {
+                                      "id": "el_RvS085",
+                                      "children": [
+                                        {
+                                          "id": "el_RvI086"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "el_RvS087",
+                                      "children": [
+                                        {
+                                          "id": "el_RvT088"
+                                        },
+                                        {
+                                          "id": "el_RvT089"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "el_RvS090",
+                                  "children": [
+                                    {
+                                      "id": "el_RvS091",
+                                      "children": [
+                                        {
+                                          "id": "el_RvI092"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "el_RvS093",
+                                      "children": [
+                                        {
+                                          "id": "el_RvT094"
+                                        },
+                                        {
+                                          "id": "el_RvT095"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "el_RvCTA096",
+                              "children": [
+                                {
+                                  "id": "el_RvT097"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "el_RvS101",
+              "children": [
+                {
+                  "id": "el_RvS102",
+                  "children": [
+                    {
+                      "id": "el_RvT104"
+                    }
+                  ]
+                },
+                {
+                  "id": "el_RvS105",
+                  "children": [
+                    {
+                      "id": "el_RvT107"
+                    }
+                  ]
+                },
+                {
+                  "id": "el_RvS108",
+                  "children": [
+                    {
+                      "id": "el_RvT110"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selectableGroups": [
+        {
+          "id": "tabs",
+          "type": "single_choice"
+        }
+      ]
+    }
+  ],
+  "locales": [
+    {
+      "id": "en",
+      "code": "en",
+      "name": "English"
+    }
+  ],
+  "defaultLocale": "en",
+  "variables": [],
+  "theme": {
+    "colors": [
+      {
+        "id": "clr_RvBg",
+        "dark": {
+          "hex": "#0B0B0D"
+        },
+        "name": "Background",
+        "light": {
+          "hex": "#F3F3F5"
+        }
+      },
+      {
+        "id": "clr_RvCard",
+        "dark": {
+          "hex": "#17171A"
+        },
+        "name": "Card",
+        "light": {
+          "hex": "#FFFFFF"
+        }
+      },
+      {
+        "id": "clr_RvInk",
+        "dark": {
+          "hex": "#F3F3F5"
+        },
+        "name": "Ink",
+        "light": {
+          "hex": "#0B0B0D"
+        }
+      },
+      {
+        "id": "clr_RvMuted",
+        "dark": {
+          "hex": "#8E8E96"
+        },
+        "name": "Muted",
+        "light": {
+          "hex": "#84848B"
+        }
+      },
+      {
+        "id": "clr_RvDark",
+        "dark": {
+          "hex": "#000000"
+        },
+        "name": "Plan card",
+        "light": {
+          "hex": "#121216"
+        }
+      },
+      {
+        "id": "clr_RvOnDark",
+        "dark": {
+          "hex": "#FFFFFF"
+        },
+        "name": "On dark",
+        "light": {
+          "hex": "#FFFFFF"
+        }
+      },
+      {
+        "id": "clr_RvDim",
+        "dark": {
+          "hex": "#B9B9C2"
+        },
+        "name": "On dark dim",
+        "light": {
+          "hex": "#B9B9C2"
+        }
+      },
+      {
+        "id": "clr_RvLink",
+        "dark": {
+          "hex": "#4C9BFF"
+        },
+        "name": "Link",
+        "light": {
+          "hex": "#0A7AFF"
+        }
+      },
+      {
+        "id": "clr_RvTabOff",
+        "dark": {
+          "hex": "#8E8E96"
+        },
+        "name": "Tab off",
+        "light": {
+          "hex": "#84848B"
+        }
+      },
+      {
+        "id": "clr_RvTabBar",
+        "dark": {
+          "hex": "#1E1E22"
+        },
+        "name": "Tab bar",
+        "light": {
+          "hex": "#E7E7EB"
+        }
+      },
+      {
+        "id": "white",
+        "dark": {
+          "hex": "#17171A"
+        },
+        "name": "white",
+        "light": {
+          "hex": "#FFFFFF"
+        }
+      },
+      {
+        "id": "accent",
+        "dark": {
+          "hex": "#F3F3F5"
+        },
+        "name": "accent",
+        "light": {
+          "hex": "#0B0B0D"
+        }
+      },
+      {
+        "id": "gray-200",
+        "dark": {
+          "hex": "#2A2A30"
+        },
+        "name": "gray-200",
+        "light": {
+          "hex": "#E7E7EB"
+        }
+      },
+      {
+        "id": "gray-900",
+        "dark": {
+          "hex": "#F3F3F5"
+        },
+        "name": "gray-900",
+        "light": {
+          "hex": "#0B0B0D"
+        }
+      }
+    ],
+    "typography": [
+      {
+        "id": "h1",
+        "name": "H1",
+        "settings": {
+          "size": 34,
+          "weight": "bold"
+        }
+      },
+      {
+        "id": "h2",
+        "name": "H2",
+        "settings": {
+          "size": 28,
+          "weight": "bold"
+        }
+      },
+      {
+        "id": "h3",
+        "name": "H3",
+        "settings": {
+          "size": 19,
+          "weight": "semibold"
+        }
+      },
+      {
+        "id": "button-label",
+        "name": "Button Label",
+        "settings": {
+          "size": 17,
+          "weight": "semibold"
+        }
+      },
+      {
+        "id": "body",
+        "name": "Body",
+        "settings": {
+          "size": 15,
+          "weight": "regular"
+        }
+      },
+      {
+        "id": "caption",
+        "name": "Caption",
+        "settings": {
+          "size": 14,
+          "weight": "regular"
+        }
+      },
+      {
+        "id": "small-label",
+        "name": "Small Label",
+        "settings": {
+          "size": 14,
+          "weight": "semibold"
+        }
+      },
+      {
+        "id": "typ_RvTab",
+        "name": "Tab",
+        "settings": {
+          "size": 16,
+          "weight": "semibold"
+        }
+      },
+      {
+        "id": "typ_RvPlan",
+        "name": "Plan",
+        "settings": {
+          "size": 30,
+          "weight": "bold"
+        }
+      },
+      {
+        "id": "typ_RvPill",
+        "name": "Pill",
+        "settings": {
+          "size": 14,
+          "weight": "semibold"
+        }
+      }
+    ]
+  },
+  "components": {},
+  "_meta": {
+    "icons": [
+      {
+        "raw": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" viewBox=\"0 0 256 256\"><path d=\"M248,120h-8V88a16,16,0,0,0-16-16H208V64a16,16,0,0,0-16-16H168a16,16,0,0,0-16,16v56H104V64A16,16,0,0,0,88,48H64A16,16,0,0,0,48,64v8H32A16,16,0,0,0,16,88v32H8a8,8,0,0,0,0,16h8v32a16,16,0,0,0,16,16H48v8a16,16,0,0,0,16,16H88a16,16,0,0,0,16-16V136h48v56a16,16,0,0,0,16,16h24a16,16,0,0,0,16-16v-8h16a16,16,0,0,0,16-16V136h8a8,8,0,0,0,0-16ZM32,168V88H48v80Zm56,24H64V64H88V192Zm104,0H168V64h24V175.82c0,.06,0,.12,0,.18s0,.12,0,.18V192Zm32-24H208V88h16Z\"></path></svg>",
+        "name": "Barbell",
+        "weight": "regular"
+      },
+      {
+        "raw": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" viewBox=\"0 0 256 256\"><path d=\"M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z\"></path></svg>",
+        "name": "Check",
+        "weight": "regular"
+      },
+      {
+        "raw": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" viewBox=\"0 0 256 256\"><path d=\"M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z\"></path></svg>",
+        "name": "CheckCircle",
+        "weight": "fill"
+      },
+      {
+        "raw": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" viewBox=\"0 0 256 256\"><path d=\"M215.79,118.17a8,8,0,0,0-5-5.66L153.18,90.9l14.66-73.33a8,8,0,0,0-13.69-7l-112,120a8,8,0,0,0,3,13l57.63,21.61L88.16,238.43a8,8,0,0,0,13.69,7l112-120A8,8,0,0,0,215.79,118.17ZM109.37,214l10.47-52.38a8,8,0,0,0-5-9.06L62,132.71l84.62-90.66L136.16,94.43a8,8,0,0,0,5,9.06l52.8,19.8Z\"></path></svg>",
+        "name": "Lightning",
+        "weight": "regular"
+      }
+    ],
+    "fonts": [],
+    "screens": {}
+  },
+  "schemaVersion": 9
+}

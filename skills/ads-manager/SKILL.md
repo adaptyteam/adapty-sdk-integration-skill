@@ -1,6 +1,6 @@
 ---
 name: ads-manager
-description: Use when managing Apple Search Ads through the Adapty CLI — reading campaign, ad group, keyword or ad performance, changing bids or budgets, adding or pausing keywords, launching or pausing a campaign, harvesting search terms, or setting up rule-based ad automations.
+description: Use when managing Apple Search Ads through the Adapty CLI — reading campaign, ad group, keyword or ad performance, changing bids or budgets, adding or pausing keywords, launching or pausing a campaign, creating a whole campaign structure in bulk from JSON or an Apple Ads template, harvesting search terms, or setting up rule-based ad automations.
 ---
 
 # Apple Search Ads through the Adapty CLI
@@ -15,16 +15,49 @@ Open the reference a workflow names before running its commands:
 - `references/asa-metrics.md` — `metrics`, `metrics overview`, `search-terms list`,
   `competitors summary`.
 
+## The CLI
+
+**Resolve `$ADAPTY` once, before your first `asa` call, and use it for every command you run.** A
+global `adapty` is frequently old. The `asa` topic ships in **0.4.0**, but `ad-groups create
+--automated` and the five `--invoice-*` flags ship in **0.8.2**, so treat 0.8.2 as this skill's floor.
+An older install answers with `unknown command` or an unknown-flag error, which reads like the command
+does not exist rather than like a stale CLI:
+
+```bash
+adapty --version                                   # >= 0.8.2 ?  ADAPTY="adapty", done
+npm i -g adapty@latest >/dev/null 2>&1 \
+  && ADAPTY="adapty" \
+  || ADAPTY="npx --yes adapty@latest"              # fallback: prefix not writable
+```
+
+**Install once; do not wrap every call in `npx`.** The wrapper costs ~1 s *per call* against 0.07 s
+installed, and an optimization pass makes dozens of calls. Where the global prefix is not writable
+the `npx` form still works, and there `--yes` is not optional: without it npx stops to ask
+permission to install, and a headless run has nobody to answer.
+
+**Writing a command out for the user? Expand it to a literal `adapty`.** Their shell has no
+`$ADAPTY`. Same split as `--yes` below — what you run carries the variable, what they run carries
+the command name.
+
+**In `zsh`, the macOS default, a multi-word `$ADAPTY` is not split into words**, so the command
+fails with `command not found: npx --yes adapty@latest`. Run `setopt shwordsplit` once in the same
+shell, or write `npx --yes adapty@latest` out in full. That error is a shell problem, never evidence
+that the CLI or the command is missing.
+
+Declare an `asa` command unavailable only after `npx --yes adapty@latest` lacks it — never from a
+version number you read somewhere.
+
 ## Account surface
 
-- `adapty asa whoami` — company, how access was granted, Apple connection state. Run it first.
-- `adapty asa connect [--no-wait]` — prints the Apple authorization link and waits; `--no-wait`
+- `$ADAPTY asa whoami` — company, how access was granted, Apple connection state. Run it first.
+- `$ADAPTY asa connect [--no-wait]` — prints the Apple authorization link and waits; `--no-wait`
   returns immediately.
-- `adapty asa orgs list` — ASA organizations. Each row carries two identifiers, not
+- `$ADAPTY asa orgs list` — ASA organizations. Each row carries two identifiers, not
   interchangeable: `internal_id`, the UUID `--org` takes on `campaigns create` and
   `--campaign-group` takes on the lists that accept scope filters, and `org_id`, Apple's numeric id,
-  which both reject. `--org` itself exists only on `campaigns create`; no list accepts it.
-- `adapty asa apps list` — apps promoted in Apple Search Ads. Each row carries two identifiers,
+  which both reject. `--org` itself exists only on `campaigns create`; no list accepts it. Each row's
+  `payment_model` (`LOC`/`PAYG`) decides whether campaigns in that organization need Invoicing Options.
+- `$ADAPTY asa apps list` — apps promoted in Apple Search Ads. Each row carries two identifiers,
   not interchangeable: Apple's numeric adam-id (`--adam-id`) and the ASA app UUID (`--app`).
 - Those two and `automations list` take pagination only — no scope filters exist.
 - Scope is the token's company. No `asa` command takes `--app` to select scope — `--app` is a
@@ -41,8 +74,8 @@ Open the reference a workflow names before running its commands:
 Fill every slot. A slot you cannot fill from a read is one you ask about, not one you drop.
 
 ```
-adapty asa <topic> list --<filter-from-that-list-s-matrix-row> <id-from-a-previous-list> [--status <enum>]
-adapty asa <topic> <create|update|add> [<id>] <field flags> --idempotency-key <key>
+$ADAPTY asa <topic> list --<filter-from-that-list-s-matrix-row> <id-from-a-previous-list> [--status <enum>]
+$ADAPTY asa <topic> <create|update|add> [<id>] <field flags> --idempotency-key <key>
 ```
 
 **The scope filter is a required slot, and the matrix is the only place it comes from** — read that
@@ -118,6 +151,12 @@ ask for — propose that in the answer instead.
 - **Never invent an id, adam-id, budget or bid.** Read it from the matching list, or ask.
 - **Never put `--yes` on a command the user will run.** It deletes the preview they would have read.
   `--yes` belongs only on a command you run yourself, after an explicit yes.
+- **Never leave a Max Conversions campaign without its automated ad group**, and never launch into a
+  `LOC` organization without the five `--invoice-*` flags. Both create cleanly and then never serve,
+  so the failure looks like a working launch until someone reads `serving_status`.
+- **Never submit a converted template without reading its `--preview` first**, and never resubmit a
+  bulk operation because it timed out. `--timeout` ends the polling, not the operation; a resubmit
+  creates the structure twice, and nothing in the `asa` topic can delete either copy.
 - **Never write a teardown.** No delete exists in the `asa` topic and there is no undo;
   `--status PAUSED` is the only stop.
 
@@ -137,7 +176,10 @@ ask for — propose that in the answer instead.
 - `--yes` on a command you are handing to the user — it deletes the preview they were going to read
 - A lookup scoped by an id that came from resolving a different entity the user named separately
 - A create in a chain of dependent creates with no `--idempotency-key` pinned
-- More than 15 keywords in one call
+- More than 15 keywords in one `keywords add` or `negative-keywords add` call — the cap does not
+  govern a `bulk-create` structure, whose review is the preview instead
+- A `bulk-create --from-file` submitted without reading the preview, or an `--org-id` filled with an
+  `internal_id` UUID instead of the numeric `org_id`
 - A write whose target you picked by your own definition of "best", "losing" or "terrible"
 - `--order-by-day` with no matching `--by-days` window in the same call
 - You stated a rule, and three commands later are making a silent exception to it
@@ -164,8 +206,8 @@ before it reaches Apple. Counting needs no metrics call: any list at `--page-siz
 only name one of those values. → `references/asa-metrics.md`, `## Cohort windows`.
 
 ```
-adapty asa metrics overview --entity <level> --date-from <YYYY-MM-DD> --date-to <YYYY-MM-DD> [--period-unit <bucket>]
-adapty asa metrics --entity <ad|ad-group|campaign|keyword> --date-from <YYYY-MM-DD> --date-to <YYYY-MM-DD> --order-by <metric> --page-size <n>
+$ADAPTY asa metrics overview --entity <level> --date-from <YYYY-MM-DD> --date-to <YYYY-MM-DD> [--period-unit <bucket>]
+$ADAPTY asa metrics --entity <ad|ad-group|campaign|keyword> --date-from <YYYY-MM-DD> --date-to <YYYY-MM-DD> --order-by <metric> --page-size <n>
 ```
 
 **3. Launch a campaign.** Read `orgs list` → `--org` and `apps list` → `--adam-id` first; then
@@ -176,12 +218,19 @@ verify the structure, then enable it with workflow 6 — nothing spends until yo
 `references/asa-management.md`, `## Writes and idempotency`.
 
 ```
-adapty asa campaigns create --org <id> --adam-id <adam-id> --name <name> --country <country-code> --daily-budget <amount> --status PAUSED --idempotency-key <run>-camp
-adapty asa ad-groups create --campaign <id> --name <name> --default-bid <amount> --idempotency-key <run>-ag
-adapty asa creatives list --app <app-uuid>   # → --creative-id; no creatives create exists
-adapty asa ads create --ad-group <id> --creative-id <id> --name <name> --idempotency-key <run>-ad
-adapty asa keywords add --ad-group <id> --text <keyword> --match-type <EXACT|BROAD> --idempotency-key <run>-kw-1   # ≤15 per call, fresh key per batch
+$ADAPTY asa campaigns create --org <id> --adam-id <adam-id> --name <name> --country <country-code> --daily-budget <amount> --status PAUSED --idempotency-key <run>-camp
+$ADAPTY asa ad-groups create --campaign <id> --name <name> --default-bid <amount> --idempotency-key <run>-ag
+$ADAPTY asa creatives list --app <app-uuid>   # → --creative-id; no creatives create exists
+$ADAPTY asa ads create --ad-group <id> --creative-id <id> --name <name> --idempotency-key <run>-ad
+$ADAPTY asa keywords add --ad-group <id> --text <keyword> --match-type <EXACT|BROAD> --idempotency-key <run>-kw-1   # ≤15 per call, fresh key per batch
 ```
+
+Two things in `orgs list` change the campaign create before you run it. A `payment_model` of `LOC`
+makes the five `--invoice-*` flags required — all five in the one call, or the campaign is created and
+never serves. And `--bidding-strategy MAX_CONVERSIONS` turns the first two writes into one unit: that
+campaign serves only once it owns an ad group created with `--automated`, which takes no
+`--default-bid` and no `--start-time`. Ask the user for the invoicing values; never invent them. →
+`references/asa-management.md`, `### Max Conversions campaigns` and `### Line of credit organizations`.
 
 **4. Harvest keywords.** Read `search-terms list --ad-group <id> --date-from <YYYY-MM-DD>
 --date-to <YYYY-MM-DD>` (dates default to today, so pass them), then
@@ -211,9 +260,13 @@ scoped list first. → `references/asa-management.md`, `## Status`.
 `ads create --ad-group <id> --creative-id <id> --name <name> --idempotency-key <key>`. →
 `references/asa-management.md`.
 
-**8. Diagnose a dead ad.** `ads get <id>`, read `serving_state_reasons`; if that does not
-explain it, walk up to `ad-groups get <id>` status, then `campaigns get <id>` status and daily
-budget. All reads. → `references/asa-management.md`.
+**8. Diagnose a dead ad or a campaign that never started.** `ads get <id>`, read
+`serving_state_reasons`; if that does not explain it, walk up to `ad-groups get <id>` status, then
+`campaigns get <id>` status and daily budget. A campaign carries `serving_status` and
+`serving_state_reasons` too, and two reasons there have a known fix rather than a diagnosis:
+`AUTOMATED_KEYWORDS_REQUIRED_AD_GROUP_MISSING` wants an `ad-groups create --automated`, and
+`MISSING_BO_OR_INVOICING_FIELDS` wants the five `--invoice-*` flags on `campaigns update`. All reads.
+→ `references/asa-management.md`.
 
 **9. Rule automations.** `automations create --file rule.json --idempotency-key <key>` →
 `automations run <id> --dry-run` → `automations runs <id>` to read what it would have done →
@@ -224,10 +277,27 @@ touching a bid or a budget. → `references/asa-management.md`.
 App Store IDs. Last full month, every country; no period or country flags exist. Read-only, shares
 the analytics pool, slow on a cold cache. → `references/asa-metrics.md`.
 
+**11. Launch many campaigns at once.** One `bulk-create` instead of a loop over workflow 3, for a
+whole structure — campaigns → ad groups → keywords/negative keywords/ads. From an Apple Ads template,
+convert and read it first; the preview is the review, and there is no undo and no delete for what a
+half-right structure creates. From JSON, `--file -` takes the structure on stdin.
+
+```
+$ADAPTY asa campaigns bulk-create --from-file <template.xlsx|keywords.csv> --org-id <numeric-org-id> --preview
+$ADAPTY asa campaigns bulk-create --file <structure.json> --idempotency-key <run>-bulk
+$ADAPTY asa campaigns bulk-status <operation-id>
+```
+
+`--org-id` is the numeric `org_id` from `orgs list`, not the `internal_id` UUID `campaigns create
+--org` takes — the one command in the surface that wants Apple's number. The command polls to
+`success`, `partial` or `failed`; a `partial` leaves the objects that succeeded in place and names the
+rest with Apple's reason. `--timeout` ends the polling, never the operation, so read it with
+`bulk-status` rather than resubmitting. → `references/asa-management.md`, `### Bulk operations`.
+
 ## Anything not covered here
 
 1. This file and its two references are the source of truth for the `asa` surface.
-2. `adapty asa <topic> <command> --help` — exact flag syntax for the installed version.
+2. `$ADAPTY asa <topic> <command> --help` — exact flag syntax for the installed version.
 3. The CLI repo, https://github.com/adaptyteam/adapty-cli (default branch): `README.md`, then
    `skills/adapty-cli/references/cli-commands.md` — both can lag the installed CLI — then
    `src/commands/asa/**`, where a command's own `static flags` declaration outranks any table and

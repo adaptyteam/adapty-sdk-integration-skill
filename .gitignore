@@ -4,10 +4,34 @@ docs/superpowers/
 # Subagent-driven-development scratch: ledgers, task briefs, review packages
 .superpowers/
 
-# Claude Code local state: per-machine settings and linked worktrees.
-# .claude/worktrees/ holds full checkouts — without this, `git add -A` from the
-# main checkout commits an entire worktree into the repo.
-.claude/settings.local.json
-.claude/worktrees/
-
 .DS_STORE
+
+# Raw un-sanitized flow exports (real product UUIDs, real media URLs) — never committed
+tests/fixtures-raw/
+
+# Local render baselines — machine-specific (font rasterization), not a CI gate
+tests/render-baseline/
+tests/.render/
+
+__pycache__/
+
+# skills.sh install artifacts. An install run INSIDE the repo replaces skills/<name>/ with
+# symlinks into .agents/, which git reads as "source deleted, symlink added" — committing that
+# would swap the real skill directories for links to an install cache.
+.agents/
+agent/
+skills-lock.json
+
+# Claude Code local state: machine-scoped permissions and whole-repo scratch worktrees.
+# `.claude/worktrees/` holds nested checkouts complete with their own .git files — committing it
+# would add thousands of files that are copies of this repo.
+.claude/
+
+# skill-validator LLM-score result caches — local tooling state, never skill content
+.score_cache/
+
+# QR images from `mobile-preview.mjs --qr`. The tool writes them INTO the working tree on
+# purpose — a client refuses to render an image outside the directory it resolves from — and its
+# own docstring says never commit one. Ignored rather than trusted to discipline, because
+# 534b16c already committed test-round output through a `git add -A`.
+flow-preview-qr-*.png

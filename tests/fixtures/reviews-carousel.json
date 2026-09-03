@@ -1,0 +1,861 @@
+{
+  "schemaVersion": 10,
+  "locales": [
+    {
+      "id": "en",
+      "code": "en",
+      "name": "English"
+    }
+  ],
+  "defaultLocale": "en",
+  "variables": [],
+  "components": {},
+  "theme": {
+    "colors": [
+      {
+        "id": "bg",
+        "name": "Background",
+        "light": {
+          "hex": "#FFFFFF"
+        },
+        "dark": {
+          "hex": "#0E0E12"
+        }
+      },
+      {
+        "id": "card",
+        "name": "Card",
+        "light": {
+          "hex": "#F4F6FA"
+        },
+        "dark": {
+          "hex": "#1B1B22"
+        }
+      },
+      {
+        "id": "ink",
+        "name": "Ink",
+        "light": {
+          "hex": "#111114"
+        },
+        "dark": {
+          "hex": "#F5F5F7"
+        }
+      },
+      {
+        "id": "muted",
+        "name": "Muted",
+        "light": {
+          "hex": "#5F6368"
+        },
+        "dark": {
+          "hex": "#9AA0A8"
+        }
+      },
+      {
+        "id": "accent",
+        "name": "Accent",
+        "light": {
+          "hex": "#F5A524"
+        },
+        "dark": {
+          "hex": "#F5A524"
+        }
+      }
+    ],
+    "typography": [
+      {
+        "id": "h1",
+        "name": "H1",
+        "settings": {
+          "size": 26,
+          "weight": "bold"
+        }
+      },
+      {
+        "id": "body",
+        "name": "Body",
+        "settings": {
+          "size": 15,
+          "weight": "regular"
+        }
+      },
+      {
+        "id": "caption",
+        "name": "Caption",
+        "settings": {
+          "size": 13,
+          "weight": "regular"
+        }
+      }
+    ]
+  },
+  "_meta": {
+    "icons": [],
+    "fonts": [],
+    "screens": {}
+  },
+  "screens": [
+    {
+      "id": "scr_reviews",
+      "props": {
+        "layout": {
+          "alignH": "start",
+          "alignV": "start",
+          "direction": "vertical",
+          "distribution": {
+            "gap": 24,
+            "type": "gap"
+          }
+        },
+        "safeArea": false,
+        "statusBar": false,
+        "scrollable": true,
+        "progressBar": {
+          "enabled": false
+        },
+        "statusBarTheme": "light",
+        "fill": [
+          {
+            "type": "color",
+            "color": {
+              "type": "color-style",
+              "colorId": "bg"
+            }
+          }
+        ],
+        "padding": {
+          "top": 72,
+          "left": 0,
+          "right": 0,
+          "bottom": 40
+        }
+      },
+      "elements": {
+        "map": {
+          "el_C_014T": {
+            "id": "el_C_014T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h1"
+              },
+              "align": "center",
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Loved by 40,000 people",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              }
+            },
+            "states": [],
+            "caption": "Heading"
+          },
+          "el_C_013C": {
+            "id": "el_C_013C",
+            "type": "carousel",
+            "props": {
+              "gap": 12,
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 150
+              },
+              "slideWidth": {
+                "type": "fixed",
+                "value": 300
+              },
+              "slideHeight": {
+                "type": "fixed",
+                "value": 150
+              },
+              "dots": {
+                "gap": 6,
+                "size": 6,
+                "color": {
+                  "type": "color-style",
+                  "colorId": "muted"
+                },
+                "activeColor": {
+                  "type": "color-style",
+                  "colorId": "ink"
+                }
+              }
+            },
+            "states": [],
+            "caption": "Reviews"
+          },
+          "el_C_004S": {
+            "id": "el_C_004S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 300
+              },
+              "height": {
+                "type": "fixed",
+                "value": 150
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 8,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              },
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "padding": {
+                "top": 16,
+                "left": 18,
+                "right": 18,
+                "bottom": 16
+              },
+              "borderRadius": {
+                "tl": 16,
+                "tr": 16,
+                "bl": 16,
+                "br": 16
+              }
+            },
+            "states": [],
+            "caption": "Review 1"
+          },
+          "el_C_001T": {
+            "id": "el_C_001T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "\u2605\u2605\u2605\u2605\u2605",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "color": {
+                "type": "color-style",
+                "colorId": "accent"
+              }
+            },
+            "states": []
+          },
+          "el_C_002T": {
+            "id": "el_C_002T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Cancelled three subscriptions I had forgotten about in the first week.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              }
+            },
+            "states": []
+          },
+          "el_C_003T": {
+            "id": "el_C_003T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "left",
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Maya R.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              }
+            },
+            "states": []
+          },
+          "el_C_008S": {
+            "id": "el_C_008S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 300
+              },
+              "height": {
+                "type": "fixed",
+                "value": 150
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 8,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              },
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "padding": {
+                "top": 16,
+                "left": 18,
+                "right": 18,
+                "bottom": 16
+              },
+              "borderRadius": {
+                "tl": 16,
+                "tr": 16,
+                "bl": 16,
+                "br": 16
+              }
+            },
+            "states": [],
+            "caption": "Review 2"
+          },
+          "el_C_005T": {
+            "id": "el_C_005T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "\u2605\u2605\u2605\u2605\u2605",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "color": {
+                "type": "color-style",
+                "colorId": "accent"
+              }
+            },
+            "states": []
+          },
+          "el_C_006T": {
+            "id": "el_C_006T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "The weekly summary is the only budgeting thing I ever read.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              }
+            },
+            "states": []
+          },
+          "el_C_007T": {
+            "id": "el_C_007T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "left",
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Tom H.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              }
+            },
+            "states": []
+          },
+          "el_C_012S": {
+            "id": "el_C_012S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 300
+              },
+              "height": {
+                "type": "fixed",
+                "value": 150
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 8,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              },
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "padding": {
+                "top": 16,
+                "left": 18,
+                "right": 18,
+                "bottom": 16
+              },
+              "borderRadius": {
+                "tl": 16,
+                "tr": 16,
+                "bl": 16,
+                "br": 16
+              }
+            },
+            "states": [],
+            "caption": "Review 3"
+          },
+          "el_C_009T": {
+            "id": "el_C_009T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "\u2605\u2605\u2605\u2605\u2605",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "color": {
+                "type": "color-style",
+                "colorId": "accent"
+              }
+            },
+            "states": []
+          },
+          "el_C_010T": {
+            "id": "el_C_010T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Set it up in ten minutes and it has paid for itself twice over since.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              }
+            },
+            "states": []
+          },
+          "el_C_011T": {
+            "id": "el_C_011T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "caption"
+              },
+              "align": "left",
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Priya N.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              }
+            },
+            "states": []
+          }
+        },
+        "hierarchy": {
+          "id": "root",
+          "children": [
+            {
+              "id": "el_C_014T"
+            },
+            {
+              "id": "el_C_013C",
+              "children": [
+                {
+                  "id": "el_C_004S",
+                  "children": [
+                    {
+                      "id": "el_C_001T"
+                    },
+                    {
+                      "id": "el_C_002T"
+                    },
+                    {
+                      "id": "el_C_003T"
+                    }
+                  ]
+                },
+                {
+                  "id": "el_C_008S",
+                  "children": [
+                    {
+                      "id": "el_C_005T"
+                    },
+                    {
+                      "id": "el_C_006T"
+                    },
+                    {
+                      "id": "el_C_007T"
+                    }
+                  ]
+                },
+                {
+                  "id": "el_C_012S",
+                  "children": [
+                    {
+                      "id": "el_C_009T"
+                    },
+                    {
+                      "id": "el_C_010T"
+                    },
+                    {
+                      "id": "el_C_011T"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selectableGroups": [],
+      "caption": "Reviews"
+    }
+  ]
+}

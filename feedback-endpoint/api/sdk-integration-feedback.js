@@ -1,7 +1,7 @@
 /**
  * Adapty SDK Integration Skill — Feedback Endpoint
  *
- * Accepts session feedback from the adapty-sdk-integration Claude skill
+ * Accepts session feedback from the adapty-integration Claude skill
  * and forwards it to Slack and Airtable.
  *
  * The body is validated before anything leaves here (see src/validate.js):

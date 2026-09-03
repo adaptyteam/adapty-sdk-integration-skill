@@ -1,0 +1,6581 @@
+{
+  "screens": [
+    {
+      "id": "scr_welcome",
+      "props": {
+        "fill": [
+          {
+            "type": "color",
+            "color": {
+              "type": "color-style",
+              "colorId": "sand"
+            }
+          }
+        ],
+        "layout": {
+          "alignH": "start",
+          "alignV": "start",
+          "direction": "vertical",
+          "distribution": {
+            "gap": 0,
+            "type": "gap"
+          }
+        },
+        "padding": {
+          "top": 0,
+          "left": 0,
+          "right": 0,
+          "bottom": 170
+        },
+        "safeArea": false,
+        "statusBar": false,
+        "scrollable": true,
+        "progressBar": {
+          "enabled": false
+        },
+        "statusBarTheme": "light"
+      },
+      "caption": "Welcome",
+      "elements": {
+        "map": {
+          "el_001I": {
+            "id": "el_001I",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "House",
+                "size": 30,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "on"
+                },
+                "weight": "fill"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_002S": {
+            "id": "el_002S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "teal"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fixed",
+                "value": 64
+              },
+              "height": {
+                "type": "fixed",
+                "value": 64
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 20,
+                "br": 20,
+                "tl": 20,
+                "tr": 20
+              }
+            },
+            "states": [],
+            "caption": "Mark"
+          },
+          "el_003T": {
+            "id": "el_003T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "mark"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "teal"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 14,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Nimbus",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Nimbus",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Nimbus",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_004T": {
+            "id": "el_004T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h1"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 10,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Find room to breathe",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Пронађите простор да дишете",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Pronađite prostor da dišete",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_005T": {
+            "id": "el_005T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 10,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Stays with space, in places worth staying. Set up your account in about a minute.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Смештај са простором, на местима вредним останка. Направите налог за око минут.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Smeštaj sa prostorom, na mestima vrednim ostanka. Napravite nalog za oko minut.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_006S": {
+            "id": "el_006S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 120,
+                "left": 24,
+                "right": 24,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Intro"
+          },
+          "el_007T": {
+            "id": "el_007T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "btn"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "on"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Get started",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Почнимо",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Počnimo",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_008S": {
+            "id": "el_008S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "teal"
+                  }
+                }
+              ],
+              "width": {
+                "type": "auto"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 54
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "left": 20,
+                "type": "fixed",
+                "right": 20,
+                "bottom": 88
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [],
+            "caption": "Button Get started",
+            "interactions": [
+              {
+                "id": "int_008S",
+                "actions": [
+                  {
+                    "id": "act_start",
+                    "type": "navigate",
+                    "payload": {
+                      "type": "screen",
+                      "screen": "scr_signup"
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_009T": {
+            "id": "el_009T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "btn"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "I already have an account",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Већ имам налог",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Već imam nalog",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_010S": {
+            "id": "el_010S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "width": {
+                "type": "auto"
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 1
+              },
+              "height": {
+                "type": "fixed",
+                "value": 54
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "left": 20,
+                "type": "fixed",
+                "right": 20,
+                "bottom": 22
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [],
+            "caption": "Button I already have an account",
+            "interactions": [
+              {
+                "id": "int_010S",
+                "actions": [
+                  {
+                    "id": "act_signin",
+                    "type": "closeFlow"
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          }
+        },
+        "hierarchy": {
+          "id": "root",
+          "children": [
+            {
+              "id": "el_006S",
+              "children": [
+                {
+                  "id": "el_002S",
+                  "children": [
+                    {
+                      "id": "el_001I"
+                    }
+                  ]
+                },
+                {
+                  "id": "el_003T"
+                },
+                {
+                  "id": "el_004T"
+                },
+                {
+                  "id": "el_005T"
+                }
+              ]
+            },
+            {
+              "id": "el_010S",
+              "children": [
+                {
+                  "id": "el_009T"
+                }
+              ]
+            },
+            {
+              "id": "el_008S",
+              "children": [
+                {
+                  "id": "el_007T"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selectableGroups": []
+    },
+    {
+      "id": "scr_signup",
+      "props": {
+        "fill": [
+          {
+            "type": "color",
+            "color": {
+              "type": "color-style",
+              "colorId": "sand"
+            }
+          }
+        ],
+        "layout": {
+          "alignH": "start",
+          "alignV": "start",
+          "direction": "vertical",
+          "distribution": {
+            "gap": 0,
+            "type": "gap"
+          }
+        },
+        "padding": {
+          "top": 0,
+          "left": 0,
+          "right": 0,
+          "bottom": 120
+        },
+        "safeArea": false,
+        "statusBar": false,
+        "scrollable": true,
+        "progressBar": {
+          "enabled": false
+        },
+        "statusBarTheme": "light"
+      },
+      "caption": "Create account",
+      "elements": {
+        "map": {
+          "el_011I": {
+            "id": "el_011I",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "X",
+                "size": 20,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "ink"
+                },
+                "weight": "regular"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_012S": {
+            "id": "el_012S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fixed",
+                "value": 40
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 1
+              },
+              "height": {
+                "type": "fixed",
+                "value": 40
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": [],
+            "caption": "Close",
+            "interactions": [
+              {
+                "id": "int_012S",
+                "actions": [
+                  {
+                    "id": "act_x",
+                    "type": "closeFlow"
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_013T": {
+            "id": "el_013T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h1"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 22,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Create your account",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Направите налог",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Napravite nalog",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_014T": {
+            "id": "el_014T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 8,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "We'll send your booking confirmations here.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Овде ћемо вам слати потврде резервација.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Ovde ćemo vam slati potvrde rezervacija.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_015F": {
+            "id": "el_015F",
+            "type": "email-input",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "font": {
+                "preset": "body"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 1
+              },
+              "height": {
+                "type": "fixed",
+                "value": 56
+              },
+              "margin": {
+                "top": 22,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "padding": {
+                "top": 0,
+                "left": 16,
+                "right": 16,
+                "bottom": 0
+              },
+              "customId": "email",
+              "position": {
+                "type": "relative"
+              },
+              "placeholder": {
+                "values": {
+                  "en": "Email",
+                  "sr": "Имејл",
+                  "sr-Latn": "Imejl"
+                },
+                "_localizable": true
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              },
+              "validateEmailFormat": true
+            },
+            "states": [],
+            "caption": "Email"
+          },
+          "el_016F": {
+            "id": "el_016F",
+            "type": "password-input",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "font": {
+                "preset": "body"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 1
+              },
+              "height": {
+                "type": "fixed",
+                "value": 56
+              },
+              "margin": {
+                "top": 12,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "padding": {
+                "top": 0,
+                "left": 16,
+                "right": 16,
+                "bottom": 0
+              },
+              "customId": "password",
+              "position": {
+                "type": "relative"
+              },
+              "placeholder": {
+                "values": {
+                  "en": "Password",
+                  "sr": "Лозинка",
+                  "sr-Latn": "Lozinka"
+                },
+                "_localizable": true
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              },
+              "passwordRequirements": {
+                "number": true,
+                "lowercase": true,
+                "minLength": 8,
+                "specialChar": false
+              }
+            },
+            "states": [],
+            "caption": "Password"
+          },
+          "el_017T": {
+            "id": "el_017T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "label"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 8,
+                "left": 2,
+                "right": 2,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "At least 8 characters, including a number.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Најмање 8 знакова, укључујући цифру.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Najmanje 8 znakova, uključujući cifru.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_018S": {
+            "id": "el_018S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 20,
+                "left": 20,
+                "right": 20,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Form"
+          },
+          "el_019T": {
+            "id": "el_019T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "btn"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "on"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Continue",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Настави",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Nastavi",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_020S": {
+            "id": "el_020S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "teal"
+                  }
+                }
+              ],
+              "width": {
+                "type": "auto"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 54
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "left": 20,
+                "type": "fixed",
+                "right": 20,
+                "bottom": 22
+              },
+              "visibility": {
+                "type": "conditional",
+                "condition": {
+                  "type": "&&",
+                  "predicates": [
+                    {
+                      "left": {
+                        "type": "var",
+                        "variableId": "email.value"
+                      },
+                      "type": "notEmpty"
+                    },
+                    {
+                      "left": {
+                        "type": "var",
+                        "variableId": "password.value"
+                      },
+                      "type": "notEmpty"
+                    }
+                  ]
+                }
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [],
+            "caption": "Button Continue",
+            "interactions": [
+              {
+                "id": "int_020S",
+                "actions": [
+                  {
+                    "id": "act_toprofile",
+                    "type": "navigate",
+                    "payload": {
+                      "type": "screen",
+                      "screen": "scr_profile"
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          }
+        },
+        "hierarchy": {
+          "id": "root",
+          "children": [
+            {
+              "id": "el_018S",
+              "children": [
+                {
+                  "id": "el_012S",
+                  "children": [
+                    {
+                      "id": "el_011I"
+                    }
+                  ]
+                },
+                {
+                  "id": "el_013T"
+                },
+                {
+                  "id": "el_014T"
+                },
+                {
+                  "id": "el_015F"
+                },
+                {
+                  "id": "el_016F"
+                },
+                {
+                  "id": "el_017T"
+                }
+              ]
+            },
+            {
+              "id": "el_020S",
+              "children": [
+                {
+                  "id": "el_019T"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selectableGroups": []
+    },
+    {
+      "id": "scr_profile",
+      "props": {
+        "fill": [
+          {
+            "type": "color",
+            "color": {
+              "type": "color-style",
+              "colorId": "sand"
+            }
+          }
+        ],
+        "layout": {
+          "alignH": "start",
+          "alignV": "start",
+          "direction": "vertical",
+          "distribution": {
+            "gap": 0,
+            "type": "gap"
+          }
+        },
+        "padding": {
+          "top": 0,
+          "left": 0,
+          "right": 0,
+          "bottom": 120
+        },
+        "safeArea": false,
+        "statusBar": false,
+        "scrollable": true,
+        "progressBar": {
+          "enabled": false
+        },
+        "statusBarTheme": "light"
+      },
+      "caption": "Profile",
+      "elements": {
+        "map": {
+          "el_021I": {
+            "id": "el_021I",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "ArrowLeft",
+                "size": 20,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "ink"
+                },
+                "weight": "regular"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_022S": {
+            "id": "el_022S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fixed",
+                "value": 40
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 1
+              },
+              "height": {
+                "type": "fixed",
+                "value": 40
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": [],
+            "caption": "Back",
+            "interactions": [
+              {
+                "id": "int_022S",
+                "actions": [
+                  {
+                    "id": "act_back",
+                    "type": "navigate",
+                    "payload": {
+                      "type": "screen",
+                      "screen": "scr_signup"
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_023T": {
+            "id": "el_023T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h1"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 22,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Tell us about you",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Реците нам нешто о себи",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Recite nam nešto o sebi",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_024F": {
+            "id": "el_024F",
+            "type": "text-input",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "font": {
+                "preset": "body"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 1
+              },
+              "height": {
+                "type": "fixed",
+                "value": 56
+              },
+              "margin": {
+                "top": 22,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "padding": {
+                "top": 0,
+                "left": 16,
+                "right": 16,
+                "bottom": 0
+              },
+              "customId": "first_name",
+              "position": {
+                "type": "relative"
+              },
+              "placeholder": {
+                "values": {
+                  "en": "First name",
+                  "sr": "Име",
+                  "sr-Latn": "Ime"
+                },
+                "_localizable": true
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [],
+            "caption": "First name"
+          },
+          "el_025F": {
+            "id": "el_025F",
+            "type": "date-picker",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "font": {
+                "preset": "body"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 1
+              },
+              "height": {
+                "type": "fixed",
+                "value": 56
+              },
+              "margin": {
+                "top": 12,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "maxDate": "2008-08-21",
+              "minDate": "1920-01-01",
+              "padding": {
+                "top": 0,
+                "left": 16,
+                "right": 16,
+                "bottom": 0
+              },
+              "customId": "birthday",
+              "position": {
+                "type": "relative"
+              },
+              "dateFormat": "mm-dd-yyyy",
+              "placeholder": {
+                "values": {
+                  "en": "Birthday",
+                  "sr": "Датум рођења",
+                  "sr-Latn": "Datum rođenja"
+                },
+                "_localizable": true
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [],
+            "caption": "Birthday"
+          },
+          "el_026T": {
+            "id": "el_026T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "label"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 8,
+                "left": 2,
+                "right": 2,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "You need to be 18 or older to book. Your birthday stays private.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Морате имати 18 или више година да резервишете. Датум рођења остаје приватан.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Morate imati 18 ili više godina da rezervišete. Datum rođenja ostaje privatan.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_027S": {
+            "id": "el_027S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 20,
+                "left": 20,
+                "right": 20,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Form"
+          },
+          "el_028T": {
+            "id": "el_028T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "btn"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "on"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Continue",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Настави",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Nastavi",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_029S": {
+            "id": "el_029S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "teal"
+                  }
+                }
+              ],
+              "width": {
+                "type": "auto"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 54
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "left": 20,
+                "type": "fixed",
+                "right": 20,
+                "bottom": 22
+              },
+              "visibility": {
+                "type": "conditional",
+                "condition": {
+                  "type": "&&",
+                  "predicates": [
+                    {
+                      "left": {
+                        "type": "var",
+                        "variableId": "first_name.value"
+                      },
+                      "type": "notEmpty"
+                    }
+                  ]
+                }
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [],
+            "caption": "Button Continue",
+            "interactions": [
+              {
+                "id": "int_029S",
+                "actions": [
+                  {
+                    "id": "act_tovalues",
+                    "type": "navigate",
+                    "payload": {
+                      "type": "screen",
+                      "screen": "scr_values"
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          }
+        },
+        "hierarchy": {
+          "id": "root",
+          "children": [
+            {
+              "id": "el_027S",
+              "children": [
+                {
+                  "id": "el_022S",
+                  "children": [
+                    {
+                      "id": "el_021I"
+                    }
+                  ]
+                },
+                {
+                  "id": "el_023T"
+                },
+                {
+                  "id": "el_024F"
+                },
+                {
+                  "id": "el_025F"
+                },
+                {
+                  "id": "el_026T"
+                }
+              ]
+            },
+            {
+              "id": "el_029S",
+              "children": [
+                {
+                  "id": "el_028T"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selectableGroups": []
+    },
+    {
+      "id": "scr_values",
+      "props": {
+        "fill": [
+          {
+            "type": "color",
+            "color": {
+              "type": "color-style",
+              "colorId": "sand"
+            }
+          }
+        ],
+        "layout": {
+          "alignH": "start",
+          "alignV": "start",
+          "direction": "vertical",
+          "distribution": {
+            "gap": 0,
+            "type": "gap"
+          }
+        },
+        "padding": {
+          "top": 0,
+          "left": 0,
+          "right": 0,
+          "bottom": 170
+        },
+        "safeArea": false,
+        "statusBar": false,
+        "scrollable": true,
+        "progressBar": {
+          "enabled": false
+        },
+        "statusBarTheme": "light"
+      },
+      "caption": "Commitment",
+      "elements": {
+        "map": {
+          "el_030I": {
+            "id": "el_030I",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "House",
+                "size": 22,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "teal"
+                },
+                "weight": "fill"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_031S": {
+            "id": "el_031S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "tealsoft"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fixed",
+                "value": 48
+              },
+              "height": {
+                "type": "fixed",
+                "value": 48
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 16,
+                "br": 16,
+                "tl": 16,
+                "tr": 16
+              }
+            },
+            "states": [],
+            "caption": "Mark"
+          },
+          "el_032T": {
+            "id": "el_032T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "label"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "teal"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 18,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Our house rule",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Наше правило",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Naše pravilo",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_033T": {
+            "id": "el_033T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h1"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 6,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Nimbus is for everyone",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Nimbus је за све",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Nimbus je za sve",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_034T": {
+            "id": "el_034T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 12,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Hosts and guests here come from everywhere. To use Nimbus, please agree to treat every person you meet through it with respect, and without judgement.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Домаћини и гости долазе са свих страна. Да бисте користили Nimbus, прихватите да се према свакој особи коју преко њега сретнете односите с уважавањем и без осуђивања.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Domaćini i gosti dolaze sa svih strana. Da biste koristili Nimbus, prihvatite da se prema svakoj osobi koju preko njega sretnete odnosite s uvažavanjem i bez osuđivanja.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_035T": {
+            "id": "el_035T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 10,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "This applies to messages, reviews and stays.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Ово се односи на поруке, оцене и боравке.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Ovo se odnosi na poruke, ocene i boravke.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_036S": {
+            "id": "el_036S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 72,
+                "left": 24,
+                "right": 24,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Commitment"
+          },
+          "el_037T": {
+            "id": "el_037T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "btn"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "on"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Agree and continue",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Прихватам и настављам",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Prihvatam i nastavljam",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_038S": {
+            "id": "el_038S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "teal"
+                  }
+                }
+              ],
+              "width": {
+                "type": "auto"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 54
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "left": 20,
+                "type": "fixed",
+                "right": 20,
+                "bottom": 88
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [],
+            "caption": "Button Agree and continue",
+            "interactions": [
+              {
+                "id": "int_038S",
+                "actions": [
+                  {
+                    "id": "act_agree",
+                    "type": "navigate",
+                    "payload": {
+                      "type": "screen",
+                      "screen": "scr_notify"
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_039T": {
+            "id": "el_039T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "btn"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Decline",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Не прихватам",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Ne prihvatam",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_040S": {
+            "id": "el_040S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "width": {
+                "type": "auto"
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 1
+              },
+              "height": {
+                "type": "fixed",
+                "value": 54
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "left": 20,
+                "type": "fixed",
+                "right": 20,
+                "bottom": 22
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [],
+            "caption": "Button Decline",
+            "interactions": [
+              {
+                "id": "int_040S",
+                "actions": [
+                  {
+                    "id": "act_decline",
+                    "type": "navigate",
+                    "payload": {
+                      "type": "screen",
+                      "screen": "scr_declined"
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          }
+        },
+        "hierarchy": {
+          "id": "root",
+          "children": [
+            {
+              "id": "el_036S",
+              "children": [
+                {
+                  "id": "el_031S",
+                  "children": [
+                    {
+                      "id": "el_030I"
+                    }
+                  ]
+                },
+                {
+                  "id": "el_032T"
+                },
+                {
+                  "id": "el_033T"
+                },
+                {
+                  "id": "el_034T"
+                },
+                {
+                  "id": "el_035T"
+                }
+              ]
+            },
+            {
+              "id": "el_040S",
+              "children": [
+                {
+                  "id": "el_039T"
+                }
+              ]
+            },
+            {
+              "id": "el_038S",
+              "children": [
+                {
+                  "id": "el_037T"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selectableGroups": []
+    },
+    {
+      "id": "scr_declined",
+      "props": {
+        "fill": [
+          {
+            "type": "color",
+            "color": {
+              "type": "color-style",
+              "colorId": "sand"
+            }
+          }
+        ],
+        "layout": {
+          "alignH": "start",
+          "alignV": "start",
+          "direction": "vertical",
+          "distribution": {
+            "gap": 0,
+            "type": "gap"
+          }
+        },
+        "padding": {
+          "top": 0,
+          "left": 0,
+          "right": 0,
+          "bottom": 170
+        },
+        "safeArea": false,
+        "statusBar": false,
+        "scrollable": true,
+        "progressBar": {
+          "enabled": false
+        },
+        "statusBarTheme": "light"
+      },
+      "caption": "Declined",
+      "elements": {
+        "map": {
+          "el_041I": {
+            "id": "el_041I",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "ArrowLeft",
+                "size": 20,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "ink"
+                },
+                "weight": "regular"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_042S": {
+            "id": "el_042S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fixed",
+                "value": 40
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 1
+              },
+              "height": {
+                "type": "fixed",
+                "value": 40
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": [],
+            "caption": "Back",
+            "interactions": [
+              {
+                "id": "int_042S",
+                "actions": [
+                  {
+                    "id": "act_back",
+                    "type": "navigate",
+                    "payload": {
+                      "type": "screen",
+                      "screen": "scr_values"
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_043T": {
+            "id": "el_043T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h1"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 28,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "You can't continue without agreeing",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Без прихватања не можете наставити",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Bez prihvatanja ne možete nastaviti",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_044T": {
+            "id": "el_044T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 12,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "The house rule is what keeps Nimbus usable for the people hosting and the people staying. Without it we can't set up your account — but you can go back and take another look.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Ово правило је оно што Nimbus чини употребљивим и за домаћине и за госте. Без њега не можемо направити ваш налог — али можете се вратити и поново га погледати.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Ovo pravilo je ono što Nimbus čini upotrebljivim i za domaćine i za goste. Bez njega ne možemo napraviti vaš nalog — ali možete se vratiti i ponovo ga pogledati.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_045S": {
+            "id": "el_045S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 20,
+                "left": 24,
+                "right": 24,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Declined"
+          },
+          "el_046T": {
+            "id": "el_046T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "btn"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "on"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Back to the house rule",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Врати се на правило",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Vrati se na pravilo",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_047S": {
+            "id": "el_047S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "teal"
+                  }
+                }
+              ],
+              "width": {
+                "type": "auto"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 54
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "left": 20,
+                "type": "fixed",
+                "right": 20,
+                "bottom": 88
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [],
+            "caption": "Button Back to the house rule",
+            "interactions": [
+              {
+                "id": "int_047S",
+                "actions": [
+                  {
+                    "id": "act_reread",
+                    "type": "navigate",
+                    "payload": {
+                      "type": "screen",
+                      "screen": "scr_values"
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_048T": {
+            "id": "el_048T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "btn"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Leave for now",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Изађи за сада",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Izađi za sada",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_049S": {
+            "id": "el_049S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "width": {
+                "type": "auto"
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 1
+              },
+              "height": {
+                "type": "fixed",
+                "value": 54
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "left": 20,
+                "type": "fixed",
+                "right": 20,
+                "bottom": 22
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [],
+            "caption": "Button Leave for now",
+            "interactions": [
+              {
+                "id": "int_049S",
+                "actions": [
+                  {
+                    "id": "act_leave",
+                    "type": "closeFlow"
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          }
+        },
+        "hierarchy": {
+          "id": "root",
+          "children": [
+            {
+              "id": "el_045S",
+              "children": [
+                {
+                  "id": "el_042S",
+                  "children": [
+                    {
+                      "id": "el_041I"
+                    }
+                  ]
+                },
+                {
+                  "id": "el_043T"
+                },
+                {
+                  "id": "el_044T"
+                }
+              ]
+            },
+            {
+              "id": "el_049S",
+              "children": [
+                {
+                  "id": "el_048T"
+                }
+              ]
+            },
+            {
+              "id": "el_047S",
+              "children": [
+                {
+                  "id": "el_046T"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selectableGroups": []
+    },
+    {
+      "id": "scr_notify",
+      "props": {
+        "fill": [
+          {
+            "type": "color",
+            "color": {
+              "type": "color-style",
+              "colorId": "sand"
+            }
+          }
+        ],
+        "layout": {
+          "alignH": "start",
+          "alignV": "start",
+          "direction": "vertical",
+          "distribution": {
+            "gap": 0,
+            "type": "gap"
+          }
+        },
+        "padding": {
+          "top": 0,
+          "left": 0,
+          "right": 0,
+          "bottom": 170
+        },
+        "safeArea": false,
+        "statusBar": false,
+        "scrollable": true,
+        "progressBar": {
+          "enabled": false
+        },
+        "statusBarTheme": "light"
+      },
+      "caption": "Notifications",
+      "elements": {
+        "map": {
+          "el_050T": {
+            "id": "el_050T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Trip updates and deals",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Обавештења о путовању и понуде",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Obaveštenja o putovanju i ponude",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_051T": {
+            "id": "el_051T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "label"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 2,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Check-in details, price drops, nothing else.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Детаљи о пријави, снижења цена, ништа друго.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Detalji o prijavi, sniženja cena, ništa drugo.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_052S": {
+            "id": "el_052S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Copy"
+          },
+          "el_053S": {
+            "id": "el_053S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fixed",
+                "value": 22
+              },
+              "height": {
+                "type": "fixed",
+                "value": 22
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": [],
+            "caption": "Knob"
+          },
+          "el_054S": {
+            "id": "el_054S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "line"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fixed",
+                "value": 50
+              },
+              "height": {
+                "type": "fixed",
+                "value": 30
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 0,
+                "left": 4,
+                "right": 4,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": [],
+            "caption": "Switch",
+            "propsByState": {
+              "selected": {
+                "fill": [
+                  {
+                    "type": "color",
+                    "color": {
+                      "type": "color-style",
+                      "colorId": "teal"
+                    }
+                  }
+                ],
+                "layout": {
+                  "alignH": "end",
+                  "alignV": "center",
+                  "direction": "horizontal",
+                  "distribution": {
+                    "gap": 0,
+                    "type": "gap"
+                  }
+                }
+              }
+            }
+          },
+          "el_055S": {
+            "id": "el_055S",
+            "type": "selectable",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fill"
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 1
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 14,
+                  "type": "gap"
+                }
+              },
+              "default": true,
+              "groupId": "notify",
+              "padding": {
+                "top": 16,
+                "left": 16,
+                "right": 16,
+                "bottom": 16
+              },
+              "customId": "trip_updates",
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [
+              {
+                "id": "selected",
+                "type": "system"
+              }
+            ],
+            "caption": "Toggle",
+            "propsByState": {
+              "selected": {
+                "border": {
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "teal"
+                  },
+                  "style": "solid",
+                  "width": 2
+                }
+              }
+            }
+          },
+          "el_056I": {
+            "id": "el_056I",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "Bell",
+                "size": 24,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "teal"
+                },
+                "weight": "regular"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_057S": {
+            "id": "el_057S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "tealsoft"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fixed",
+                "value": 52
+              },
+              "height": {
+                "type": "fixed",
+                "value": 52
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 17,
+                "br": 17,
+                "tl": 17,
+                "tr": 17
+              }
+            },
+            "states": [],
+            "caption": "Mark"
+          },
+          "el_058T": {
+            "id": "el_058T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h1"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 20,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Turn on notifications?",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Да укључимо обавештења?",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Da uključimo obaveštenja?",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_059T": {
+            "id": "el_059T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 10,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "So you don't miss a check-in detail or a price drop on a place you saved.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Да не пропустите детаљ о пријави или снижење за смештај који сте сачували.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Da ne propustite detalj o prijavi ili sniženje za smeštaj koji ste sačuvali.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_060S": {
+            "id": "el_060S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "margin": {
+                "top": 24,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Options"
+          },
+          "el_061S": {
+            "id": "el_061S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 84,
+                "left": 20,
+                "right": 20,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Notify"
+          },
+          "el_062T": {
+            "id": "el_062T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "btn"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "on"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Yes, notify me",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Да, обавести ме",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Da, obavesti me",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_063S": {
+            "id": "el_063S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "teal"
+                  }
+                }
+              ],
+              "width": {
+                "type": "auto"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 54
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "left": 20,
+                "type": "fixed",
+                "right": 20,
+                "bottom": 88
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [],
+            "caption": "Button Yes, notify me",
+            "interactions": [
+              {
+                "id": "int_063S",
+                "actions": [
+                  {
+                    "id": "act_yes",
+                    "type": "navigate",
+                    "payload": {
+                      "type": "screen",
+                      "screen": "scr_paywall"
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_064T": {
+            "id": "el_064T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "btn"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Skip",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Прескочи",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Preskoči",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_065S": {
+            "id": "el_065S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "width": {
+                "type": "auto"
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 1
+              },
+              "height": {
+                "type": "fixed",
+                "value": 54
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "left": 20,
+                "type": "fixed",
+                "right": 20,
+                "bottom": 22
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [],
+            "caption": "Button Skip",
+            "interactions": [
+              {
+                "id": "int_065S",
+                "actions": [
+                  {
+                    "id": "act_skip",
+                    "type": "navigate",
+                    "payload": {
+                      "type": "screen",
+                      "screen": "scr_paywall"
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          }
+        },
+        "hierarchy": {
+          "id": "root",
+          "children": [
+            {
+              "id": "el_061S",
+              "children": [
+                {
+                  "id": "el_057S",
+                  "children": [
+                    {
+                      "id": "el_056I"
+                    }
+                  ]
+                },
+                {
+                  "id": "el_058T"
+                },
+                {
+                  "id": "el_059T"
+                },
+                {
+                  "id": "el_060S",
+                  "children": [
+                    {
+                      "id": "el_055S",
+                      "children": [
+                        {
+                          "id": "el_052S",
+                          "children": [
+                            {
+                              "id": "el_050T"
+                            },
+                            {
+                              "id": "el_051T"
+                            }
+                          ]
+                        },
+                        {
+                          "id": "el_054S",
+                          "children": [
+                            {
+                              "id": "el_053S"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "el_065S",
+              "children": [
+                {
+                  "id": "el_064T"
+                }
+              ]
+            },
+            {
+              "id": "el_063S",
+              "children": [
+                {
+                  "id": "el_062T"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selectableGroups": [
+        {
+          "id": "notify",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "scr_paywall",
+      "props": {
+        "fill": [
+          {
+            "type": "color",
+            "color": {
+              "type": "color-style",
+              "colorId": "sand"
+            }
+          }
+        ],
+        "layout": {
+          "alignH": "start",
+          "alignV": "start",
+          "direction": "vertical",
+          "distribution": {
+            "gap": 0,
+            "type": "gap"
+          }
+        },
+        "padding": {
+          "top": 0,
+          "left": 0,
+          "right": 0,
+          "bottom": 180
+        },
+        "safeArea": false,
+        "statusBar": false,
+        "scrollable": true,
+        "progressBar": {
+          "enabled": false
+        },
+        "statusBarTheme": "light"
+      },
+      "caption": "Paywall",
+      "elements": {
+        "map": {
+          "el_066T": {
+            "id": "el_066T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "label"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "teal"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Nimbus Plus",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Nimbus Plus",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Nimbus Plus",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_067T": {
+            "id": "el_067T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h1"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 6,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Better places, fewer fees",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Бољи смештај, мање накнада",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Bolji smeštaj, manje naknada",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_068T": {
+            "id": "el_068T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "body"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 10,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "No booking fee, free changes, and early access to new stays.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Без накнаде за резервацију, бесплатне промене и ранији приступ новом смештају.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Bez naknade za rezervaciju, besplatne promene i raniji pristup novom smeštaju.",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_069T": {
+            "id": "el_069T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h2"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Yearly",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Годишње",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Godišnje",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_070T": {
+            "id": "el_070T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "label"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 2,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Best value — 12 months",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Најбоља вредност — 12 месеци",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Najbolja vrednost — 12 meseci",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_071S": {
+            "id": "el_071S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Copy"
+          },
+          "el_072I": {
+            "id": "el_072I",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "Check",
+                "size": 13,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "on"
+                },
+                "weight": "bold"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_073S": {
+            "id": "el_073S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 24
+              },
+              "height": {
+                "type": "fixed",
+                "value": 24
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              },
+              "visibility": {
+                "type": "hidden"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": [],
+            "caption": "Tick",
+            "propsByState": {
+              "selected": {
+                "fill": [
+                  {
+                    "type": "color",
+                    "color": {
+                      "type": "color-style",
+                      "colorId": "teal"
+                    }
+                  }
+                ],
+                "visibility": {
+                  "type": "visible"
+                }
+              }
+            }
+          },
+          "el_074S": {
+            "id": "el_074S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 12,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Head"
+          },
+          "el_075T": {
+            "id": "el_075T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h2"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "teal"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 8,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "variable",
+                          "attrs": {
+                            "variableId": "6cdd73d5-bdb2-4b2e-c207-784fbcb2f408.prod_price_per_month"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "variable",
+                          "attrs": {
+                            "variableId": "6cdd73d5-bdb2-4b2e-c207-784fbcb2f408.prod_price_per_month"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "variable",
+                          "attrs": {
+                            "variableId": "6cdd73d5-bdb2-4b2e-c207-784fbcb2f408.prod_price_per_month"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_076S": {
+            "id": "el_076S",
+            "type": "product",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fill"
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 2
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "default": true,
+              "groupId": "plans",
+              "padding": {
+                "top": 14,
+                "left": 16,
+                "right": 16,
+                "bottom": 14
+              },
+              "product": {
+                "id": "6cdd73d5-bdb2-4b2e-c207-784fbcb2f408"
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [
+              {
+                "id": "selected",
+                "type": "system"
+              }
+            ],
+            "caption": "Plan Yearly",
+            "propsByState": {
+              "selected": {
+                "fill": [
+                  {
+                    "type": "color",
+                    "color": {
+                      "type": "color-style",
+                      "colorId": "tealsoft"
+                    }
+                  }
+                ],
+                "border": {
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "teal"
+                  },
+                  "style": "solid",
+                  "width": 2
+                }
+              }
+            }
+          },
+          "el_077T": {
+            "id": "el_077T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h2"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "ink"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Monthly",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Месечно",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Mesečno",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_078T": {
+            "id": "el_078T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "label"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 2,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Cancel any time",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Откажите било кад",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Otkažite bilo kad",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_079S": {
+            "id": "el_079S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Copy"
+          },
+          "el_080I": {
+            "id": "el_080I",
+            "type": "icon",
+            "props": {
+              "icon": {
+                "name": "Check",
+                "size": 13,
+                "type": "phosphor",
+                "color": {
+                  "type": "color-style",
+                  "colorId": "on"
+                },
+                "weight": "bold"
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": []
+          },
+          "el_081S": {
+            "id": "el_081S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fixed",
+                "value": 24
+              },
+              "height": {
+                "type": "fixed",
+                "value": 24
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              },
+              "visibility": {
+                "type": "hidden"
+              },
+              "borderRadius": {
+                "bl": 9999,
+                "br": 9999,
+                "tl": 9999,
+                "tr": 9999
+              }
+            },
+            "states": [],
+            "caption": "Tick",
+            "propsByState": {
+              "selected": {
+                "fill": [
+                  {
+                    "type": "color",
+                    "color": {
+                      "type": "color-style",
+                      "colorId": "teal"
+                    }
+                  }
+                ],
+                "visibility": {
+                  "type": "visible"
+                }
+              }
+            }
+          },
+          "el_082S": {
+            "id": "el_082S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 12,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Head"
+          },
+          "el_083T": {
+            "id": "el_083T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "h2"
+              },
+              "align": "left",
+              "color": {
+                "type": "color-style",
+                "colorId": "teal"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "margin": {
+                "top": 8,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "variable",
+                          "attrs": {
+                            "variableId": "fbc63856-bf3a-45d1-7bee-dd4bcb54b10a.prod_price"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "variable",
+                          "attrs": {
+                            "variableId": "fbc63856-bf3a-45d1-7bee-dd4bcb54b10a.prod_price"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "variable",
+                          "attrs": {
+                            "variableId": "fbc63856-bf3a-45d1-7bee-dd4bcb54b10a.prod_price"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_084S": {
+            "id": "el_084S",
+            "type": "product",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "card"
+                  }
+                }
+              ],
+              "width": {
+                "type": "fill"
+              },
+              "border": {
+                "color": {
+                  "type": "color-style",
+                  "colorId": "line"
+                },
+                "style": "solid",
+                "width": 2
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "default": false,
+              "groupId": "plans",
+              "padding": {
+                "top": 14,
+                "left": 16,
+                "right": 16,
+                "bottom": 14
+              },
+              "product": {
+                "id": "fbc63856-bf3a-45d1-7bee-dd4bcb54b10a"
+              },
+              "position": {
+                "type": "relative"
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [
+              {
+                "id": "selected",
+                "type": "system"
+              }
+            ],
+            "caption": "Plan Monthly",
+            "propsByState": {
+              "selected": {
+                "fill": [
+                  {
+                    "type": "color",
+                    "color": {
+                      "type": "color-style",
+                      "colorId": "tealsoft"
+                    }
+                  }
+                ],
+                "border": {
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "teal"
+                  },
+                  "style": "solid",
+                  "width": 2
+                }
+              }
+            }
+          },
+          "el_085S": {
+            "id": "el_085S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 12,
+                  "type": "gap"
+                }
+              },
+              "margin": {
+                "top": 26,
+                "left": 0,
+                "right": 0,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Plans"
+          },
+          "el_086S": {
+            "id": "el_086S",
+            "type": "stack",
+            "props": {
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": {
+                "alignH": "start",
+                "alignV": "start",
+                "direction": "vertical",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "padding": {
+                "top": 76,
+                "left": 20,
+                "right": 20,
+                "bottom": 0
+              },
+              "position": {
+                "type": "relative"
+              }
+            },
+            "states": [],
+            "caption": "Offer"
+          },
+          "el_087T": {
+            "id": "el_087T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "btn"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "on"
+              },
+              "width": {
+                "type": "fill"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Start Nimbus Plus",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Покрени Nimbus Plus",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Pokreni Nimbus Plus",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "type": "relative"
+              },
+              "decoration": "none"
+            },
+            "states": []
+          },
+          "el_088S": {
+            "id": "el_088S",
+            "type": "stack",
+            "props": {
+              "fill": [
+                {
+                  "type": "color",
+                  "color": {
+                    "type": "color-style",
+                    "colorId": "teal"
+                  }
+                }
+              ],
+              "width": {
+                "type": "auto"
+              },
+              "height": {
+                "type": "fixed",
+                "value": 54
+              },
+              "layout": {
+                "alignH": "center",
+                "alignV": "center",
+                "direction": "horizontal",
+                "distribution": {
+                  "gap": 0,
+                  "type": "gap"
+                }
+              },
+              "position": {
+                "left": 20,
+                "type": "fixed",
+                "right": 20,
+                "bottom": 56
+              },
+              "borderRadius": {
+                "bl": 14,
+                "br": 14,
+                "tl": 14,
+                "tr": 14
+              }
+            },
+            "states": [],
+            "caption": "Button Start Nimbus Plus",
+            "interactions": [
+              {
+                "id": "int_088S",
+                "actions": [
+                  {
+                    "id": "act_buy",
+                    "type": "purchase",
+                    "payload": {
+                      "product": {
+                        "type": "var",
+                        "variableId": "plans.selectedProduct"
+                      }
+                    }
+                  }
+                ],
+                "trigger": "tap"
+              }
+            ]
+          },
+          "el_089T": {
+            "id": "el_089T",
+            "type": "text",
+            "props": {
+              "font": {
+                "preset": "small"
+              },
+              "align": "center",
+              "color": {
+                "type": "color-style",
+                "colorId": "muted"
+              },
+              "width": {
+                "type": "auto"
+              },
+              "height": {
+                "type": "hug"
+              },
+              "layout": "auto-height",
+              "content": {
+                "values": {
+                  "en": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Restore purchase   ·   Terms   ·   Privacy",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Обнови куповину   ·   Услови   ·   Приватност",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "sr-Latn": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "text": "Obnovi kupovinu   ·   Uslovi   ·   Privatnost",
+                          "type": "text",
+                          "attrs": {
+                            "bold": false,
+                            "italic": false,
+                            "underline": false,
+                            "strikethrough": false
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "_localizable": true
+              },
+              "position": {
+                "left": 20,
+                "type": "fixed",
+                "right": 20,
+                "bottom": 22
+              },
+              "decoration": "none"
+            },
+            "states": []
+          }
+        },
+        "hierarchy": {
+          "id": "root",
+          "children": [
+            {
+              "id": "el_086S",
+              "children": [
+                {
+                  "id": "el_066T"
+                },
+                {
+                  "id": "el_067T"
+                },
+                {
+                  "id": "el_068T"
+                },
+                {
+                  "id": "el_085S",
+                  "children": [
+                    {
+                      "id": "el_076S",
+                      "children": [
+                        {
+                          "id": "el_074S",
+                          "children": [
+                            {
+                              "id": "el_071S",
+                              "children": [
+                                {
+                                  "id": "el_069T"
+                                },
+                                {
+                                  "id": "el_070T"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "el_073S",
+                              "children": [
+                                {
+                                  "id": "el_072I"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "el_075T"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "el_084S",
+                      "children": [
+                        {
+                          "id": "el_082S",
+                          "children": [
+                            {
+                              "id": "el_079S",
+                              "children": [
+                                {
+                                  "id": "el_077T"
+                                },
+                                {
+                                  "id": "el_078T"
+                                }
+                              ]
+                            },
+                            {
+                              "id": "el_081S",
+                              "children": [
+                                {
+                                  "id": "el_080I"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "el_083T"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "el_089T"
+            },
+            {
+              "id": "el_088S",
+              "children": [
+                {
+                  "id": "el_087T"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "selectableGroups": [
+        {
+          "id": "plans",
+          "type": "product"
+        }
+      ]
+    }
+  ],
+  "locales": [
+    {
+      "id": "en",
+      "code": "en",
+      "name": "English"
+    },
+    {
+      "id": "sr",
+      "code": "sr",
+      "name": "Serbian"
+    },
+    {
+      "id": "sr-Latn",
+      "code": "sr-Latn",
+      "name": "Serbian (Latin)"
+    }
+  ],
+  "defaultLocale": "en",
+  "variables": [],
+  "theme": {
+    "colors": [
+      {
+        "id": "sand",
+        "dark": {
+          "hex": "#12100D"
+        },
+        "name": "Sand",
+        "light": {
+          "hex": "#FBF7F2"
+        }
+      },
+      {
+        "id": "card",
+        "dark": {
+          "hex": "#1C1A16"
+        },
+        "name": "Card",
+        "light": {
+          "hex": "#FFFFFF"
+        }
+      },
+      {
+        "id": "ink",
+        "dark": {
+          "hex": "#F2EFE9"
+        },
+        "name": "Ink",
+        "light": {
+          "hex": "#12211E"
+        }
+      },
+      {
+        "id": "muted",
+        "dark": {
+          "hex": "#9AA5A0"
+        },
+        "name": "Muted",
+        "light": {
+          "hex": "#6B7A75"
+        }
+      },
+      {
+        "id": "teal",
+        "dark": {
+          "hex": "#128975"
+        },
+        "name": "Teal",
+        "light": {
+          "hex": "#0E6B5C"
+        }
+      },
+      {
+        "id": "tealsoft",
+        "dark": {
+          "hex": "#14332C"
+        },
+        "name": "Teal soft",
+        "light": {
+          "hex": "#DCEDE8"
+        }
+      },
+      {
+        "id": "line",
+        "dark": {
+          "hex": "#2B2721"
+        },
+        "name": "Line",
+        "light": {
+          "hex": "#E7E0D6"
+        }
+      },
+      {
+        "id": "on",
+        "dark": {
+          "hex": "#FFFFFF"
+        },
+        "name": "On teal",
+        "light": {
+          "hex": "#FFFFFF"
+        }
+      }
+    ],
+    "typography": [
+      {
+        "id": "h1",
+        "name": "H1",
+        "settings": {
+          "size": 30,
+          "weight": "bold"
+        }
+      },
+      {
+        "id": "h2",
+        "name": "H2",
+        "settings": {
+          "size": 22,
+          "weight": "bold"
+        }
+      },
+      {
+        "id": "body",
+        "name": "Body",
+        "settings": {
+          "size": 16,
+          "weight": "regular"
+        }
+      },
+      {
+        "id": "label",
+        "name": "Label",
+        "settings": {
+          "size": 13,
+          "weight": "regular"
+        }
+      },
+      {
+        "id": "btn",
+        "name": "Button",
+        "settings": {
+          "size": 17,
+          "weight": "bold"
+        }
+      },
+      {
+        "id": "small",
+        "name": "Small",
+        "settings": {
+          "size": 13,
+          "weight": "regular"
+        }
+      },
+      {
+        "id": "mark",
+        "name": "Mark",
+        "settings": {
+          "size": 20,
+          "weight": "bold"
+        }
+      }
+    ]
+  },
+  "components": {},
+  "_meta": {
+    "icons": [
+      {
+        "raw": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" viewBox=\"0 0 256 256\"><path d=\"M224,120v96a8,8,0,0,1-8,8H160a8,8,0,0,1-8-8V164a4,4,0,0,0-4-4H108a4,4,0,0,0-4,4v52a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V120a16,16,0,0,1,4.69-11.31l80-80a16,16,0,0,1,22.62,0l80,80A16,16,0,0,1,224,120Z\"></path></svg>",
+        "name": "House",
+        "weight": "fill"
+      },
+      {
+        "raw": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" viewBox=\"0 0 256 256\"><path d=\"M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z\"></path></svg>",
+        "name": "X",
+        "weight": "regular"
+      },
+      {
+        "raw": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" viewBox=\"0 0 256 256\"><path d=\"M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z\"></path></svg>",
+        "name": "ArrowLeft",
+        "weight": "regular"
+      },
+      {
+        "raw": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" viewBox=\"0 0 256 256\"><path d=\"M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z\"></path></svg>",
+        "name": "Bell",
+        "weight": "regular"
+      },
+      {
+        "raw": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" viewBox=\"0 0 256 256\"><path d=\"M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z\"></path></svg>",
+        "name": "Check",
+        "weight": "bold"
+      }
+    ],
+    "fonts": [],
+    "screens": {
+      "scr_paywall": {
+        "products": [
+          {
+            "id": "6cdd73d5-bdb2-4b2e-c207-784fbcb2f408",
+            "flowProductId": "19e4551e-c6b1-521c-d747-16a3aa10cebc"
+          },
+          {
+            "id": "fbc63856-bf3a-45d1-7bee-dd4bcb54b10a",
+            "flowProductId": "0608c255-6567-50ee-bb94-a046416ab793"
+          }
+        ]
+      }
+    }
+  },
+  "schemaVersion": 10
+}

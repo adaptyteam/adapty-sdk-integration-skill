@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Link lint: every URL the skill tells an agent (or a human) to open must
- * work, the way an AGENT would fetch it.
+ * Link lint: every URL ANY skill tells an agent (or a human) to open must
+ * work, the way an AGENT would fetch it. Walks all of `skills/`.
  *
  * - adapty.io/docs pages are verified via their agent-fetchable variant
  *   (<slug>.md, or as-is for *-llms*.txt aggregates). A dead docs link is a
@@ -32,8 +32,11 @@ import {DOCS_BASE, fetchLlmsTxt, fetchText, mapLimit} from './shared.mjs'
 const FOREIGN_DOCS_BASES = ['https://www.revenuecat.com/docs/']
 const isForeignDocs = (url) => FOREIGN_DOCS_BASES.some((base) => url.startsWith(base))
 
-const SKILL_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'skills', 'adapty-sdk-integration')
-const REPO_ROOT = join(SKILL_DIR, '..', '..')
+// Every skill, not just one. This lint covered `adapty-integration` alone until 2026-08-28,
+// which meant a green run said nothing about four of the five skills that ship -- and the
+// runtime agent is instructed to fetch URLs from all of them.
+const SKILLS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'skills')
+const REPO_ROOT = join(SKILLS_DIR, '..')
 const FETCH_CONCURRENCY = 3
 
 // ---------- collect URLs ----------
@@ -54,8 +57,11 @@ function extractUrls(markdown) {
   for (const [i, lineText] of markdown.split('\n').entries()) {
     for (const m of lineText.matchAll(/https:\/\/[^\s)"'`<>\]]+/g)) {
       const url = m[0].replace(/[).,:;!?]+$/, '')
-      // Templates/globs like https://adapty.io/docs/{slug} or /docs/* are instructions, not links.
-      if (/[{}<>*]/.test(url)) continue
+      // Templates, globs and elided examples are instructions, not links:
+      //   https://adapty.io/docs/{slug}   /docs/*   https://\u2026/hero.png
+      // `...` is the redaction marker in pasted sample output (a media URL with the hash
+      // cut out); no real URL carries three consecutive dots.
+      if (/[{}<>*\u2026]/.test(url) || url.includes('...')) continue
       found.push({line: i + 1, url})
     }
   }
@@ -88,7 +94,7 @@ async function checkUrl(url) {
 
 // ---------- main ----------
 
-const files = [...(await markdownFiles(SKILL_DIR))]
+const files = [...(await markdownFiles(SKILLS_DIR))]
 const mentions = [] // {file, line, url}
 for (const file of files) {
   const markdown = await readFile(file, 'utf8')
@@ -144,7 +150,12 @@ for (const {file, line, url} of mentions) {
   }
 }
 
+const skillOf = (file) => file.split('/')[1] ?? '(root)'
+const bySkill = new Map()
+for (const {file} of mentions) bySkill.set(skillOf(file), (bySkill.get(skillOf(file)) ?? 0) + 1)
+const coverage = [...bySkill.entries()].sort().map(([s, n]) => `${s} ${n}`).join(', ')
+console.log(`\ncoverage: ${coverage}`)
 console.log(
-  `\n${files.length} files, ${mentions.length} link mentions (${uniqueUrls.length} unique) -> ${errors} dead docs links, ${warnings} warnings, ${infraProblems} unverifiable`,
+  `${files.length} files, ${mentions.length} link mentions (${uniqueUrls.length} unique) -> ${errors} dead docs links, ${warnings} warnings, ${infraProblems} unverifiable`,
 )
 process.exit(infraProblems > 0 ? 2 : errors > 0 ? 1 : 0)

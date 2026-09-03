@@ -1,5 +1,5 @@
 ---
-name: adapty-sdk-integration
+name: adapty-integration
 description: Use when a user wants to integrate Adapty SDK into a mobile app, set up in-app purchases with Adapty, add a paywall to their app, or move to Adapty from another purchase system. Triggers on "integrate Adapty", "add Adapty to my app", "set up subscriptions", "add a paywall", "migrate from RevenueCat", "replace RevenueCat with Adapty", "move off Superwall", or similar.
 ---
 
@@ -99,7 +99,7 @@ Use `AskUserQuestion` for all three together in one call:
 
 1. **Paywall approach** — which do they want?
    - **Paywall Builder** (recommended): Adapty renders paywalls in a no-code visual editor; no paywall UI to build
-     - **iOS, Android, React Native, Flutter, and Kotlin Multiplatform:** Present this option as **Flow Builder** instead. Flow Builder is the v4 successor to Paywall Builder and also supports onboarding flows. The `paywallApproach` state value for this choice on these platforms is `flow_builder`. Note: Flow Builder requires the platform SDK **v4+**; see Stage 1 in `references/ios.md`, `references/android.md`, `references/react-native.md`, `references/flutter.md`, or `references/kmp.md`.
+     - **Every platform** — iOS, Android, React Native, Flutter, Kotlin Multiplatform, Unity, and Capacitor: Present this option as **Flow Builder** instead. Flow Builder is the v4 successor to Paywall Builder and also supports onboarding flows. The `paywallApproach` state value for this choice is `flow_builder`. Note: Flow Builder requires the platform SDK **v4+**; see Stage 1 in `references/<platform>.md` for that platform's version floor and its build requirements, which on Unity and Capacitor changed in v4 (Swift Package Manager instead of CocoaPods on iOS).
    - **Custom paywall**: User builds their own paywall UI; Adapty fetches products and handles purchases
    - **Observer mode** *(not recommended for new projects)*: Keep existing StoreKit/Billing purchase infrastructure unchanged; Adapty only tracks events. Limitations: no paywall management, no A/B testing, manual transaction reporting required. Only suitable if replacing a purchase system is not feasible.
 
@@ -121,7 +121,7 @@ Use `AskUserQuestion` for all three together in one call:
 
 **Some apps show no paywall at all.** If the app only ever *reads* entitlement state — access is bought on the user's website, granted by their backend, or sold through a channel outside the app — then none of the three approaches applies, and forcing one produces a placement and paywall nobody will ever fetch. Set `paywallApproach` to `none` in that case, skip the paywall and placement work in Phase 3 (Steps 4 and 5) and the paywall stage in Phase 4, and record in `ADAPTY_SETUP.md` that no paywall was set up and why. Everything else still applies — activation, identity, entitlement checks, and the store connections. Confirm it with the user before concluding it rather than inferring it from an absent paywall screen, since a paywall that simply has not been built yet is a different situation. On a migration run this is also a signal to read `references/migration.md` section 5 subsection 8: an app that sells outside the stores usually has a backend granting access through the source's API, and that path does not move itself.
 
-**State update:** Set `paywallApproach` to `paywall_builder` (or `flow_builder` on iOS, Android, React Native, Flutter, or Kotlin Multiplatform), `custom`, `observer`, or `none`. Set `integrations` to the array of selected integration keys (e.g. `["amplitude", "appsflyer"]`), or `[]` if none. Set `appPreference` to `existing` or `new`. Set `phasesCompleted = 2`.
+**State update:** Set `paywallApproach` to `flow_builder` (the value on every platform for the builder-rendered choice; `paywall_builder` survives only as the state value a run that predates Flow Builder support may still carry), `custom`, `observer`, or `none`. Set `integrations` to the array of selected integration keys (e.g. `["amplitude", "appsflyer"]`), or `[]` if none. Set `appPreference` to `existing` or `new`. Set `phasesCompleted = 2`.
 
 Use `AskUserQuestion` for any other quick clarifications throughout the integration (e.g., "Did the build succeed?", "What's your App Store product ID?"). Never ask for values that can be retrieved via CLI.
 
@@ -205,7 +205,7 @@ npx adapty@latest paywalls list --app <APP_ID>
 npx adapty@latest placements list --app <APP_ID>
 ```
 
-**Note for `paywallApproach == "flow_builder"`:** the CLI's `paywalls list` does not return Flow Builder flows — flows are dashboard-only. An empty `paywalls list` does **not** mean nothing is set up. In Step 5, the dashboard path will confirm directly with the user whether a flow + placement already exists. `placements list` still works and is the source of truth for placement developer IDs.
+**Note for `paywallApproach == "flow_builder"`:** flows are their own CLI topic, not paywalls — `paywalls list` never returns them, so an empty `paywalls list` does **not** mean nothing is set up. List them with `npx adapty@latest flows list --app <APP_ID>` instead of asking. What the CLI has no command for is *publishing* a flow or attaching one to a placement, so a flow it lists may still be an unpublished draft that no placement points at; Step 5 settles that with the user. `placements list` is the source of truth for placement developer IDs.
 
 Use this to determine the path through Steps 4 and 5:
 
@@ -306,15 +306,42 @@ Then branch by `paywallApproach`:
 
 #### `paywallApproach == "flow_builder"` (Flow Builder) — dashboard path
 
-The CLI cannot create flows or attach them to placements — Flow Builder is dashboard-only. Skip the CLI commands below. For each confirmed location, the user creates a flow and attaches it to a placement in the dashboard.
+The CLI cannot publish a flow or attach one to a placement — both are dashboard-only. Skip the CLI commands below. It *can* build the flow itself: the **`flow-generator`** skill authors the config and saves it as a draft. So the division on this path is fixed and does not depend on who builds the flow — **you or the user can produce it; only the user can publish it and create the flow placement.**
 
 **Create no placement with the CLI on this path — not even as a stopgap, and not "so the code has an ID to point at".** A placement carries a type — flow, paywall, or onboarding — fixed at creation and not convertible afterwards; the CLI creates paywall placements only (an audience entry requires a `paywall_id`); and a developer ID cannot be changed or reused. So a placement created here permanently blocks the flow placement with that ID: the user has to invent a different ID in the dashboard and you have to edit the code to match. This is the same reservation `references/migration.md` section 3 applies to a source's visual-builder paywalls, reached from the greenfield side. When this step is deferred for missing products (see the prerequisite above), the deferred sequence carries the `products create` commands only — no `paywalls create`, no `placements create` — and the flow placement stays a dashboard step in `ADAPTY_SETUP.md`, written with the exact developer ID the code uses.
 
 Ask the user via `AskUserQuestion`:
 
 > "For each location, have you already created a flow in the Adapty Dashboard and attached it to a placement?"
+> - **Build one with me now** — I'll generate the flow from your description or a reference image
 > - **Yes, already set up** — I'll ask for your placement ID(s)
-> - **No, walk me through it** — I'll guide you in the dashboard
+> - **No, walk me through it** — I'll guide you through building it yourself in the dashboard
+
+**If build one with me now: stop the setup interview here.** Ask one thing and nothing else — no template questions, no screen-count questions, no product re-confirmation:
+
+> "Describe the flow you want, or give me a visual reference — a screenshot, a design, a paywall whose look you want. Whatever you already know helps: how many screens, what it should say, which plans it offers."
+
+Then invoke the **`flow-generator`** skill with that answer, once per confirmed location. It owns everything from there — authenticating, creating the flow, binding the products from Step 4, previewing it for the user's approval, and saving. Do not author flow JSON yourself and do not answer its questions on the user's behalf.
+
+**If `flow-generator` is not among your available skills, install it — never hand-author the config instead.** It ships in the same package as this skill, so it is usually already present, possibly namespaced (`adapty-skills:flow-generator`); check both names before concluding it is missing. If it really is absent, get the user's yes via `AskUserQuestion` — this writes to their agent's skill directory — and then run one:
+
+```bash
+# any agentic CLI (Claude Code, Cursor, Copilot, Codex, Gemini CLI, Zed, Amp)
+npx skills add adaptyteam/adapty-skills --skill flow-generator
+
+# Claude Code plugin — installs every skill in the package at once
+claude plugin marketplace add adaptyteam/adapty-skills   # skip if already added
+claude plugin install adapty-skills@adapty
+```
+
+The flow config carries traps that cost real money when they are got wrong — a plan card whose selected state is baked in, a footer that vanishes on device, a carousel that does not swipe — and that skill is where every one of them is checked. If the user declines the install, say so plainly and take the walk-me-through branch below instead.
+
+**`flow-generator` stops at a saved draft, and that is the reason this path stays a dashboard step.** There is no publish command and no way to create a flow placement from the CLI, so when it hands back, the user does both — confirm each with `AskUserQuestion` before moving on:
+
+1. **Publish the flow** — the button at the **top right of the builder**. Until they publish, the SDK gets nothing.
+2. **Create the placement** at [Adapty Dashboard → Placements](https://app.adapty.io/placements) — **Create placement**, set a **Developer ID** (e.g. `main`, `onboarding`, `settings`, the exact string the SDK uses in `Adapty.getFlow`), attach the flow under the **All Users** audience, save.
+
+Then collect the **placement developer ID(s)** via `AskUserQuestion` and continue to Phase 4.
 
 **If already set up:** collect the **placement developer ID** for each location (the user finds it at [Adapty Dashboard → Placements](https://app.adapty.io/placements) — the **Developer ID** column). Set as placement ID(s) and continue to Phase 4.
 
@@ -362,7 +389,7 @@ If the user says they'd rather do it manually, walk them through these five step
 | 1. Connect store | App settings → General | App Store or Google Play connected |
 | 2. Copy Public SDK key | App settings → General → API keys | The key string for `Adapty.activate()` |
 | 3. Create product(s) | Products page | At least one product created |
-| 4. Create paywall/flow + placement | Paywalls or Flows page, then Placements page | Placement ID for `getFlow()` — or `getPaywall()` on Capacitor and Unity, where it takes `getFlow`'s place. The fetch call depends on the **platform**, not on the paywall approach: a custom paywall on a `getFlow` platform still uses `getFlow`. `references/<platform>.md` Stage 2 is authoritative |
+| 4. Create paywall/flow + placement | Paywalls or Flows page, then Placements page | Placement ID for `getFlow()`. Every platform's v4 SDK fetches with `getFlow`, and the fetch call depends on the **platform SDK major version**, not on the paywall approach: a custom paywall on v4 still uses `getFlow`, and only a project pinned to a v3 SDK still uses `getPaywall`. `references/<platform>.md` Stage 2 is authoritative |
 | 5. Assign access level to product | Products page | Default `"premium"` works for most apps |
 
 Full dashboard walkthrough: `https://adapty.io/docs/quickstart.md`
@@ -470,5 +497,5 @@ Example with real values:
 ```bash
 curl -s -X POST "https://feedback-endpoint-eandreeva-twrs-projects.vercel.app/api/sdk-integration-feedback" \
   -H "Content-Type: application/json" \
-  -d '{"platform": "ios", "paywall_approach": "paywall_builder", "integrations": "amplitude, appsflyer", "phases_completed": 4, "checkpoints_passed": 5, "friction_rounds": 0, "sentiment": "positive", "rating": 4, "app_id": "a1b2c3d4", "migration_source": null, "slack_text": "[ios · paywall_builder] Phase 4 ✓ · Rating: 4/5 · Sentiment: positive · 0 friction rounds · App: a1b2c3d4"}'
+  -d '{"platform": "ios", "paywall_approach": "flow_builder", "integrations": "amplitude, appsflyer", "phases_completed": 4, "checkpoints_passed": 5, "friction_rounds": 0, "sentiment": "positive", "rating": 4, "app_id": "a1b2c3d4", "migration_source": null, "slack_text": "[ios · flow_builder] Phase 4 ✓ · Rating: 4/5 · Sentiment: positive · 0 friction rounds · App: a1b2c3d4"}'
 ```
