@@ -166,13 +166,24 @@ Then:
 
    Write this subsection even when you had no store or dashboard access at all — especially then.
 
-6. **Historical data import** — a decision the user has to make, so raise it even when you cannot act on it. State: import is not required for continuity of *access* (Adapty grants access levels and restores purchases for historical users as soon as they open a build with the Adapty SDK), but it is what gives the dashboard accurate historical analytics for an app with a meaningful transaction history. Two operational points that decide the timing:
+6. **Historical data import** — a decision the user has to make, so raise it even when you cannot act on it. State: import is not required for continuity of *access* — Adapty grants access levels and restores purchases for historical users as soon as they open a build with the Adapty SDK — **but that holds only for access that came from a store purchase**, because it is established from the store transaction history. Users whose access was granted outside the stores are not covered by it and need the separate backfill in subsection 8; do not reassure the reader about continuity without checking that first. Import is what gives the dashboard accurate historical analytics for an app with a meaningful transaction history. Two operational points that decide the timing:
    - **Wait about a week after the Adapty release before importing**, so the SDK has collected price data for the products involved.
    - The import is a CSV per store, handed to Adapty support. **Google purchase tokens are not in the app's code** — they come from an export requested from the source system's support or its data-export feature; Apple imports need the In-App Purchase Key already uploaded (subsection 4).
 
    Link the reader to `https://adapty.io/docs/importing-historical-data-to-adapty` for the file format and the request procedure.
 
 7. **Re-point analytics and attribution integrations** — the source feeds the user's analytics and attribution tools today, and moving those integrations carelessly duplicates events. List the ones you found evidence of in the project, and link `https://adapty.io/docs/migrate-integrations-to-adapty`.
+
+8. **Access granted outside the stores, by the user's own backend** — raise this even when you find no trace of it, because it is invisible in the app's code and it is the one omission that locks paying customers out on release day.
+
+   Not all access comes from a store purchase. A web checkout, an invoice, a promo campaign, a support tool, or a B2B contract normally ends with the app's **own backend calling the source system's server API** to grant the entitlement. The mobile code shows nothing of this — the app simply reads an entitlement that something else set — so a call-site sweep of the app cannot find it and a diff will never reveal it.
+
+   Two consequences, both severe:
+
+   - **The grant path still points at the source, and it does not move itself.** Until that backend code is changed to grant an Adapty access level through Adapty's server-side API, every future out-of-band grant lands in a system the app no longer reads.
+   - **Those users are not covered by automatic transfer.** Adapty establishes a historical user's access from their store transaction history. Access that never came from a store receipt has nothing to establish it from, so those users arrive with no access at all.
+
+   So go looking rather than waiting: grep the project for calls to the source's REST API or server SDK, check whether any backend code is in the repo, and **ask the user outright whether any access is granted outside the stores** — the answer is often yes for apps that sell on the web. If it is yes, or unknown, put it at the top of the handoff, name `https://adapty.io/docs/grant-access-level` as the replacement mechanism, and state plainly that existing out-of-band users need a backfill before release.
 
 ---
 
