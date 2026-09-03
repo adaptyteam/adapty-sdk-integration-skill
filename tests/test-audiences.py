@@ -363,6 +363,118 @@ check('the problem is a one-line string, never a raise -- the caller turns it in
       'a message, and an exception here would land on the tool-bug exit code',
       isinstance(m._audience_problem({'content_type': 'paywall'}), str))
 
+# ---------- Round 4: the legacy multi-segment audience (readable, unwritable) ----------
+#
+# Source: adapty-dashboard-api!13221 @ d0b878cb. The audience DTO's field_validator
+# caps segment_ids at ONE entry, and both read factories bypass it with
+# `model_construct` so legacy multi-segment rows survive a read round-trip. So such
+# an audience READS fine and CANNOT be written back -- and `to_flow_audience` carries
+# segment_ids verbatim, by design, because that is the targeting the migration must
+# not change. Without a guard the plan looks clean and dies at `placements create`.
+
+LEGACY = [
+    {'id': 'pl-multi', 'developer_id': 'legacy', 'title': 'Legacy',
+     'audiences': [{'paywall_id': 'pw-1', 'segment_ids': ['s1', 's2'], 'priority': 0}]},
+    {'id': 'pl-ok', 'developer_id': 'fine', 'title': 'Fine',
+     'audiences': [{'paywall_id': 'pw-1', 'segment_ids': ['s1'], 'priority': 0}]},
+]
+def plan_or_raised(*a, **k):
+    """build_plan's output, or a marker if it raised.
+
+    Defensive because `build_create_command` REFUSES a multi-segment array, so a
+    build_plan that failed to detect the row first would raise straight through
+    this module-level call and abort the suite -- and an aborted suite reports
+    zero failures while every later check merely looks green. Turning that into a
+    named check is also the better assertion: on valid readable input build_plan
+    must REPORT the problem, never raise.
+    """
+    try:
+        return m.build_plan(*a, **k), None
+    except Exception as exc:                              # noqa: BLE001
+        return {'placements': [], 'summary': {}}, f'{type(exc).__name__}: {exc}'
+
+
+legacy_plan, legacy_raised = plan_or_raised(LEGACY, flows={'pw-1': 'f-1'}, app_id='app-1')
+check('build_plan REPORTS a multi-segment row rather than raising -- the argv '
+      'guard downstream would raise, so detecting it here is what keeps a valid '
+      'inventory from looking like a crash',
+      legacy_raised is None, str(legacy_raised))
+legacy_rows = {r['source_developer_id']: r for r in legacy_plan['placements']}
+
+check('a multi-segment audience is FLAGGED on the row, with the offending index',
+      legacy_rows.get('legacy', {}).get('multi_segment_audiences') == [0],
+      str(legacy_rows.get('legacy', {})))
+check('AND NO COMMAND IS EMITTED FOR IT -- an argv the API will refuse is worse '
+      'than no argv, on the one irreversible command in the skill',
+      'command' not in legacy_rows.get('legacy', {}), str(legacy_rows.get('legacy', {})))
+check('the reason names the placement', "'legacy'" in
+      legacy_rows.get('legacy', {}).get('command_unavailable', ''),
+      legacy_rows.get('legacy', {}).get('command_unavailable'))
+check('the reason names how many audiences are affected and the worst count',
+      '1 audience(s)' in legacy_rows.get('legacy', {}).get('command_unavailable', '')
+      and 'up to 2' in legacy_rows.get('legacy', {}).get('command_unavailable', ''),
+      legacy_rows.get('legacy', {}).get('command_unavailable'))
+check('the reason says it is READABLE but not writable, so the user is not sent '
+      'hunting for a corrupt file',
+      'on read' in legacy_rows.get('legacy', {}).get('command_unavailable', ''),
+      legacy_rows.get('legacy', {}).get('command_unavailable'))
+check('the reason hands the decision to the USER rather than proposing a fix -- '
+      'splitting or dropping a segment changes who sees what',
+      'change who sees what' in legacy_rows.get('legacy', {}).get('command_unavailable', ''),
+      legacy_rows.get('legacy', {}).get('command_unavailable'))
+check('a SINGLE-segment audience beside it is unaffected and still gets its command',
+      isinstance(legacy_rows.get('fine', {}).get('command'), list), str(legacy_rows.get('fine', {})))
+check('and the clean row carries no multi-segment flag at all',
+      'multi_segment_audiences' not in legacy_rows.get('fine', {}), str(legacy_rows.get('fine', {})))
+check('the SEGMENT IDS ARE NOT SILENTLY DROPPED OR SPLIT anywhere in the plan -- '
+      'the row still reports both, because the targeting is the user\'s to change',
+      (legacy_rows.get('legacy', {}).get('audiences') or [{}])[0]
+      .get('segment_ids') == ['s1', 's2'],
+      str(legacy_rows.get('legacy', {}).get('audiences')))
+
+check('an empty segment_ids is not multi-segment', 'multi_segment_audiences' not in
+      (plan_or_raised([{'id': 'p', 'developer_id': 'd',
+                        'audiences': [{'paywall_id': 'pw-1', 'segment_ids': []}]}],
+                      flows={'pw-1': 'f-1'}, app_id='a')[0]['placements'] or [{}])[0])
+check('an absent segment_ids is not multi-segment', 'multi_segment_audiences' not in
+      (plan_or_raised([{'id': 'p', 'developer_id': 'd',
+                        'audiences': [{'paywall_id': 'pw-1'}]}],
+                      flows={'pw-1': 'f-1'}, app_id='a')[0]['placements'] or [{}])[0])
+three = plan_or_raised(
+    [{'id': 'p', 'developer_id': 'd',
+      'audiences': [{'paywall_id': 'pw-1', 'segment_ids': ['a', 'b', 'c']}]}],
+    flows={'pw-1': 'f-1'}, app_id='a')[0]['placements']
+check('THREE segment ids are flagged too, and the worst count is reported',
+      'up to 3' in (three or [{}])[0].get('command_unavailable', ''),
+      str(three))
+
+check('the flag appears WITHOUT --flows too, so phase 3 reports it before phase 5 '
+      'spends a flow on a placement that cannot receive one',
+      m.build_plan(LEGACY)['placements'][0].get('multi_segment_audiences') == [0],
+      str(m.build_plan(LEGACY)['placements'][0]))
+check('the summary COUNTS unwritable audiences, so the phase-3 report can name them',
+      m.build_plan(LEGACY)['summary']['unwritable_multi_segment'] == 1,
+      str(m.build_plan(LEGACY)['summary']))
+check('and counts zero when every audience is writable',
+      m.build_plan(PLACEMENTS)['summary']['unwritable_multi_segment'] == 0)
+
+check('build_create_command REFUSES a multi-segment array outright -- the argv '
+      'generator is where the guards have to be unavoidable, not optional',
+      raises(ValueError, m.build_create_command, 'app-1', 'T', 'd',
+             [{'flow_id': 'f-1', 'segment_ids': ['s1', 's2']}]))
+check('and it accepts a single-segment array',
+      isinstance(m.build_create_command('app-1', 'T', 'd',
+                 [{'flow_id': 'f-1', 'segment_ids': ['s1']}]), list))
+check('and an empty one', isinstance(m.build_create_command(
+      'app-1', 'T', 'd', [{'flow_id': 'f-1', 'segment_ids': []}]), list))
+check('to_flow_audience still carries multi-segment VERBATIM -- it is not the '
+      'place to decide, and normalising there would hide the problem',
+      m.to_flow_audience({'paywall_id': 'pw', 'segment_ids': ['s1', 's2']},
+                         'f-1')['segment_ids'] == ['s1', 's2'])
+check('_audience_problem does NOT reject multi-segment -- it is legal, readable '
+      'input, so refusing to READ it would be wrong',
+      m._audience_problem({'paywall_id': 'pw', 'segment_ids': ['s1', 's2']}) is None)
+
 # ---------- Fix round 3: segment_ids, _api_field, and the opt-in exit 3 ----------
 
 check('a STRING segment_ids is a problem -- it does not crash, it spreads one '
@@ -448,9 +560,10 @@ plan_scoped = m.build_plan(PLACEMENTS, scope={'kept': 2, 'filtered_out': 7})
 check('build_plan carries the scope block into summary, so the phase-3 report '
       'cannot omit it', plan_scoped['summary'].get('scope', {}).get('filtered_out') == 7,
       str(plan_scoped['summary']))
-check('build_plan with no scope adds no scope key, but keeps the five counts',
+check('build_plan with no scope adds no scope key, but keeps the counts',
       set(m.build_plan(PLACEMENTS)['summary'])
-      == {'placements', 'audiences', 'paywalls', 'already_flow', 'empty', 'exposure'},
+      == {'placements', 'audiences', 'paywalls', 'already_flow', 'empty',
+          'unwritable_multi_segment', 'exposure'},
       str(sorted(m.build_plan(PLACEMENTS)['summary'])))
 
 # EXPOSURE vs SCOPE. `scope` partitions the whole `list`; `exposure` partitions the

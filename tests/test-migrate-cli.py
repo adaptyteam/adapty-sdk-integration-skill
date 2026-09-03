@@ -104,13 +104,15 @@ counts_only = {k: v for k, v in (plan.get('summary') or {}).items()
                if k not in ('scope', 'exposure')}
 check('plan carries the summary block through from migratable_summary',
       counts_only == {'placements': 2, 'audiences': 3, 'paywalls': 2,
-                      'already_flow': 1, 'empty': 0},
+                      'already_flow': 1, 'empty': 0,
+                      'unwritable_multi_segment': 0},
       str(plan.get('summary')))
 check('the five counts, the account-wide scope and the plan-row exposure are three '
       'SEPARATE blocks -- none of them silently stands in for another',
       set(plan.get('summary') or {})
       == {'placements', 'audiences', 'paywalls', 'already_flow', 'empty',
-          'scope', 'exposure'}, str(sorted(plan.get('summary') or {})))
+          'unwritable_multi_segment', 'scope', 'exposure'},
+      str(sorted(plan.get('summary') or {})))
 
 check('plan without --flows emits no command key -- the flag is purely additive',
       all('command' not in p and 'missing_flows' not in p
@@ -606,6 +608,67 @@ check('an EMPTY audience array is legal -- a placement with no audiences is a re
       audience_case('valid-empty', []).returncode == 0)
 
 SHAPE_SHIM_SRC = '#!/usr/bin/env python3\n"""Prints whatever raw `placements list` body BODY holds -- malformed on purpose.\n\nTaking the body verbatim from the environment keeps the malformed shapes in the\ntest beside their assertions, instead of in a lookup table inside a nested\nstring where the quoting is its own hazard.\n"""\nimport json, os, sys\na = sys.argv[1:]\nif a[:2] == ["placements", "list"]:\n    print(os.environ["BODY"])\n    sys.exit(0)\nif a[:2] == ["placements", "get"]:\n    print(json.dumps({"id": "p", "developer_id": "d", "audiences": []}))\n    sys.exit(0)\nsys.exit(9)\n'
+
+# --- ROUND 4: the legacy multi-segment audience, end to end through `plan` ---
+#
+# Source: adapty-dashboard-api!13221 @ d0b878cb. Readable (the read factories
+# bypass the 1-segment cap with `model_construct` for legacy rows) and unwritable
+# (the DTO validator refuses >1 on write). So the failure this prevents is a plan
+# that passes every gate and dies at `placements create`.
+
+multiseg = TMP / 'multiseg.json'
+multiseg.write_text(json.dumps({'app': 'app-1', 'placements': [
+    {'id': 'pl-multi', 'developer_id': 'legacy', 'title': 'Legacy',
+     'audiences': [{'paywall_id': 'pw-1', 'segment_ids': ['s1', 's2'], 'priority': 0}]},
+    {'id': 'pl-ok', 'developer_id': 'fine', 'title': 'Fine',
+     'audiences': [{'paywall_id': 'pw-1', 'segment_ids': ['s1'], 'priority': 1}]},
+]}))
+ms_ledger = TMP / 'ms-flows.json'
+ms_ledger.write_text(json.dumps({'pw-1': 'flow-one'}))
+
+r25 = subprocess.run([sys.executable, str(MIGRATE), 'plan', '--inventory', str(multiseg),
+                      '--flows', str(ms_ledger)], capture_output=True, text=True)
+check('a multi-segment inventory still PLANS successfully -- it is valid input, so '
+      'exiting non-zero would be wrong; the refusal is per-placement',
+      r25.returncode == 0, f'{r25.returncode} {r25.stderr[:200]}')
+ms_rows = ({r['source_developer_id']: r for r in json.loads(r25.stdout)['placements']}
+           if r25.returncode == 0 else {})
+check('the multi-segment placement gets NO command through the real plan path',
+      'command' not in (ms_rows.get('legacy') or {'command': 1}),
+      str(ms_rows.get('legacy')))
+check('and it says why, naming the placement and the count',
+      "'legacy'" in (ms_rows.get('legacy') or {}).get('command_unavailable', '')
+      and '1 audience(s)' in (ms_rows.get('legacy') or {}).get('command_unavailable', ''),
+      str((ms_rows.get('legacy') or {}).get('command_unavailable')))
+check('and it flags the offending audience index for the user to find',
+      (ms_rows.get('legacy') or {}).get('multi_segment_audiences') == [0],
+      str(ms_rows.get('legacy')))
+check('the single-segment placement on the SAME paywall still gets its command -- '
+      'one legacy row does not block the rest of the migration',
+      isinstance((ms_rows.get('fine') or {}).get('command'), list),
+      str(ms_rows.get('fine')))
+ms_fine_auds = json.loads(flag((ms_rows.get('fine') or {}).get('command'),
+                               '--audiences') or '[]')
+check('the emitted command for the clean row carries its one segment verbatim',
+      (ms_fine_auds or [{}])[0].get('segment_ids') == ['s1'], str(ms_fine_auds))
+check('the summary counts the unwritable audience, so the phase-3 report names it '
+      'rather than the user meeting it as a missing command in phase 7',
+      (json.loads(r25.stdout)['summary'] if r25.returncode == 0 else {})
+      .get('unwritable_multi_segment') == 1,
+      str(json.loads(r25.stdout)['summary'] if r25.returncode == 0 else {}))
+
+r26 = subprocess.run([sys.executable, str(MIGRATE), 'plan', '--inventory', str(multiseg)],
+                     capture_output=True, text=True)
+r26_body = json.loads(r26.stdout) if r26.returncode == 0 else {}
+r26_rows = r26_body.get('placements') or [{}]
+check('WITHOUT --flows the flag and the count are still there, so phase 3 warns '
+      'before phase 5 creates a flow for a placement that cannot receive one',
+      r26.returncode == 0
+      and (r26_body.get('summary') or {}).get('unwritable_multi_segment') == 1
+      and r26_rows[0].get('multi_segment_audiences') == [0],
+      r26.stdout[:300])
+check('and no command key appears without --flows either way',
+      r26.returncode == 0 and all('command' not in row for row in r26_rows))
 
 # --- THE NINE SHAPES THAT STILL LEAKED AFTER ROUND 2, plus the silent one ---
 #

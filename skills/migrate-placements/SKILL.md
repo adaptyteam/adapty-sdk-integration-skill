@@ -152,12 +152,15 @@ to tell a user. When any exist, the scope block sets **`unknown_withheld: true`*
 that flag is what triggers phase 4's offer to widen.
 
 **Why the filter is an argument to `inventory` rather than something applied to its output.**
-`is_active` is owner-stated to ride on `list`, which costs 2 calls, while audiences come only from
-`get`, which costs one per placement — so filtering the `list` result is what turns `2 + 150` into
+the API source declares `is_active` on the summary that `list` returns, which costs 2 calls, while
+audiences come only from `get`, which costs one per placement — so filtering the `list` result is what turns `2 + 150` into
 `2 + 30`. Filtering after the GET loop produces a byte-identical file and saves nothing.
 
 **The scale gate.** Redundant once the field is present; the only option while it is absent, which
-is today. Read `meta.pagination.count` first. Past **25** placements, state the cost — one `get` per
+is today. Note it scopes the **placement-first** enumeration — do not reach for
+`paywalls placements` as a cheaper narrow path, because it is filtered to live, paywall-typed rows
+and so **cannot see an inactive placement at all**
+([api-surface.md](references/api-surface.md#summary-vs-detail)). Read `meta.pagination.count` first. Past **25** placements, state the cost — one `get` per
 placement — and offer to scope before spending it: a `developer_id` substring, or an explicit list
 of placements. "All of them" is then an informed choice rather than an accidental sweep.
 
@@ -183,6 +186,22 @@ one flow instead of many.
 **Report the counts and the grouping, never one row per placement** — migratable placements,
 migratable audiences, distinct paywalls, already-flow, no-audience. A 150-row dump is not a report.
 Name the distinct paywall count as the number of flows the next phase creates.
+
+**When `summary.unwritable_multi_segment` is not zero, report it here and treat those placements as
+blocked.** An audience carrying more than one `segment_id` is **readable and unwritable** — the API
+caps it at one per entry on write while its read path deliberately bypasses that cap so legacy rows
+survive a round-trip ([api-surface.md](references/api-surface.md#what-the-write-requires-and-why-we-carry-values-verbatim)).
+`plan` emits no `command` for such a placement and says why. **Do not offer to split or drop a
+segment**: that changes who sees what, which is the user's decision. Say it must be resolved in the
+dashboard first, and that the rest of the migration can proceed without it.
+
+**And disclose what the counts are counts OF, once:** `placements get` returns only paywall and
+flow audiences and **silently omits any other kind** — an A/B-test audience, for instance — so a
+placement may hold more audiences than the read shows. **This is not detectable from the API**:
+nothing in the response says an entry was skipped, so there is no check to run and none is
+attempted. It matters because the new flow placement will not carry an audience the read never
+revealed. Say the counts are of what the API returned, and that a placement known to run an A/B
+test should be checked in the dashboard.
 
 **And report `summary.scope` in the same line, when it is there** — how many placements the
 inventory withheld and why. The counts above describe what you read; that block is the only thing
@@ -250,14 +269,12 @@ The cost is honest and worth saying: it is two passes, and every placement it cr
 either way. Offer it; do not impose it. With the field absent there is nothing to order on, so skip
 this entirely rather than guessing which placements are quiet.
 
-> **This advice rests entirely on `is_active` meaning what the owner stated — the placement's own
-> enabled/disabled status.** Its whole safety claim is *"inactive serves nobody"*. If the field
-> turns out to be traffic-derived, or to mean "has an audience configured", then an `is_active:
-> false` placement may still be wired into a shipped app and the rehearsal runs **against live
-> placements** — the opposite of what it promises. The semantics are
-> [owner-stated, not measured](references/api-surface.md#is_active--the-scope-filter). So offer this
-> as a rehearsal whose premise is the field's meaning, and if the user knows that placement is live,
-> believe them over the flag.
+> **The premise is that `is_active: false` means nobody is being served, and the field means
+> exactly one thing:** the [activation state the API source documents](references/api-surface.md#is_active--the-scope-filter)
+> — Live versus Inactive, the dashboard's own toggle, nothing finer. What that does *not* tell you
+> is whether a shipped app still calls the placement. An inactive placement serves no paywall, so a
+> stub on it shows nobody a placeholder; but if the user says a placement is live traffic,
+> **believe them over the flag** and treat it as active.
 
 ## Phase 5 — Realize the flows
 
@@ -475,6 +492,10 @@ is the one irreversible command in the skill, so it is the last place to trust r
   goes missing.
 - **A row whose paywall is not in `flows.json` carries no `command`**, only `missing_flows` and a
   reason. Do not fill the gap in by hand: finish phase 5 for that paywall and re-run `plan`.
+- **A row with `multi_segment_audiences` carries no `command` either, and this one you cannot
+  resolve by re-running.** Its audience holds more than one `segment_id`, which the API returns on
+  read and refuses on write. Report it, name the placement, and leave it to the user — writing it
+  anyway fails, and editing the segments changes their targeting.
 - **There is no prompt and no preview on `placements create`** — unlike `flows publish`. Whatever
   argv you send is sent. Phase 6 is the only gate there is
   ([api-surface.md](references/api-surface.md#confirmation-asymmetry)).

@@ -234,11 +234,13 @@ SCOPES = (SCOPE_ACTIVE, SCOPE_ALL)
 def activity(placement):
     """Which of THREE states a placement's `is_active` reports.
 
-    `is_active` is owner-confirmed (2026-09-03) as the placement's own
-    enabled/disabled status, returned on both `list` and `get`. It was also
-    measured that day to be ABSENT in production and absent on the MR !13221
-    pod -- so on today's API this returns UNKNOWN for every placement, and
-    that is the case the caller must survive.
+    `is_active` is the placement's ACTIVATION STATE -- true=Live,
+    false=Inactive, the dashboard's own toggle -- read from the API source
+    (adapty-dashboard-api!13221 @ d0b878cb), which declares it on both the
+    summary and the detail DTO. It was measured 2026-09-03 to be ABSENT in
+    production and absent on the MR !13221 pod, because the code is written
+    and not yet released -- so on today's API this returns UNKNOWN for every
+    placement, and that is the case the caller must survive.
 
     ABSENT IS NOT FALSE. Reading absence as `False` filters an entire
     present-day account out and reports an empty migration: a silent, total
@@ -270,9 +272,10 @@ def select_scope(placements, scope=SCOPE_ALL):
     """(rows to spend GETs on, a report of what was kept AND withheld).
 
     Called on the `list` result, BEFORE the per-placement GETs. That position
-    is the call saving -- `list` is owner-stated to carry `is_active` while
-    audiences are only on `get`, so filtering first turns a 150-placement app
-    with 30 active from 2 + 150 calls into 2 + 30.
+    is the call saving -- the API source declares `is_active` on the summary
+    DTO that `list` returns, while audiences are only on `get`, so filtering
+    first turns a 150-placement app with 30 active from 2 + 150 calls into
+    2 + 30.
 
     THE POSITION IS SEPARABLE FROM THE PARTITION, and only the position rests
     on `is_active` being on `list`. If it ships on `get` only, this function
@@ -290,13 +293,21 @@ def select_scope(placements, scope=SCOPE_ALL):
     2. The withheld count is produced by the same code that withholds, so a
        caller cannot report the kept count alone. A filter that hides work is
        worse than no filter -- if `is_active`'s real semantics turn out
-       narrower than owner-stated, the filter would skip placements that need
-       migrating and the user would never see them.
+       narrower than the activation state the source documents, the filter
+       would skip placements that need migrating and the user would never see
+       them.
 
     Note what is deliberately NOT done: under `scope=active` an unknown row
     is filtered out (it is not known-active), but it is counted separately
     from the inactive rows, so the report distinguishes "you disabled these"
     from "I could not tell".
+
+    THE THIRD BUCKET IS REQUIRED, NOT DEFENSIVE, and do not simplify it away
+    once the field ships. `paywalls placements` omits `is_active`
+    permanently and by design -- its queryset does not annotate the state --
+    so one of this skill's own read paths will always return placements whose
+    activation is unknown, and collapsing them into `inactive` would mark
+    every one of them disabled.
     """
     if scope not in SCOPES:
         raise ValueError(f'scope must be one of {SCOPES}, got {scope!r}')
@@ -416,12 +427,22 @@ def migratable_summary(placements):
             continue
         if CONTENT_PAYWALL not in content_types(audiences):
             already_flow += 1
+    # Counted here so phase 3's report names it, rather than the user meeting it
+    # for the first time as a missing `command` in phase 7.
+    unwritable = 0
+    for placement in placements:
+        for raw in placement.get('audiences') or []:
+            entry = normalize_audience(raw)
+            if (entry['content_type'] == CONTENT_PAYWALL
+                    and len(entry.get('segment_ids') or []) > 1):
+                unwritable += 1
     return {
         'placements': len(referenced),
         'audiences': sum(len(refs) for refs in groups.values()),
         'paywalls': len(groups),
         'already_flow': already_flow,
         'empty': empty,
+        'unwritable_multi_segment': unwritable,
     }
 
 
@@ -456,6 +477,19 @@ def build_create_command(app_id, title, developer_id, audiences):
         raise ValueError(
             f'a created flow placement must be all-flow, got {sorted(kinds)}; '
             'mixed paywall+flow audiences are refused by the backend')
+    over = [i for i, e in enumerate(normalized)
+            if len(e.get('segment_ids') or []) > 1]
+    if over:
+        # The API caps segment_ids at one per entry on WRITE while its read
+        # factories bypass that cap for legacy rows, so this argv would be
+        # refused. `build_plan` reports it as `command_unavailable` before
+        # reaching here; this raise covers a direct caller, because this is the
+        # function that makes the guards unavoidable rather than optional.
+        raise ValueError(
+            f'audience entr(ies) {over} carry more than one segment_id; the API '
+            'accepts at most one per entry on write. It is readable because the '
+            'read path bypasses that cap for legacy rows -- resolve it in the '
+            'dashboard, because splitting it changes targeting')
     return [
         'placements', 'create',
         '--app', app_id,
@@ -587,14 +621,42 @@ def build_plan(placements, suffix='-flow', flows=None, app_id=None, scope=None):
                            'segment_ids': list(a.get('segment_ids') or []),
                            'priority': a.get('priority', 0)} for a in migratable],
         }
+        # READABLE BUT UNWRITABLE. The API's audience DTO validator caps
+        # segment_ids at one entry, and both READ factories deliberately bypass
+        # it (`model_construct`) so legacy multi-segment rows survive a read
+        # round-trip. So a legacy audience reads back perfectly and is refused
+        # on write -- and `to_flow_audience` carries segment_ids VERBATIM,
+        # because that is the targeting this migration must not change. The
+        # result without this check is a plan that looks clean and dies at
+        # `placements create`, the one irreversible command in the skill.
+        #
+        # Detected unconditionally, not only under --flows, so phase 3 can
+        # report it before phase 5 spends a flow on a placement that cannot
+        # receive one.
+        multi = [index for index, a in enumerate(migratable)
+                 if len(a.get('segment_ids') or []) > 1]
+        if multi:
+            row['multi_segment_audiences'] = multi
         if flows is not None:
+            blockers = []
             missing = sorted({a['paywall_id'] for a in migratable
                               if not flows.get(a['paywall_id'])})
             if missing:
                 row['missing_flows'] = missing
-                row['command_unavailable'] = (
+                blockers.append(
                     'no published flow recorded for ' + ', '.join(missing) +
                     ' -- finish phase 5 for those paywalls, then re-run plan')
+            if multi:
+                worst = max(len(migratable[i].get('segment_ids') or []) for i in multi)
+                blockers.append(
+                    f'{len(multi)} audience(s) on {placement["developer_id"]!r} '
+                    f'carry more than one segment_id (up to {worst}); the API '
+                    'accepts at most one per audience entry on write, though it '
+                    'returns these on read. Splitting or dropping a segment '
+                    'would change who sees what, so this is yours to resolve '
+                    'in the dashboard first -- not something this tool guesses')
+            if blockers:
+                row['command_unavailable'] = ' | '.join(blockers)
             else:
                 row['command'] = build_create_command(
                     app_id, row['title'], proposed,

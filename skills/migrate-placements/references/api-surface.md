@@ -21,7 +21,7 @@ Error strings are quoted exactly. An agent routes on them, so a paraphrase here 
 | flow audience on `placements create` | `audiences.0.paywall_id: Field required` | accepted; a draft flow refused (below) |
 | flow audience on `placements update` | `audiences.0.paywall_id: Field required` | **`Placement type can not be changed.`** (`validation_error`) |
 | `placements get` audiences | **omits** `content_type` | **includes** `content_type` |
-| `is_active` on a placement | **absent** | **absent** |
+| `is_active` on a placement | **absent** | **absent** — declared in the source at `!13221 @ d0b878cb`, not yet released |
 
 **None of ADP-6502 is live in production.** So the skill probes rather than assumes, and it
 degrades on those exact error shapes. `audiences.0.paywall_id: Field required` in response to a
@@ -100,6 +100,13 @@ There is no bulk read, so classifying N placements costs N GETs.
 called without pagination — and returns summaries only. It answers *which* placements use a
 paywall; it does not carry the `segment_ids`, `priority` or `title` a write needs.
 
+**And it is FILTERED, which limits it further than the missing fields do.** From the source
+(`adapty-dashboard-api!13221 @ d0b878cb`): *"Filtered to live (state=LIVE), paywall-typed
+(content_type=PAYWALL), non-deleted placements."* So the reverse index **cannot find an inactive
+placement at all** — a narrow "just these paywalls" run built on it silently sees only the live
+ones, which is the wrong shape for a migration that may deliberately start with the inactive
+placements. It also omits `is_active` by design (see below), so it cannot report what it filtered.
+
 Cost for a 150-placement / 192-paywall app, which settles which primitive to enumerate on:
 
 | Route | Calls | Yields what a write needs? |
@@ -162,25 +169,38 @@ requires `paywall_id`, a flow entry requires `flow_id`. Reported as `--audiences
 
 ## `is_active` — the scope filter
 
-**This entry keeps two kinds of claim apart on purpose, because only one of them was measured
-here.**
-
-**Measured 2026-09-03.** The field is **absent in production** and **absent on the MR !13221 pod**,
-on both `placements list` and `placements get`. Every placement in both environments, no exceptions
-found. So on the API as it stands today, nothing can be filtered on it.
-
-**Owner-stated, not measured** (2026-09-03, requested off the back of this work):
+**Read from the API source** — `adapty-dashboard-api!13221 @ d0b878cb` — and no longer
+owner-stated. The source comment, verbatim: *"`is_active` is the placement activation state
+(true=Live, false=Inactive), matching the dashboard."*
 
 | | |
 |---|---|
 | shape | `is_active: true \| false` |
-| returned on | **both** `placements list` and `placements get` |
-| meaning | the **placement's own status** — its enabled/disabled state |
+| declared on | **both** `PlacementSummaryDTO` and `PlacementDetailDTO`, read from `placement.is_active` |
+| meaning | the **placement's activation state** — Live / Inactive, the dashboard's own toggle |
 | explicitly not | traffic-derived, and not "has an audience configured" |
 
-**Do not build edge behaviour on more than "true means enabled, false means disabled."** The
-semantics above came from the owner, not from a response body; verify on the pod before relying on
-anything finer.
+So `placements list` **and** `placements get` both carry it, which is what makes the pre-GET filter
+a real saving rather than a hope. This supersedes the earlier owner-stated entry; the semantics are
+now source-backed, and the guidance not to build finer edge behaviour than
+*true = Live, false = Inactive* stands because that is all the source defines.
+
+**Measured 2026-09-03, and still true: the field is absent in production and absent on the MR
+!13221 pod**, on every placement in both. Source-confirmed semantics and deployed availability are
+different facts — the code is written and not yet released — so nothing can be filtered on it today.
+
+**`paywalls placements` OMITS `is_active` PERMANENTLY, BY DESIGN.** The source excludes it
+explicitly, `model_dump(exclude={'is_active'})`, with the reason: *"these placements come from the
+paywall latest-placement query, which does not annotate the activation state, so the entity would
+carry the meaningless getattr default. It is exposed only on the placement list/retrieve reads,
+whose queryset annotates it."*
+
+**That retroactively justifies the `unknown` bucket, and upgrades it from defensive to required.**
+`unknown` was built for a rollout gap that will close; it turns out to be the permanent shape of an
+endpoint this skill uses. So the three-way partition is not a hedge against release timing that can
+be simplified away once the field ships — one of our own read paths will always return placements
+with no activation state, and collapsing `unknown` into `inactive` would mark every one of them
+disabled. Keep the third bucket.
 
 **The consequence that shapes `migrate.py`: absence is a THIRD state.** `select_scope` partitions
 active / inactive / **unknown** and never collapses the third into the second, because on today's
@@ -194,9 +214,9 @@ semantics turn out narrower than the status above, a filter would skip placement
 migrating and the user would never see them — so `describe_scope` produces the exclusion count from
 the same code that makes the exclusion, and `plan` carries it into `summary.scope`.
 
-**What it buys, in the mechanism's own terms.** The field is **owner-stated to be** on `list`,
-which costs 2 calls; the audiences are **measured** to be only on `get`, which costs one per
-placement. So filtering the `list` result **before**
+**What it buys, in the mechanism's own terms.** The field is **declared on both DTOs in the API
+source** and `list` costs 2 calls; the audiences are **measured** to be only on `get`, which costs
+one per placement. So filtering the `list` result **before**
 the GET loop turns a 150-placement app with 30 active from `2 + 150 = 152` calls into `2 + 30 = 32`.
 Filtering after the loop yields a byte-identical inventory and saves nothing, which is why the scope
 is an argument to `inventory` rather than something applied to its output.
@@ -244,6 +264,53 @@ this placement"*, while the **recommended** `--audiences` form prints none — e
 paywall_id: null` before filling one, i.e. it is a **full replace**.
 
 Worth reporting to the CLI/API team alongside QA case C7.
+
+## Blind spots in the reads themselves
+
+**`placements get` SILENTLY OMITS an audience that is neither paywall nor flow.**
+`PlacementDetailDTO.factory` appends only `PAYWALL` and `FLOW` entries; the source's own test
+`test_factory_skips_content_that_is_neither_paywall_nor_flow` exercises it with
+`PlacementContentType.AB_TEST`. So a placement carrying an A/B-test audience **reports fewer
+audiences than it has**, and every count derived from that read — including this skill's — is short
+by exactly the entries the DTO dropped.
+
+**We cannot detect it, and saying so is the honest answer rather than inventing a check.** The read
+is the only view we have; a placement with 3 audiences of which 1 is an A/B test is
+indistinguishable from a placement with 2. Nothing in the response says an entry was skipped, so
+there is no count to compare against and no flag to test. The only way to know is to look at the
+placement in the dashboard.
+
+**What follows for the migration, stated precisely.** This skill creates and never updates, so
+nothing is destroyed and the source placement keeps its A/B-test audience serving. But the **new
+flow placement would not carry that audience**, because the read never showed it — so the migration
+is incomplete in a way the plan cannot show. Disclose it wherever audience counts are reported:
+they are counts of what the API returned, not necessarily of what exists.
+
+## What the write requires, and why we carry values verbatim
+
+From the same source, the audience array a `placements create` must satisfy:
+
+| Constraint | |
+|---|---|
+| `segment_ids` per entry | **at most one** — a `field_validator` refuses more (see the legacy trap below) |
+| exactly one entry | must have `segment_ids=[]`, the default, and it must hold the **highest priority** |
+| `priority` values | must be **unique** across the array |
+| `segment_ids` values | must be **unique** across the array |
+
+**This is the argument for carrying `segment_ids` and `priority` over verbatim rather than
+normalising them.** A valid source placement already satisfies every row above, so copying the
+targeting unchanged yields a valid target by construction — while any normalisation we invented
+(renumbering priorities, reordering, filling a default) could break a constraint the source was
+respecting, and would change who sees what. `to_flow_audience` therefore copies and does not think.
+
+**The one exception, and it is the legacy trap: a multi-segment audience is READABLE and
+UNWRITABLE.** The `field_validator` capping `segment_ids` at one entry is deliberately bypassed on
+the read paths — `model_construct`, commented *"bypass the 1-segment cap so legacy multi-segment
+rows survive read round-trips"* — so a legacy row reads back perfectly and is refused on write.
+Carrying it verbatim, which is right for every other field, therefore produces an argv the API will
+reject at the one irreversible command in the skill. `migrate.py` detects `len(segment_ids) > 1`,
+emits **no `command`** for that placement, and reports it as work the user must resolve in the
+dashboard — it does not split or drop a segment, because that is a targeting decision.
 
 ## What is still unverified
 
